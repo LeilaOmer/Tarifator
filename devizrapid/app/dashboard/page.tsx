@@ -382,10 +382,10 @@ export default function Dashboard() {
                 <p className="text-sm font-bold text-gray-900">🧮 Calculator de Pret</p>
                 <p className="text-xs text-gray-500 mt-0.5">Calculez preturi de vanzare din facturi de furnizor</p>
               </button>
-              <button onClick={() => chooseModule('devize')} disabled={choosingModule}
+              <button onClick={() => chooseModule('fise')} disabled={choosingModule}
                 className="w-full text-left bg-white rounded-xl px-4 py-3 hover:bg-blue-100/50 active:scale-95 transition-all disabled:opacity-50">
                 <p className="text-sm font-bold text-gray-900">📋 Fise Servicii</p>
-                <p className="text-xs text-gray-500 mt-0.5">Fac devize/fise de servicii pentru clienti</p>
+                <p className="text-xs text-gray-500 mt-0.5">Fac fise de servicii pentru clienti</p>
               </button>
               <button onClick={() => chooseModule('both')} disabled={choosingModule}
                 className="w-full text-left text-xs font-semibold text-blue-500 hover:text-blue-700 px-4 py-1.5">
@@ -423,7 +423,7 @@ export default function Dashboard() {
                     <span className="text-gray-300">→</span>
                   </a>
                 </>
-              ) : primaryModule === 'devize' ? (
+              ) : primaryModule === 'fise' ? (
                 <>
                   {/* Modul principal: Fise Servicii. Calculatorul ramane accesibil, comprimat intr-un singur link. */}
                   <div className="grid grid-cols-1 gap-3">{fisaVoceTile}</div>

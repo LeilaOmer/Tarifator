@@ -307,7 +307,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-3 gap-2">
             {([
               { value: 'calculator', icon: '🧮', label: 'Calculator Pret' },
-              { value: 'devize', icon: '📋', label: 'Fise Servicii' },
+              { value: 'fise', icon: '📋', label: 'Fise Servicii' },
               { value: 'both', icon: '✨', label: 'Amandoua' },
             ] as const).map(opt => (
               <button key={opt.value} onClick={() => saveModule(opt.value)}

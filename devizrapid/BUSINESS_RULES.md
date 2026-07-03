@@ -13,7 +13,7 @@ Aplicatia are TREI concepte diferite care par similare. NU le amesteca:
 
 1. **Modul** = ce face aplicatia. Doua module:
    - **Calculator Pret** (`/pricing`, `/calcule`) — calculeaza pret de vanzare din facturi de furnizor.
-   - **Fise Servicii** (`/quick`, `/quotes`, `/services`, `/clients`) — devize/fise pentru clienti.
+   - **Fise Servicii** (`/quick`, `/quotes`, `/services`, `/clients`) — fise pentru clienti.
 2. **Mod de lucru** (`profiles.account_type` = `artizan` | `pro`) = regimul de lucru, LIBER pentru toti, fara legatura cu plata:
    - `artizan` ("Simplu") — fara TVA, o singura firma (datele contului).
    - `pro` ("Firma") — cu TVA, mai multe firme.
@@ -115,7 +115,7 @@ Repere scurte, ca sa te orientezi rapid. Sunt STABILE (locatiile nu se muta des)
 - **Calcul pret (TVA, adaos, rotunjire, neplatitor)**: `lib/pricing/calc.ts`. Regimul TVA: `app/pricing/hooks/usePricingDraft.ts`.
 - **Abonamente + limite**: `lib/plan.ts` (`TIER_LIMITS`, `getEffectiveLimits`, `PRELAUNCH`), consum lunar in `lib/usage.ts`.
 - **Numerotare fise**: `lib/quoteNumber.ts`.
-- **Generare PDF**: calculator → `lib/pricing/pdf.ts`; fisa/deviz → `app/quotes/[id]/page.tsx` (`buildPDF`). Preview mobil: `lib/pricing/pdfPreview.ts`.
+- **Generare PDF**: calculator → `lib/pricing/pdf.ts`; fisa → `app/quotes/[id]/page.tsx` (`buildPDF`). Preview mobil: `lib/pricing/pdfPreview.ts`.
 - **Dictare voce**: `app/api/transcribe/route.ts` (Whisper) → `app/api/parse-quote/route.ts` / `parse-pricing`.
 - **Auth pe rutele API**: `lib/apiAuth.ts` (`verifyBearer`), rate-limit `lib/rateLimit.ts`.
 - **Module + mod de lucru pe dashboard**: `app/dashboard/page.tsx`, `lib/module.ts`.
