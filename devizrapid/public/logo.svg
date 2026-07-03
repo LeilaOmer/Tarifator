@@ -1,0 +1,55 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="rb4">
+      <rect x="0" y="0" width="512" height="512" rx="115" ry="115"/>
+    </clipPath>
+    <linearGradient id="parch3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+
+  <g clip-path="url(#rb4)">
+    <rect x="0" y="0" width="512" height="512" fill="#04295c"/>
+
+    <rect x="120" y="146" width="272" height="18" rx="9" fill="#ffffff"/>
+    <rect x="247" y="146" width="18" height="240" fill="#ffffff"/>
+    <rect x="212" y="382" width="88" height="18" rx="9" fill="#ffffff"/>
+
+    <line x1="130" y1="155" x2="130" y2="244" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+    <line x1="382" y1="155" x2="382" y2="242" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+
+    <!-- ===== LEFT PAN: PAPYRUS SCROLL ===== -->
+    <g transform="translate(88,242)">
+      <!-- top rolled cylinder (horizontal tube) -->
+      <rect x="0" y="0" width="90" height="20" rx="10" fill="url(#parch3)" stroke="#04295c" stroke-width="1.5"/>
+      <ellipse cx="10" cy="10" rx="8" ry="9" fill="none" stroke="#04295c" stroke-width="1.5"/>
+      <ellipse cx="80" cy="10" rx="8" ry="9" fill="none" stroke="#04295c" stroke-width="1.5"/>
+
+      <!-- unrolled sheet -->
+      <rect x="8" y="16" width="74" height="82" fill="url(#parch3)"/>
+      <line x1="8" y1="16" x2="8" y2="98" stroke="#04295c" stroke-width="1.5" opacity="0.5"/>
+      <line x1="82" y1="16" x2="82" y2="98" stroke="#04295c" stroke-width="1.5" opacity="0.5"/>
+
+      <!-- bottom rolled cylinder -->
+      <rect x="0" y="94" width="90" height="20" rx="10" fill="url(#parch3)" stroke="#04295c" stroke-width="1.5"/>
+      <ellipse cx="10" cy="104" rx="8" ry="9" fill="none" stroke="#04295c" stroke-width="1.5"/>
+      <ellipse cx="80" cy="104" rx="8" ry="9" fill="none" stroke="#04295c" stroke-width="1.5"/>
+    </g>
+
+    <!-- ===== RIGHT PAN: ABACUS (same total size as scroll, solid white) ===== -->
+    <g transform="translate(334,242)">
+      <rect x="0" y="0" width="90" height="114" rx="12" fill="#ffffff"/>
+      <line x1="10" y1="30" x2="80" y2="30" stroke="#04295c" stroke-width="4"/>
+      <line x1="10" y1="57" x2="80" y2="57" stroke="#04295c" stroke-width="4"/>
+      <line x1="10" y1="84" x2="80" y2="84" stroke="#04295c" stroke-width="4"/>
+      <circle cx="24" cy="30" r="6" fill="#3f8a5c"/>
+      <circle cx="45" cy="30" r="6" fill="#3f8a5c"/>
+      <circle cx="66" cy="30" r="6" fill="#3f8a5c"/>
+      <circle cx="24" cy="57" r="6" fill="#3f8a5c"/>
+      <circle cx="58" cy="57" r="6" fill="#3f8a5c"/>
+      <circle cx="32" cy="84" r="6" fill="#3f8a5c"/>
+      <circle cx="63" cy="84" r="6" fill="#3f8a5c"/>
+    </g>
+  </g>
+</svg>
