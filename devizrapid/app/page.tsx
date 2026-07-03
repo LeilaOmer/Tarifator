@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Tarifator – Raspunsul la „Cat costa?" | Fisa Servicii & Calculator Pret',
-  description: 'Raspunsul instant la „cat costa?" — pentru prestatori de servicii (fisa prin dictare vocala cu preturile tale) si comercianti (calculator pret cu adaos si TVA). Clientul primeste un document clar. Gratuit 6 luni, fara card.',
+  description: 'Raspunsul instant la „cat costa?" — pentru prestatori de servicii (fisa prin dictare vocala cu preturile tale) si comercianti (calculator pret cu adaos si TVA). Clientul primeste un document clar. Plan gratuit permanent, fara card.',
   alternates: { canonical: 'https://devizele-mele.vercel.app' },
 }
 
@@ -18,7 +18,7 @@ export default function LandingPage() {
       '@type': 'Offer',
       price: '0',
       priceCurrency: 'RON',
-      description: 'Trial gratuit 6 luni',
+      description: 'Plan gratuit permanent',
     },
     description: 'Raspunsul instant la „cat costa?" — fisa de servicii prin dictare vocala pentru prestatori si calculator pret cu adaos si TVA pentru comercianti.',
     url: 'https://devizele-mele.vercel.app',
@@ -44,7 +44,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="px-6 pt-16 pb-16 max-w-3xl mx-auto">
         <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-4">
-          6 luni gratuit · Fara card
+          Plan gratuit · Fara card
         </p>
         <h1 className="text-5xl font-bold text-gray-900 leading-tight mb-6 max-w-xl">
           „Cat costa?" — raspunsul in cateva secunde.
@@ -115,38 +115,52 @@ export default function LandingPage() {
 
       {/* Preturi */}
       <section className="border-t border-gray-100 px-6 py-16 max-w-3xl mx-auto">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-10">Preturi</p>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Preturi</p>
+        <p className="text-sm text-gray-400 mb-8">Primii 50 de utilizatori: preturi reduse (in paranteza).</p>
         <div className="divide-y divide-gray-100 border border-gray-100 rounded-2xl overflow-hidden">
+
           <div className="px-6 py-5 flex justify-between items-center bg-green-50">
             <div>
-              <p className="font-semibold text-gray-900">Trial gratuit</p>
-              <p className="text-sm text-gray-500 mt-0.5">6 luni · Acces complet · Fara card</p>
+              <p className="font-semibold text-gray-900">Free</p>
+              <p className="text-sm text-gray-500 mt-0.5">3 fise + 3 calcule / luna · Fara card</p>
             </div>
             <p className="text-2xl font-bold text-green-600">0 lei</p>
           </div>
+
           <div className="px-6 py-5 flex justify-between items-center">
             <div>
               <p className="font-semibold text-gray-900">Artizan</p>
-              <p className="text-sm text-gray-500 mt-0.5">Fise si calcule nelimitate · Fara TVA · Fara firme</p>
+              <p className="text-sm text-gray-500 mt-0.5">Fise nelimitate · 3 calcule / luna</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">25 <span className="text-sm font-normal text-gray-400">lei/luna</span></p>
+            <p className="text-2xl font-bold text-gray-900">59 <span className="text-sm font-normal text-gray-400">(39) lei/luna</span></p>
           </div>
+
+          <div className="px-6 py-5 flex justify-between items-center">
+            <div>
+              <p className="font-semibold text-gray-900">Mercator</p>
+              <p className="text-sm text-gray-500 mt-0.5">Calcule nelimitate · 3 fise / luna</p>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">129 <span className="text-sm font-normal text-gray-400">(89) lei/luna</span></p>
+          </div>
+
           <div className="px-6 py-5 flex justify-between items-center">
             <div>
               <div className="flex items-center gap-2">
                 <p className="font-semibold text-gray-900">Pro</p>
                 <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Recomandat</span>
               </div>
-              <p className="text-sm text-gray-500 mt-0.5">Tot Artizan + TVA · Firme multiple</p>
+              <p className="text-sm text-gray-500 mt-0.5">Fise si calcule nelimitate</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">65 <span className="text-sm font-normal text-gray-400">lei/luna</span></p>
+            <p className="text-2xl font-bold text-gray-900">149 <span className="text-sm font-normal text-gray-400">(99) lei/luna</span></p>
           </div>
+
         </div>
+        <p className="text-xs text-gray-400 mt-4">TVA si firmele multiple sunt gratuite pe orice plan. Primele 30 de zile: 10 fise + 10 calcule.</p>
       </section>
 
       {/* CTA final */}
       <section className="border-t border-gray-100 px-6 py-16 max-w-3xl mx-auto">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Incearca gratuit 6 luni.</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Incearca gratuit.</h2>
         <p className="text-gray-500 mb-8">Fara card. Fara angajament. Daca nu e pentru tine, nu platesti nimic.</p>
         <Link href="/login"
           className="inline-block px-8 py-3.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">

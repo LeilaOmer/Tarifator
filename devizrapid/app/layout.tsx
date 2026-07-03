@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     default: 'Tarifator – Raspunsul la „Cat costa?" | Fisa Servicii & Calculator Pret',
     template: '%s | Tarifator',
   },
-  description: 'Raspunsul instant la „cat costa?" — fisa de servicii prin dictare vocala pentru prestatori (electricieni, instalatori, mecanici, coafori) si calculator pret cu adaos si TVA pentru comercianti. Gratuit 6 luni, fara card.',
+  description: 'Raspunsul instant la „cat costa?" — fisa de servicii prin dictare vocala pentru prestatori (electricieni, instalatori, mecanici, coafori) si calculator pret cu adaos si TVA pentru comercianti. Plan gratuit permanent, fara card.',
   keywords: [
     // fise servicii — domenii
     'fisa servicii', 'fisa servicii', 'bon de lucru', 'bon manopera', 'raport de lucru',
@@ -50,12 +50,12 @@ export const metadata: Metadata = {
     url: 'https://devizele-mele.vercel.app',
     siteName: 'Tarifator',
     title: 'Tarifator – Raspunsul la „Cat costa?"',
-    description: '„Cat costa?" — raspunsul in secunde. Fisa servicii prin dictare vocala pentru prestatori + calculator pret cu adaos si TVA pentru comercianti. Gratuit 6 luni.',
+    description: '„Cat costa?" — raspunsul in secunde. Fisa servicii prin dictare vocala pentru prestatori + calculator pret cu adaos si TVA pentru comercianti. Plan gratuit permanent.',
   },
   twitter: {
     card: 'summary',
     title: 'Tarifator – Raspunsul la „Cat costa?"',
-    description: 'Fisa servicii prin dictare + calculator pret cu adaos si TVA. Raspunsul instant la „cat costa?" pentru prestatori si comercianti. Gratuit 6 luni.',
+    description: 'Fisa servicii prin dictare + calculator pret cu adaos si TVA. Raspunsul instant la „cat costa?" pentru prestatori si comercianti. Plan gratuit permanent.',
   },
   appleWebApp: {
     capable: true,
