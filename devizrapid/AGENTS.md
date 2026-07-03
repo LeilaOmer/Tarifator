@@ -10,6 +10,18 @@ Inainte de a modifica logica de TVA, preturi, SGR, cutie/bucata, abonamente,
 numerotare fise sau scanare facturi, citeste `BUSINESS_RULES.md` — contine
 regulile de domeniu (contabile + de produs) pe care codul trebuie sa le respecte.
 
+# Documentatie proiect
+
+Deciziile importante de produs se documenteaza in `docs/`, ca proiectul sa nu
+depinda de istoricul conversatiilor:
+- `docs/DECISIONS.md` — jurnal de decizii (ce s-a decis + DE CE).
+- `docs/PRODUCT.md` — ce face produsul (module, tipuri de cont, fluxuri).
+- `docs/ROADMAP.md` — ce urmeaza.
+- `docs/VISION.md` — directia pe termen lung.
+
+Regulile de domeniu (TVA/SGR/cutie-bucata/limite) raman in `BUSINESS_RULES.md`.
+Cand iei o decizie de produs cu impact, scrie-o in fisierul potrivit din `docs/`.
+
 # Disciplina de cod
 
 - **Nu rescrie cod care merge.** Prefera editari tintite fata de rescrieri; o
