@@ -4,10 +4,10 @@ Ce urmează. Grupat după orizont, nu după dată fixă. Ideile neangajate sunt 
 
 ## Înainte de lansare (detaliile rămase)
 - [ ] **Stinge `PRELAUNCH`** (`lib/plan.ts`) — trece pe limitele reale pe niveluri.
-- [x] **RLS verificat (2026-07-03)** — RLS pornit pe toate tabelele; politici corecte
-      (scope pe `auth.uid()`, `with_check` corect la scrieri; `product_box_ratios` și
-      `api_usage` doar prin service-role). Rămas: `drop policy "allow all" on counters;`
-      (politica permisivă `true` pe un tabel legacy neutilizat de cod).
+- [x] **RLS verificat și închis (2026-07-03)** — RLS pornit pe toate tabelele; politici
+      corecte (scope pe `auth.uid()`, `with_check` corect la scrieri; `product_box_ratios`
+      și `api_usage` doar prin service-role). Politica publică `"allow all"` de pe `counters`
+      a fost ștearsă. Opțional (necritic): `drop table counters` dacă se confirmă că e legacy.
 - [ ] **Actualizează pagina de landing** (`app/page.tsx`): prețurile afișate (Artizan 25,
       Pro 65) și „6 luni gratuit" sunt **vechi** și nu mai corespund structurii
       Free/Artizan/Mercator/Pro. De aliniat cu `docs/PRODUCT.md`.
