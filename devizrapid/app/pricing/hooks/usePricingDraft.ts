@@ -39,6 +39,7 @@ export function usePricingDraft() {
           const s = JSON.parse(saved)
           if (s.roundStep) setRoundStep(s.roundStep)
           if (s.roundMode) setRoundMode(s.roundMode)
+          if (s.adaos !== undefined && s.adaos !== null && s.adaos !== '') setAdaos(String(s.adaos))
         }
       } catch {}
     }
@@ -72,9 +73,9 @@ export function usePricingDraft() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('pricing_settings', JSON.stringify({ roundStep, roundMode }))
+      localStorage.setItem('pricing_settings', JSON.stringify({ roundStep, roundMode, adaos }))
     } catch {}
-  }, [roundStep, roundMode])
+  }, [roundStep, roundMode, adaos])
 
   // Auto-salveaza calculul cat timp are cel putin un produs valid, ca sa nu se piarda
   // lucrul daca utilizatorul pleaca din pagina fara sa exporte un PDF.

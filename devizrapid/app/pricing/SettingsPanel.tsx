@@ -11,16 +11,16 @@ type Props = {
 export default function SettingsPanel({ supplier, onSupplier, adaos, onAdaos, roundStep, onRoundStep, roundMode, onRoundMode }: Props) {
   return (
     <div className="bg-white rounded-2xl shadow-sm p-2.5 space-y-2.5">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Setari calcul</p>
+      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Setari calcul</p>
 
       <div>
-        <label className="text-xs font-medium text-gray-500 mb-1 block">Furnizor (optional)</label>
+        <label className="text-xs font-medium text-gray-700 mb-1 block">Furnizor (optional)</label>
         <input className="w-full border border-gray-200 rounded-xl px-2.5 py-2 text-sm text-gray-900"
           placeholder="Ex: Metro, Selgros..." value={supplier} onChange={e => onSupplier(e.target.value)} />
       </div>
 
       <div>
-        <label className="text-xs font-medium text-gray-500 mb-1 block">Adaos comercial %</label>
+        <label className="text-xs font-medium text-gray-700 mb-1 block">Adaos comercial %</label>
         <input type="number" min="0" step="1"
           className="w-full border border-gray-200 rounded-xl px-2.5 py-2 text-sm font-bold text-gray-900"
           value={adaos} onChange={e => onAdaos(e.target.value)} />
@@ -28,7 +28,7 @@ export default function SettingsPanel({ supplier, onSupplier, adaos, onAdaos, ro
 
 
       <div>
-        <label className="text-xs font-medium text-gray-500 mb-1 block">Rotunjire pret final</label>
+        <label className="text-xs font-medium text-gray-700 mb-1 block">Rotunjire pret final</label>
         <div className="flex gap-2 flex-wrap">
           {(['none', '0.10', '0.50', '1.00'] as RoundStep[]).map(s => (
             <button key={s} onClick={() => onRoundStep(s)}
