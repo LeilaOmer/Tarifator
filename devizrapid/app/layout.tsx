@@ -69,6 +69,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="ro" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <head>
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="theme-color" content="#002b5b" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="google-site-verification" content="1oT_kVaquGCv5mRyuLehEXtvVb05ICwJ8ToNfDAqs84" />
       </head>
