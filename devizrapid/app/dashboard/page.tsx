@@ -330,9 +330,8 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex justify-between items-center pt-5 pb-1">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center shadow-sm shrink-0">
-              <span className="text-white font-black text-xl leading-none">T</span>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="Tarifator" className="w-11 h-11 rounded-2xl shadow-sm shrink-0" />
             <div>
               <h1 className="text-3xl font-black text-gray-900 tracking-tight leading-none">Tarifator</h1>
               {mode === 'pro' && companies.length > 0 ? (

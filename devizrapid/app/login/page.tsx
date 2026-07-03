@@ -70,6 +70,8 @@ export default function LoginPage() {
       <div className="bg-white rounded-2xl shadow-sm w-full max-w-sm p-8 space-y-5">
 
         <div className="text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="Tarifator" className="w-16 h-16 mx-auto mb-3 rounded-2xl shadow-sm" />
           <h1 className="text-3xl font-bold text-gray-900">Tarifator</h1>
           <p className="text-sm text-gray-400 mt-1">
             {mode === 'login' ? 'Autentificare' : 'Creare cont nou'}

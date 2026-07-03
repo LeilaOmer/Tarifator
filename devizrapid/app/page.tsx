@@ -32,9 +32,8 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className="px-6 py-5 flex items-center justify-between max-w-3xl mx-auto border-b border-gray-100">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-            <span className="text-white font-black text-sm leading-none">T</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="Tarifator" className="w-8 h-8 rounded-lg" />
           <span className="font-bold text-lg text-gray-900">Tarifator</span>
         </div>
         <Link href="/login" className="text-sm font-medium text-gray-500 hover:text-gray-900">
