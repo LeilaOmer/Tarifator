@@ -6,7 +6,7 @@ export default function TermeniPage() {
         <div>
           <a href="/login" className="text-sm text-blue-600 hover:underline">← Inapoi</a>
           <h1 className="text-2xl font-bold text-gray-900 mt-3">Termeni si Conditii</h1>
-          <p className="text-xs text-gray-400 mt-1">Ultima actualizare: Iunie 2026</p>
+          <p className="text-xs text-gray-400 mt-1">Ultima actualizare: Iulie 2026</p>
         </div>
 
         {/* Rezumat pe scurt */}
@@ -14,8 +14,8 @@ export default function TermeniPage() {
           <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">Pe scurt — ce trebuie sa stii</p>
           <ul className="space-y-2 text-sm text-blue-900">
             <li>✓ <strong>Ce e Tarifator:</strong> aplicatie pentru artizani si prestatori de servicii — genereaza fise de servicii, calculeaza preturi, exporta PDF.</li>
-            <li>✓ <strong>Trial gratuit:</strong> 6 luni cu acces complet, fara card (promotie early adopter).</li>
-            <li>✓ <strong>Dupa trial:</strong> plan gratuit (3 fise + 3 calcule/luna) sau abonament Artizan 25 lei/luna / Pro 65 lei/luna.</li>
+            <li>✓ <strong>Plan gratuit permanent:</strong> 3 fise + 3 calcule pe luna, fara card. Primele 30 de zile de la inregistrare: 10 fise + 10 calcule.</li>
+            <li>✓ <strong>Abonamente optionale:</strong> Artizan 59, Mercator 129, Pro 149 lei/luna (primii 50 utilizatori: preturi reduse). TVA si firmele multiple sunt gratuite pe orice plan.</li>
             <li>✓ <strong>Datele tale iti apartin:</strong> fisele, clientii si preturile introduse de tine sunt ale tale si le poti sterge oricand.</li>
             <li>✓ <strong>Retragere:</strong> ai 14 zile sa te razgandesti dupa plata. Daca ai folosit deja serviciul, rambursarea e proportionala.</li>
             <li>✓ <strong>Anulare:</strong> oricand, fara penalitati. Accesul continua pana la expirarea perioadei platite.</li>
@@ -26,7 +26,7 @@ export default function TermeniPage() {
         <Section title="1. Partile contractante">
           <p>Prezentii Termeni si Conditii ("Termeni") reglementeaza utilizarea aplicatiei <strong>Tarifator</strong> ("Serviciul"), disponibila la adresa <em>devizele-mele.vercel.app</em>.</p>
           <p className="mt-2">Serviciul este furnizat de <strong>Tarifator</strong> (serviciu in faza beta, operat de o persoana fizica, in curs de inregistrare ca entitate juridica), denumit in continuare "Furnizor".</p>
-          <p className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">Aceasta versiune a aplicatiei este in faza de testare (beta). Nu se percep plati in aceasta etapa. Accesul este gratuit pe durata perioadei de test.</p>
+          <p className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">Aplicatia este in faza de pre-lansare (beta). In aceasta etapa accesul este complet si gratuit; abonamentele platite se activeaza la lansare.</p>
           <p className="mt-2">Serviciul este destinat exclusiv persoanelor cu varsta de minimum <strong>18 ani</strong>. Prin crearea unui cont confirmati ca aveti cel putin 18 ani, ati citit, inteles si acceptat acesti Termeni.</p>
         </Section>
 
@@ -52,11 +52,12 @@ export default function TermeniPage() {
 
         <Section title="4. Planuri si tarife">
           <div className="space-y-2">
-            <Row label="Perioada de test" value="6 luni gratuite cu acces complet — promotie early adopter (inregistrare inainte de lansarea pe tarifator.ro)" />
-            <Row label="Plan gratuit" value="3 fise/luna + 3 calcule de pret/luna, dupa expirarea trialului" />
-            <Row label="Plan Artizan" value="25 lei (RON)/luna — utilizare nelimitata, fara TVA, fara firme" />
-            <Row label="Plan Pro" value="65 lei (RON)/luna — utilizare nelimitata, TVA, firme multiple" />
+            <Row label="Plan Free" value="Gratuit permanent — 3 fise/luna + 3 calcule de pret/luna, fara card. Primele 30 de zile de la inregistrare: 10 fise + 10 calcule." />
+            <Row label="Plan Artizan" value="59 lei (RON)/luna — fise nelimitate, 3 calcule de pret/luna" />
+            <Row label="Plan Mercator" value="129 lei (RON)/luna — calcule de pret nelimitate, 3 fise/luna" />
+            <Row label="Plan Pro" value="149 lei (RON)/luna — fise si calcule nelimitate" />
           </div>
+          <p className="mt-3 text-xs text-gray-500">TVA si firmele multiple sunt incluse gratuit pe orice plan. Primii 50 de utilizatori inregistrati beneficiaza de preturi reduse: 39 / 89 / 99 lei/luna.</p>
           <p className="mt-3">Tarifele pot fi modificate cu notificare prealabila de minimum <strong>30 de zile</strong> transmisa pe adresa de email inregistrata. Continuarea utilizarii Serviciului dupa data intrarii in vigoare a noilor tarife constituie acceptarea acestora.</p>
           <p className="mt-2">Modificarile substantiale ale prezentilor Termeni vor fi notificate cu minimum 15 zile inainte. Daca nu sunteti de acord, puteti rezilia contractul inainte de data modificarii.</p>
         </Section>

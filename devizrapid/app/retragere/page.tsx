@@ -6,7 +6,7 @@ export default function RetragerePage() {
         <div>
           <a href="/login" className="text-sm text-blue-600 hover:underline">← Inapoi</a>
           <h1 className="text-2xl font-bold text-gray-900 mt-3">Drept de Retragere · Rambursare · Anulare</h1>
-          <p className="text-xs text-gray-400 mt-1">OUG 34/2014 (modificata prin Legea 240/2020) · Ultima actualizare: Iunie 2026</p>
+          <p className="text-xs text-gray-400 mt-1">OUG 34/2014 (modificata prin Legea 240/2020) · Ultima actualizare: Iulie 2026</p>
         </div>
 
         <Section title="1. Dreptul de retragere (14 zile)">
@@ -62,8 +62,8 @@ export default function RetragerePage() {
               then="Rambursare proportionala cu perioada de indisponibilitate confirmata, la cerere motivata trimisa in 30 de zile de la incident."
             />
             <Case
-              when="Perioada de test (6 luni gratuite)"
-              then="Nu se aplica rambursarea — perioada de test este complet gratuita."
+              when="Plan gratuit (fara plata)"
+              then="Nu se aplica rambursarea — planul gratuit nu presupune nicio plata."
             />
           </div>
           <p className="mt-4 text-sm text-gray-500">Rambursarile se efectueaza prin acelasi mijloc de plata utilizat initial, in termen de 14 zile calendaristice (Art. 13 OUG 34/2014). Nu percepem taxe pentru procesarea rambursarilor.</p>
