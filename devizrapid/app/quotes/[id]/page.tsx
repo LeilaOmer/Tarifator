@@ -115,7 +115,7 @@ function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: numb
 
   doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.setTextColor(20, 20, 20);
   doc.text(emitent.name, margin, y);
-  doc.setFontSize(11); doc.setTextColor(59, 130, 246);
+  doc.setFontSize(11); doc.setTextColor(0, 43, 91); // Navy #002B5B
   doc.text(`FISA SERVICII ${quote.quote_number}`, W - margin, y, { align: "right" }); y += 6;
 
   if (isPro && emitent.cui) addLine(`CUI: ${emitent.cui}`, 9, false, [80, 80, 80]);
@@ -179,7 +179,7 @@ function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: numb
     doc.text(fmt(val), W - margin, y, { align: "right" }); y += 5.5;
   });
 
-  doc.setFillColor(59, 130, 246); doc.rect(W - margin - 62, y - 4, 62, 8, "F");
+  doc.setFillColor(0, 43, 91); doc.rect(W - margin - 62, y - 4, 62, 8, "F"); // Navy #002B5B
   doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(255, 255, 255);
   doc.text("TOTAL", W - margin - 52, y + 0.5);
   doc.text(fmt(total), W - margin, y + 0.5, { align: "right" }); y += 12;

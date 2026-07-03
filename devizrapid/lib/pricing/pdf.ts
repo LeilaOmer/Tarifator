@@ -185,7 +185,7 @@ export async function exportPDFMagazin(
     doc.text(fmt2(final) + ' RON', W - margin, y, { align: 'right' })
     doc.setFont('helvetica', 'normal')
     if (sgr > 0) {
-      doc.setFontSize(7); doc.setTextColor(200, 100, 0)
+      doc.setFontSize(7); doc.setTextColor(45, 106, 79) // Verde Smarald #2D6A4F
       doc.text(`+${fmt2(sgr)} SGR`, W - margin, y + 4, { align: 'right' })
       doc.setFontSize(9); doc.setTextColor(30, 30, 30)
       y += 4

@@ -1,6 +1,59 @@
 @import "tailwindcss";
 
+/* Paleta de brand — remapata central ca sa nu atingem 100+ clase din UI.
+   Tailwind v4 citeste culorile din variabile de tema, deci redefinind aici
+   scalele `blue`, `orange` si `amber` schimbam toate utilitarele
+   (bg-*, text-*, border-* etc.) dintr-o singura sursa.
+
+   - Albastru  -> Navy (#002B5B) — nuanta principala pe treapta 600.
+   - Portocaliu + Auriu/Amber -> Verde Smarald (#2D6A4F) — accentul cald,
+     unificat pe o singura scala verde (600). Portocaliul si amberul folosesc
+     ACEEASI scala verde, ca sa nu ramana nicio nuanta calda.
+   Rampa (50 deschis -> 900 inchis) e construita in jurul nuantei cerute pe 600,
+   ca fundalurile deschise (50/100) sa ramana deschise, nu sa devina toate navy. */
+@theme {
+  /* Navy (inlocuieste albastrul) */
+  --color-blue-50:  #e7edf3;
+  --color-blue-100: #c5d5e4;
+  --color-blue-200: #9cb8d0;
+  --color-blue-300: #6c93b4;
+  --color-blue-400: #3d6d96;
+  --color-blue-500: #14497a;
+  --color-blue-600: #002b5b;
+  --color-blue-700: #00234a;
+  --color-blue-800: #001b39;
+  --color-blue-900: #001228;
+
+  /* Verde Smarald (inlocuieste portocaliul) */
+  --color-orange-50:  #eaf3ee;
+  --color-orange-100: #cde5d6;
+  --color-orange-200: #a6cfb4;
+  --color-orange-300: #78b491;
+  --color-orange-400: #4e9770;
+  --color-orange-500: #397c58;
+  --color-orange-600: #2d6a4f;
+  --color-orange-700: #234f3c;
+  --color-orange-800: #1a3b2d;
+  --color-orange-900: #11271e;
+
+  /* Verde Smarald (inlocuieste auriul/amber — aceeasi scala ca portocaliul) */
+  --color-amber-50:  #eaf3ee;
+  --color-amber-100: #cde5d6;
+  --color-amber-200: #a6cfb4;
+  --color-amber-300: #78b491;
+  --color-amber-400: #4e9770;
+  --color-amber-500: #397c58;
+  --color-amber-600: #2d6a4f;
+  --color-amber-700: #234f3c;
+  --color-amber-800: #1a3b2d;
+  --color-amber-900: #11271e;
+
+  /* Fundal gri foarte deschis — folosit ca root de pagina (bg-gray-50) peste tot,
+     aliniat cu body ca sa fie un singur gri consistent in toata aplicatia. */
+  --color-gray-50: #f4f5f7;
+}
+
 body {
-  background-color: #f9fafb;
+  background-color: #f4f5f7; /* gri foarte deschis */
   color: #111827;
 }
