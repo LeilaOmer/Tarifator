@@ -122,7 +122,4 @@ Repere scurte, ca sa te orientezi rapid. Sunt STABILE (locatiile nu se muta des)
 
 ## Idei de roadmap (NU implementate — nu sunt reguli)
 
-- Export catre software de contabilitate (ex. Senior ERP / SAGA) — ar atrage contabili.
-- Adaos minim configurabil per categorie.
-- Alerta de pret schimbat fata de ultima factura a aceluiasi furnizor (folosind istoricul `product_box_ratios` / preturi).
-- Audit log: cine ce a modificat/sters/exportat si cand (tabel `audit_log` cu user_id, actiune, tabel, id_rand, valori vechi/noi, timestamp, populat la scrieri). Util cand vor exista clienti business cu cerinte de conformitate. Loginurile sunt deja acoperite de logurile Supabase Auth.
+Mutate in `docs/ROADMAP.md` (sursa unica). Deciziile asumate: `docs/DECISIONS.md`.
