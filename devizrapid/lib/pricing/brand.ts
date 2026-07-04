@@ -7,15 +7,25 @@ export const LOGO_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA
 // "Creat cu Tarifator.ro" (rotit, citit de jos in sus, centrat pe verticala).
 // A se apela pe FIECARE pagina. pageHeight = inaltimea paginii curente (mm).
 export function drawBrandMargin(doc: jsPDF, pageHeight: number) {
-  const label = 'Creat cu Tarifator.ro'
-  doc.setFont('helvetica', 'normal')
+  const part1 = 'Creat cu '
+  const part2 = 'Tarifator.ro'
   doc.setFontSize(7)
-  const tw = doc.getTextWidth(label)
-  const anchorY = (pageHeight + tw) / 2
-  doc.setTextColor(150, 150, 150)
-  doc.text(label, 6.5, anchorY, { angle: 90 })
+  doc.setTextColor(0, 0, 0) // negru
+  doc.setFont('helvetica', 'normal')
+  const w1 = doc.getTextWidth(part1)
+  doc.setFont('helvetica', 'bold')
+  const w2 = doc.getTextWidth(part2)
+  const total = w1 + w2
+  // Text rotit, citit de jos in sus, centrat pe verticala: "Creat cu " (normal)
+  // jos, "Tarifator.ro" (bold) deasupra.
+  const anchorY = (pageHeight + total) / 2
+  doc.setFont('helvetica', 'normal')
+  doc.text(part1, 6.5, anchorY, { angle: 90 })
+  doc.setFont('helvetica', 'bold')
+  doc.text(part2, 6.5, anchorY - w1, { angle: 90 })
   try { doc.addImage(LOGO_DATA_URL, 'PNG', 2.5, anchorY + 3, 7, 7) } catch {}
   // reset ca sa nu afectam desenul urmator
+  doc.setFont('helvetica', 'normal')
   doc.setTextColor(30, 30, 30)
   doc.setFontSize(9)
 }
