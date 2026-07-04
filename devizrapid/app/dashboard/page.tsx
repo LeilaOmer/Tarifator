@@ -12,8 +12,8 @@ import { useRouter } from 'next/navigation'
 // la prima logare dupa ce i-ai dat accesul. Schimba textul cu cuvintele tale.
 const LIFETIME_GREETING = {
   title: 'Mulțumesc din suflet.',
-  body: 'Ai acces complet la Tarifator, gratuit, pe viață — pentru că m-ai ajutat, aici sau în viață. E felul meu de a-ți spune că nu am uitat. Sper să-ți fie de folos.',
-  sign: '— Leyla',
+  body: 'Ai acces complet la Tarifator, gratuit, pe viață — pentru că mi-ai fost alături. E felul meu de a-ți spune că nu am uitat. Sper să-ți fie de folos.',
+  sign: '— Leila',
 }
 
 interface Company {
