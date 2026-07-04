@@ -33,7 +33,7 @@ export default function SettingsPage() {
   const [form, setForm] = useState(emptyCompany())
   const [accountType, setAccountType] = useState<'artizan' | 'pro'>('artizan')
   const [primaryModule, setPrimaryModuleState] = useState<PrimaryModule>('both')
-  const [sub, setSub] = useState<{ tier: PlanTier; fise: number; fiseLimit: number; calcule: number; calculeLimit: number; prelaunch: boolean; freemium: boolean } | null>(null)
+  const [sub, setSub] = useState<{ tier: PlanTier; fise: number; fiseLimit: number; calcule: number; calculeLimit: number; prelaunch: boolean; freemium: boolean; lifetime: boolean } | null>(null)
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null)
@@ -73,7 +73,7 @@ export default function SettingsPage() {
 
     const limits = await getEffectiveLimits(user.id, user.created_at)
     const [fise, calcule] = await Promise.all([getMonthlyFise(user.id), getMonthlyCalcule(user.id)])
-    setSub({ tier: limits.tier, fise, fiseLimit: limits.fise, calcule, calculeLimit: limits.calcule, prelaunch: limits.prelaunch, freemium: limits.freemium })
+    setSub({ tier: limits.tier, fise, fiseLimit: limits.fise, calcule, calculeLimit: limits.calcule, prelaunch: limits.prelaunch, freemium: limits.freemium, lifetime: limits.lifetime })
 
     setLoading(false)
   }
@@ -247,9 +247,10 @@ export default function SettingsPage() {
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Abonament</p>
                 <p className="text-lg font-black text-gray-900 mt-0.5">
-                  {sub.prelaunch ? 'Pro' : TIER_LABELS[sub.tier]}
-                  {sub.prelaunch && <span className="text-xs font-semibold text-green-600 ml-2">gratuit · perioada de lansare</span>}
-                  {!sub.prelaunch && sub.freemium && <span className="text-xs font-semibold text-green-600 ml-2">prima luna gratuita</span>}
+                  {sub.lifetime ? 'Pro' : sub.prelaunch ? 'Pro' : TIER_LABELS[sub.tier]}
+                  {sub.lifetime && <span className="text-xs font-semibold text-green-600 ml-2">acces gratuit pe viata</span>}
+                  {!sub.lifetime && sub.prelaunch && <span className="text-xs font-semibold text-green-600 ml-2">gratuit · perioada de lansare</span>}
+                  {!sub.lifetime && !sub.prelaunch && sub.freemium && <span className="text-xs font-semibold text-green-600 ml-2">prima luna gratuita</span>}
                 </p>
                 {planActiveUntil && new Date(planActiveUntil) > new Date() && sub.tier !== 'free' && !sub.prelaunch && (
                   <p className="text-xs text-gray-500 mt-0.5">

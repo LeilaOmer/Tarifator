@@ -43,6 +43,8 @@ cheamă „Calculator Preț".
   nelimitat). Se stinge manual la lansare.
 - Activarea abonamentului e **manuală** (se setează `plan_tier` + `plan_active_until`
   în DB) până la integrarea unui procesator de plăți.
+- **Acces gratuit pe viață**: coloana `profiles.lifetime = true` → Pro nelimitat permanent,
+  fără expirare (acordat manual unor oameni care au ajutat proiectul). Vezi ADR-019.
 
 ## Fluxuri cheie
 - **Fișă prin dictare**: buton mic → înregistrare → Whisper transcrie → model text

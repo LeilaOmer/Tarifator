@@ -9,6 +9,16 @@ proiectul să nu depindă de istoricul conversațiilor.
 
 ---
 
+## ADR-019 — Acces gratuit pe viață (lifetime) pentru cei care au ajutat
+**Data:** 2026-07-04.
+**Decizie:** Coloană `profiles.lifetime` (boolean). Când e `true`, userul primește **Pro
+nelimitat pe viață**, fără dată de expirare — `getEffectiveLimits` îl întoarce înaintea
+logicii de abonament plătit (dar după PRELAUNCH). Se acordă MANUAL în DB:
+`UPDATE profiles SET lifetime = true WHERE ...`.
+**De ce:** Câteva persoane care au ajutat proiectul (aici sau în viață) primesc acces full
+permanent. Un flag dedicat e mai curat decât o dată de expirare falsă (ex. 2099). În
+Setări apare „acces gratuit pe viață".
+
 ## ADR-001 — Aritmetica se face în cod, nu de AI
 **Decizie:** La scanarea facturilor/bonurilor, modelul AI DOAR citește și transcrie
 numerele brute. Toată aritmetica (TVA, cutie/bucată, discount, SGR, raport frate) se

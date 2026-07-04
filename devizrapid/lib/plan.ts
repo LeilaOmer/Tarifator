@@ -35,21 +35,28 @@ export type EffectiveLimits = {
   tier: PlanTier
   prelaunch: boolean
   freemium: boolean
+  lifetime: boolean
 }
 
 // Limitele lunare efective pentru un user, tinand cont, in ordine, de:
-// 1. pre-lansare (toti Pro), 2. abonament platit activ, 3. freemium prima luna,
-// 4. Free. Un singur select pe profil, ca sa nu multiplicam query-urile.
+// 1. pre-lansare (toti Pro), 2. acces gratuit pe viata, 3. abonament platit activ,
+// 4. freemium prima luna, 5. Free. Un singur select pe profil.
 export async function getEffectiveLimits(userId: string, createdAt: string): Promise<EffectiveLimits> {
   if (PRELAUNCH) {
-    return { ...TIER_LIMITS.pro, tier: 'pro', prelaunch: true, freemium: false }
+    return { ...TIER_LIMITS.pro, tier: 'pro', prelaunch: true, freemium: false, lifetime: false }
   }
 
   const { data } = await supabase
     .from('profiles')
-    .select('plan_tier, plan_active_until')
+    .select('plan_tier, plan_active_until, lifetime')
     .eq('id', userId)
     .single()
+
+  // Acces gratuit full pe viata — acordat manual (coloana `lifetime`) unor oameni
+  // care au ajutat proiectul. Pro nelimitat, fara data de expirare.
+  if (data?.lifetime) {
+    return { ...TIER_LIMITS.pro, tier: 'pro', prelaunch: false, freemium: false, lifetime: true }
+  }
 
   const active = !!data?.plan_active_until && new Date(data.plan_active_until) > new Date()
   const storedTier = (data?.plan_tier as PlanTier | null) ?? 'free'
@@ -58,9 +65,9 @@ export async function getEffectiveLimits(userId: string, createdAt: string): Pro
   if (tier === 'free') {
     const daysElapsed = Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000)
     if (daysElapsed < FREEMIUM_DAYS) {
-      return { fise: FREEMIUM_LIMIT, calcule: FREEMIUM_LIMIT, tier, prelaunch: false, freemium: true }
+      return { fise: FREEMIUM_LIMIT, calcule: FREEMIUM_LIMIT, tier, prelaunch: false, freemium: true, lifetime: false }
     }
   }
 
-  return { ...TIER_LIMITS[tier], tier, prelaunch: false, freemium: false }
+  return { ...TIER_LIMITS[tier], tier, prelaunch: false, freemium: false, lifetime: false }
 }
