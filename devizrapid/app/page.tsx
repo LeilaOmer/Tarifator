@@ -116,7 +116,7 @@ export default function LandingPage() {
       {/* Preturi */}
       <section className="border-t border-gray-100 px-6 py-16 max-w-3xl mx-auto">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Preturi</p>
-        <p className="text-sm text-gray-400 mb-8">Primii 50 de utilizatori: preturi reduse (in paranteza).</p>
+        <p className="text-sm text-gray-400 mb-8">Primii 50 de utilizatori inregistrati beneficiaza de pretul redus (marcat cu verde).</p>
         <div className="divide-y divide-gray-100 border border-gray-100 rounded-2xl overflow-hidden">
 
           <div className="px-6 py-5 flex justify-between items-center bg-green-50">
@@ -124,26 +124,32 @@ export default function LandingPage() {
               <p className="font-semibold text-gray-900">Free</p>
               <p className="text-sm text-gray-500 mt-0.5">3 fise + 3 calcule / luna · Fara card</p>
             </div>
-            <p className="text-2xl font-bold text-green-600">0 lei</p>
+            <p className="text-2xl font-bold text-green-600 whitespace-nowrap shrink-0 pl-3">0 lei</p>
           </div>
 
-          <div className="px-6 py-5 flex justify-between items-center">
+          <div className="px-6 py-5 flex justify-between items-center gap-3">
             <div>
               <p className="font-semibold text-gray-900">Artizan</p>
               <p className="text-sm text-gray-500 mt-0.5">Fise nelimitate · 3 calcule / luna</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">59 <span className="text-sm font-normal text-gray-400">(39) lei/luna</span></p>
+            <div className="text-right shrink-0">
+              <p className="text-2xl font-bold text-gray-900 whitespace-nowrap">59 <span className="text-sm font-normal text-gray-400">lei/luna</span></p>
+              <p className="text-xs font-semibold text-green-600 whitespace-nowrap">39 lei primii 50</p>
+            </div>
           </div>
 
-          <div className="px-6 py-5 flex justify-between items-center">
+          <div className="px-6 py-5 flex justify-between items-center gap-3">
             <div>
               <p className="font-semibold text-gray-900">Mercator</p>
               <p className="text-sm text-gray-500 mt-0.5">Calcule nelimitate · 3 fise / luna</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">129 <span className="text-sm font-normal text-gray-400">(89) lei/luna</span></p>
+            <div className="text-right shrink-0">
+              <p className="text-2xl font-bold text-gray-900 whitespace-nowrap">129 <span className="text-sm font-normal text-gray-400">lei/luna</span></p>
+              <p className="text-xs font-semibold text-green-600 whitespace-nowrap">89 lei primii 50</p>
+            </div>
           </div>
 
-          <div className="px-6 py-5 flex justify-between items-center">
+          <div className="px-6 py-5 flex justify-between items-center gap-3">
             <div>
               <div className="flex items-center gap-2">
                 <p className="font-semibold text-gray-900">Pro</p>
@@ -151,7 +157,10 @@ export default function LandingPage() {
               </div>
               <p className="text-sm text-gray-500 mt-0.5">Fise si calcule nelimitate</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">149 <span className="text-sm font-normal text-gray-400">(99) lei/luna</span></p>
+            <div className="text-right shrink-0">
+              <p className="text-2xl font-bold text-gray-900 whitespace-nowrap">149 <span className="text-sm font-normal text-gray-400">lei/luna</span></p>
+              <p className="text-xs font-semibold text-green-600 whitespace-nowrap">99 lei primii 50</p>
+            </div>
           </div>
 
         </div>
