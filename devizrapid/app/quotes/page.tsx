@@ -1,4 +1,5 @@
 'use client'
+import { toast } from '@/lib/toast'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getEffectiveLimits } from '@/lib/plan'
@@ -74,7 +75,7 @@ async function fetchData() {
       company_id: activeCompanyId || null
     }).select().single()
     setLoading(false)
-    if (error || !data) { alert('Nu s-a creat fisa: ' + (error?.message || 'eroare necunoscuta')); return }
+    if (error || !data) { toast('Nu s-a creat fisa: ' + (error?.message || 'eroare necunoscuta')); return }
     setTitle(''); setClientId('')
     router.push(`/quotes/${data.id}`)
   }
@@ -103,7 +104,7 @@ async function fetchData() {
     if (!session) { setSavingClient(false); return }
     const { data, error } = await supabase.from('clients').insert({ ...clientForm, user_id: session.user.id }).select().single()
     setSavingClient(false)
-    if (error || !data) { alert('Nu s-a adaugat beneficiarul: ' + (error?.message || 'eroare necunoscuta')); return }
+    if (error || !data) { toast('Nu s-a adaugat beneficiarul: ' + (error?.message || 'eroare necunoscuta')); return }
     setClients(prev => [...prev, { id: data.id, name: data.name }].sort((a, b) => a.name.localeCompare(b.name)))
     setClientId(data.id)
     setClientForm({ name: '', cui: '', address: '', contact_person: '', phone: '', email: '' })
@@ -113,7 +114,7 @@ async function fetchData() {
 
   async function handleDelete(id: string) {
     const { error } = await supabase.from('quotes').delete().eq('id', id)
-    if (error) { alert('Nu s-a sters fisa: ' + error.message); return }
+    if (error) { toast('Nu s-a sters fisa: ' + error.message); return }
     await fetchData()
   }
 

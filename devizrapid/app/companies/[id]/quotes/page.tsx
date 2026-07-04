@@ -1,4 +1,5 @@
 'use client'
+import { toast } from '@/lib/toast'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
@@ -35,7 +36,7 @@ export default function CompanyQuotesPage() {
 
   async function handleDelete(qid: string) {
     const { error } = await supabase.from('quotes').delete().eq('id', qid)
-    if (error) { alert('Nu s-a putut sterge fisa: ' + error.message); return }
+    if (error) { toast('Nu s-a putut sterge fisa: ' + error.message); return }
     load()
   }
 

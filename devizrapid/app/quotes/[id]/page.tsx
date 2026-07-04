@@ -1,4 +1,5 @@
 "use client";
+import { toast } from '@/lib/toast'
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -285,10 +286,10 @@ export default function QuoteDetailPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSavingClient(false); return; }
     const { data: newClient, error: clientErr } = await supabase.from("clients").insert({ ...clientForm, user_id: user.id }).select().single();
-    if (clientErr || !newClient) { setSavingClient(false); alert("Nu s-a adaugat beneficiarul: " + (clientErr?.message || "eroare necunoscuta")); return; }
+    if (clientErr || !newClient) { setSavingClient(false); toast("Nu s-a adaugat beneficiarul: " + (clientErr?.message || "eroare necunoscuta")); return; }
     const { error: linkErr } = await supabase.from("quotes").update({ client_id: newClient.id }).eq("id", id);
     setSavingClient(false);
-    if (linkErr) { alert("Beneficiarul s-a creat, dar nu s-a putut atasa la fisa: " + linkErr.message); return; }
+    if (linkErr) { toast("Beneficiarul s-a creat, dar nu s-a putut atasa la fisa: " + linkErr.message); return; }
     setClientForm({ name: "", cui: "", address: "", contact_person: "", phone: "", email: "" });
     setAnafError("");
     setShowClientModal(false);
@@ -356,7 +357,7 @@ export default function QuoteDetailPage() {
         quantity: qty,
         unit_price: price,
       });
-      if (itemErr) { setSaving(false); alert("Nu s-a salvat o linie: " + itemErr.message); return; }
+      if (itemErr) { setSaving(false); toast("Nu s-a salvat o linie: " + itemErr.message); return; }
     }
 
     const { data: allItems } = await supabase.from("quote_items").select("quantity, unit_price").eq("quote_id", quote.id);
@@ -376,7 +377,7 @@ export default function QuoteDetailPage() {
       discount: parseFloat(discount || "0"),
       discount_type: discountType,
     }).eq("id", quote.id);
-    if (totalErr) { setSaving(false); alert("Nu s-a actualizat totalul: " + totalErr.message); return; }
+    if (totalErr) { setSaving(false); toast("Nu s-a actualizat totalul: " + totalErr.message); return; }
 
     setRows([emptyRow()]);
     setSaving(false);
@@ -386,7 +387,7 @@ export default function QuoteDetailPage() {
 
   async function handleDeleteItem(itemId: string) {
     const { error: delErr } = await supabase.from("quote_items").delete().eq("id", itemId);
-    if (delErr) { alert("Nu s-a sters linia: " + delErr.message); return; }
+    if (delErr) { toast("Nu s-a sters linia: " + delErr.message); return; }
     const { data: remaining } = await supabase.from("quote_items").select("quantity, unit_price").eq("quote_id", quote!.id);
     const subtotalBrut = (remaining || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
@@ -426,7 +427,7 @@ export default function QuoteDetailPage() {
       discount_type: discountType,
     }).eq("id", quote.id);
     setSavingDiscount(false);
-    if (discErr) { alert("Nu s-a salvat discountul: " + discErr.message); return; }
+    if (discErr) { toast("Nu s-a salvat discountul: " + discErr.message); return; }
     setSavedDiscount(discount);
     setSavedDiscountType(discountType);
     playSuccessSound();
@@ -436,14 +437,14 @@ export default function QuoteDetailPage() {
   async function handleFinalize() {
     if (!quote) return;
     const { error } = await supabase.from("quotes").update({ status: "final" }).eq("id", quote.id);
-    if (error) { alert("Nu s-a finalizat fisa: " + error.message); return; }
+    if (error) { toast("Nu s-a finalizat fisa: " + error.message); return; }
     await loadQuote();
   }
 
   async function handleUnfinalize() {
     if (!quote) return;
     const { error } = await supabase.from("quotes").update({ status: "draft" }).eq("id", quote.id);
-    if (error) { alert("Nu s-a putut readuce fisa la ciorna: " + error.message); return; }
+    if (error) { toast("Nu s-a putut readuce fisa la ciorna: " + error.message); return; }
     await loadQuote();
   }
 

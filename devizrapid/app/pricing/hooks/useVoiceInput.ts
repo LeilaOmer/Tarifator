@@ -1,4 +1,5 @@
 'use client'
+import { toast } from '@/lib/toast'
 import { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Item } from '@/lib/pricing/calc'
@@ -24,7 +25,7 @@ export function useVoiceInput(onItemsAdded: (items: Item[]) => void) {
     setVoiceMsg('')
     let stream: MediaStream
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }) }
-    catch { alert('Nu am acces la microfon.'); return }
+    catch { toast('Nu am acces la microfon.'); return }
 
     const mediaRecorder = new MediaRecorder(stream)
     mediaRecorderRef.current = mediaRecorder

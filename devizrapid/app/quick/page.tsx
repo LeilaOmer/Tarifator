@@ -1,4 +1,5 @@
 'use client'
+import { toast } from '@/lib/toast'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getEffectiveLimits } from '@/lib/plan'
@@ -54,7 +55,7 @@ export default function QuickPage() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     } catch {
-      alert('Nu am acces la microfon.')
+      toast('Nu am acces la microfon.')
       return
     }
 
@@ -179,7 +180,7 @@ export default function QuickPage() {
         client_id = existing[0].id
       } else {
         const { data: newClient, error: clientErr } = await supabase.from('clients').insert({ name: preview.client_name, user_id: user?.id }).select().single()
-        if (clientErr) { setLoading(false); alert('Nu s-a putut salva clientul: ' + clientErr.message); return }
+        if (clientErr) { setLoading(false); toast('Nu s-a putut salva clientul: ' + clientErr.message); return }
         client_id = newClient?.id
       }
     }
@@ -194,7 +195,7 @@ export default function QuickPage() {
       quote_number,
       company_id: companyId
     }).select().single()
-    if (quoteErr || !quote) { setLoading(false); alert('Nu s-a creat fisa: ' + (quoteErr?.message || 'eroare necunoscuta')); return }
+    if (quoteErr || !quote) { setLoading(false); toast('Nu s-a creat fisa: ' + (quoteErr?.message || 'eroare necunoscuta')); return }
     for (const item of preview.items) {
       const { error: itemErr } = await supabase.from('quote_items').insert({
         quote_id: quote.id,
@@ -203,11 +204,11 @@ export default function QuickPage() {
         quantity: item.quantity,
         unit_price: item.unit_price
       })
-      if (itemErr) { setLoading(false); alert('Nu s-a salvat o linie din fisa: ' + itemErr.message); return }
+      if (itemErr) { setLoading(false); toast('Nu s-a salvat o linie din fisa: ' + itemErr.message); return }
     }
     const total = preview.items.reduce((sum, i) => sum + i.total, 0)
     const { error: totalErr } = await supabase.from('quotes').update({ total }).eq('id', quote.id)
-    if (totalErr) { setLoading(false); alert('Nu s-a actualizat totalul: ' + totalErr.message); return }
+    if (totalErr) { setLoading(false); toast('Nu s-a actualizat totalul: ' + totalErr.message); return }
     playSuccessSound()
     router.push('/quotes/' + quote.id)
   }

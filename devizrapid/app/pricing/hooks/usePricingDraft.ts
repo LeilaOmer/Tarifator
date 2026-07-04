@@ -1,4 +1,5 @@
 'use client'
+import { toast } from '@/lib/toast'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Item, RoundStep, RoundMode, emptyItem } from '@/lib/pricing/calc'
@@ -97,18 +98,18 @@ export function usePricingDraft() {
     if (companyId) {
       if (!v) {
         const { error } = await supabase.from('companies').update({ vat_rate: 0 }).eq('id', companyId)
-        if (error) { setVatPayerState(previous); alert('Nu s-a salvat regimul TVA: ' + error.message) }
+        if (error) { setVatPayerState(previous); toast('Nu s-a salvat regimul TVA: ' + error.message) }
       } else {
         // Restore to 21 only if currently non-platitor (0)
         const { data } = await supabase.from('companies').select('vat_rate').eq('id', companyId).single()
         if (data && data.vat_rate === 0) {
           const { error } = await supabase.from('companies').update({ vat_rate: 21 }).eq('id', companyId)
-          if (error) { setVatPayerState(previous); alert('Nu s-a salvat regimul TVA: ' + error.message) }
+          if (error) { setVatPayerState(previous); toast('Nu s-a salvat regimul TVA: ' + error.message) }
         }
       }
     } else {
       const { error } = await supabase.from('profiles').update({ vat_rate: v ? 21 : 0 }).eq('id', session.user.id)
-      if (error) { setVatPayerState(previous); alert('Nu s-a salvat regimul TVA: ' + error.message) }
+      if (error) { setVatPayerState(previous); toast('Nu s-a salvat regimul TVA: ' + error.message) }
     }
   }
 
@@ -128,10 +129,10 @@ export function usePricingDraft() {
     }
     if (draftId) {
       const { error } = await supabase.from('pricing_drafts').update(payload).eq('id', draftId)
-      if (error) { setSaving(false); alert('Nu s-a salvat calculul: ' + error.message); return }
+      if (error) { setSaving(false); toast('Nu s-a salvat calculul: ' + error.message); return }
     } else {
       const { data, error } = await supabase.from('pricing_drafts').insert(payload).select('id').single()
-      if (error) { setSaving(false); alert('Nu s-a salvat calculul: ' + error.message); return }
+      if (error) { setSaving(false); toast('Nu s-a salvat calculul: ' + error.message); return }
       if (data) setDraftId(data.id)
     }
     setSaving(false)

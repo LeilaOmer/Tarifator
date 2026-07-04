@@ -1,5 +1,6 @@
 'use client'
 
+import { toast } from '@/lib/toast'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getEffectiveLimits } from '@/lib/plan'
@@ -133,7 +134,7 @@ export default function Dashboard() {
     const { data: { session } } = await supabase.auth.getSession()
     if (session) {
       const { error } = await setPrimaryModule(session.user.id, value)
-      if (error) { setChoosingModule(false); alert('Nu s-a salvat alegerea: ' + error); return }
+      if (error) { setChoosingModule(false); toast('Nu s-a salvat alegerea: ' + error); return }
     }
     setPrimaryModuleValue(value)
     setShowWelcome(false)
@@ -184,7 +185,7 @@ export default function Dashboard() {
     const { data: { session } } = await supabase.auth.getSession()
     if (session) {
       const { error } = await supabase.from('feedback').insert({ user_id: session.user.id, message: fbText.trim() })
-      if (error) { setFbSending(false); alert('Nu s-a trimis mesajul: ' + error.message); return }
+      if (error) { setFbSending(false); toast('Nu s-a trimis mesajul: ' + error.message); return }
     }
     setFbText('')
     setFbDone(true)

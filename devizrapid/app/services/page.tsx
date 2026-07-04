@@ -1,4 +1,5 @@
 'use client'
+import { toast } from '@/lib/toast'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -65,14 +66,14 @@ export default function ServicesPage() {
     }
     const { error } = await supabase.from('services').insert(payload)
     setLoading(false)
-    if (error) { alert('Nu s-a adaugat serviciul: ' + error.message); return }
+    if (error) { toast('Nu s-a adaugat serviciul: ' + error.message); return }
     setName(''); setUnit(''); setPrice('')
     await fetchServices(isPro ? activeCompanyId : null)
   }
 
   async function handleDelete(id: string) {
     const { error } = await supabase.from('services').delete().eq('id', id)
-    if (error) { alert('Nu s-a sters serviciul: ' + error.message); return }
+    if (error) { toast('Nu s-a sters serviciul: ' + error.message); return }
     await fetchServices(isPro ? activeCompanyId : null)
   }
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { toast } from '@/lib/toast'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PrimaryModule, setPrimaryModule } from '@/lib/module'
@@ -81,7 +82,7 @@ export default function SettingsPage() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
     const { error } = await supabase.from('profiles').update(profileForm).eq('id', session.user.id)
-    if (error) { alert('Nu s-a salvat: ' + error.message); return }
+    if (error) { toast('Nu s-a salvat: ' + error.message); return }
     setProfileSaved(true)
     setProfileEditing(false)
     setTimeout(() => setProfileSaved(false), 2000)
@@ -113,7 +114,7 @@ export default function SettingsPage() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
     const { error } = await supabase.from('profiles').update({ account_type: type }).eq('id', session.user.id)
-    if (error) { alert('Nu s-a putut schimba tipul de cont: ' + error.message); return }
+    if (error) { toast('Nu s-a putut schimba tipul de cont: ' + error.message); return }
     setAccountType(type)
     localStorage.setItem('dashboardMode', type)
     if (type === 'artizan') {
@@ -126,7 +127,7 @@ export default function SettingsPage() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
     const { error } = await setPrimaryModule(session.user.id, value)
-    if (error) { alert('Nu s-a putut schimba modulul principal: ' + error); return }
+    if (error) { toast('Nu s-a putut schimba modulul principal: ' + error); return }
     setPrimaryModuleState(value)
   }
 
@@ -136,7 +137,7 @@ export default function SettingsPage() {
     const user = session.user
     if (editing === 'new') {
       const { data: newCompany, error } = await supabase.from('companies').insert({ ...form, user_id: user.id }).select().single()
-      if (error) { alert('Nu s-a putut adauga firma: ' + error.message); return }
+      if (error) { toast('Nu s-a putut adauga firma: ' + error.message); return }
       if (newCompany) {
         const { data: existingServices } = await supabase.from('services').select('*').eq('user_id', user.id).is('company_id', null)
         if (existingServices && existingServices.length > 0) {
@@ -150,7 +151,7 @@ export default function SettingsPage() {
       }
     } else {
       const { error } = await supabase.from('companies').update(form).eq('id', editing!)
-      if (error) { alert('Nu s-a salvat firma: ' + error.message); return }
+      if (error) { toast('Nu s-a salvat firma: ' + error.message); return }
     }
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -171,7 +172,7 @@ export default function SettingsPage() {
           unit: s.unit,
           price_per_unit: s.price_per_unit
         })))
-        if (error) alert('Firma s-a creat, dar nu s-au putut copia serviciile: ' + error.message)
+        if (error) toast('Firma s-a creat, dar nu s-au putut copia serviciile: ' + error.message)
       }
     }
     setPendingCompanyId(null)
@@ -189,14 +190,14 @@ export default function SettingsPage() {
       email: userEmail || null,
       vat_rate: profileForm.vat_rate || 0,
     })
-    if (error) { alert('Nu s-a putut adauga firma: ' + error.message); return }
+    if (error) { toast('Nu s-a putut adauga firma: ' + error.message); return }
     load()
   }
 
   async function deleteCompany(id: string) {
     if (!confirm('Stergi firma? Fisele asociate raman dar fara firma.')) return
     const { error } = await supabase.from('companies').delete().eq('id', id)
-    if (error) { alert('Nu s-a putut sterge firma: ' + error.message); return }
+    if (error) { toast('Nu s-a putut sterge firma: ' + error.message); return }
     load()
   }
 
@@ -213,7 +214,7 @@ export default function SettingsPage() {
       router.push('/login')
     } else {
       const { error } = await res.json()
-      alert('Eroare la stergere: ' + (error || 'necunoscuta'))
+      toast('Eroare la stergere: ' + (error || 'necunoscuta'))
       setDeletingAccount(false)
       setShowDeleteModal(false)
     }

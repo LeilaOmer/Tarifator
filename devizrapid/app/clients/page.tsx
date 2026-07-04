@@ -1,4 +1,5 @@
 'use client'
+import { toast } from '@/lib/toast'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -44,7 +45,7 @@ export default function ClientsPage() {
     const { data: { user } } = await supabase.auth.getUser()
     const { error } = await supabase.from('clients').insert({ ...form, user_id: user?.id })
     setLoading(false)
-    if (error) { alert('Nu s-a adaugat clientul: ' + error.message); return }
+    if (error) { toast('Nu s-a adaugat clientul: ' + error.message); return }
     setForm({ name: '', phone: '', email: '', cui: '', address: '', contact_person: '' })
     await fetchClients()
   }
@@ -57,14 +58,14 @@ export default function ClientsPage() {
       cui: editing.cui, address: editing.address, contact_person: editing.contact_person
     }).eq('id', editing.id)
     setLoading(false)
-    if (error) { alert('Nu s-a salvat clientul: ' + error.message); return }
+    if (error) { toast('Nu s-a salvat clientul: ' + error.message); return }
     setEditing(null)
     await fetchClients()
   }
 
   async function handleDelete(id: string) {
     const { error } = await supabase.from('clients').delete().eq('id', id)
-    if (error) { alert('Nu s-a sters clientul: ' + error.message); return }
+    if (error) { toast('Nu s-a sters clientul: ' + error.message); return }
     await fetchClients()
   }
 

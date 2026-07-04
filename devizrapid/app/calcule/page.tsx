@@ -1,4 +1,5 @@
 'use client'
+import { toast } from '@/lib/toast'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -33,7 +34,7 @@ export default function CalculePage() {
 
   async function handleDelete(id: string) {
     const { error } = await supabase.from('pricing_drafts').delete().eq('id', id)
-    if (error) { alert('Nu s-a putut sterge calculul: ' + error.message); return }
+    if (error) { toast('Nu s-a putut sterge calculul: ' + error.message); return }
     setDrafts(prev => prev.filter(d => d.id !== id))
   }
 
