@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyBearer } from '@/lib/apiAuth'
+import { allowDaily } from '@/lib/rateLimit'
 
 export const maxDuration = 30
 
 export async function GET(req: NextRequest) {
+  // Fara auth + limita, ruta ar fi un proxy ANAF deschis oricui de pe internet
+  // (consum pe serverul nostru + risc de blocare a IP-ului de catre ANAF).
+  const userId = await verifyBearer(req.headers.get('authorization'))
+  if (!userId) return NextResponse.json({ error: 'Trebuie sa fii autentificat.' }, { status: 401 })
+  if (!(await allowDaily(userId, 'anaf-lookup', 100))) {
+    return NextResponse.json({ error: 'Limita zilnica de cautari ANAF atinsa. Revino maine.' }, { status: 429 })
+  }
+
   const cui = req.nextUrl.searchParams.get('cui')
   if (!cui) return NextResponse.json({ error: 'CUI lipsa' }, { status: 400 })
 

@@ -2,6 +2,7 @@
 import { toast } from '@/lib/toast'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { anafLookup } from '@/lib/anaf'
 import { useRouter } from 'next/navigation'
 
 type Client = { id: string; name: string; phone: string; email: string; cui: string; address: string; contact_person: string }
@@ -21,9 +22,8 @@ export default function ClientsPage() {
     setLookingUp(true)
     setAnafError('')
     try {
-      const res = await fetch(`/api/anaf-lookup?cui=${cuiNum}`)
-      const data = await res.json()
-      if (!res.ok) { setAnafError(data.error || 'Eroare ANAF'); return }
+      const { ok, data } = await anafLookup(cuiNum)
+      if (!ok) { setAnafError(data.error || 'Eroare ANAF'); return }
       onResult(data.name || '', data.address || '')
     } catch {
       setAnafError('Eroare conexiune')

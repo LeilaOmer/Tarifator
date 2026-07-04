@@ -2,6 +2,7 @@
 import { toast } from '@/lib/toast'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { anafLookup } from '@/lib/anaf'
 import { getEffectiveLimits } from '@/lib/plan'
 import { getMonthlyFise } from '@/lib/usage'
 import { nextQuoteNumber } from '@/lib/quoteNumber'
@@ -86,9 +87,8 @@ async function fetchData() {
     setLookingUp(true)
     setAnafError('')
     try {
-      const res = await fetch(`/api/anaf-lookup?cui=${cuiNum}`)
-      const data = await res.json()
-      if (!res.ok) { setAnafError(data.error || 'Eroare ANAF'); return }
+      const { ok, data } = await anafLookup(cuiNum)
+      if (!ok) { setAnafError(data.error || 'Eroare ANAF'); return }
       setClientForm(f => ({ ...f, name: data.name || f.name, address: data.address || f.address }))
     } catch {
       setAnafError('Eroare conexiune')

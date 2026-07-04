@@ -3,6 +3,7 @@
 import { toast } from '@/lib/toast'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { anafLookup } from '@/lib/anaf'
 import { PrimaryModule, setPrimaryModule } from '@/lib/module'
 import { PlanTier, TIER_LABELS, getEffectiveLimits } from '@/lib/plan'
 import { getMonthlyFise, getMonthlyCalcule } from '@/lib/usage'
@@ -101,9 +102,8 @@ export default function SettingsPage() {
     setProfileAnafError('')
     try {
       const cui = profileForm.cui.replace(/[^0-9]/g, '')
-      const res = await fetch(`/api/anaf-lookup?cui=${cui}`)
-      const data = await res.json()
-      if (!res.ok) { setProfileAnafError(data.error || 'Eroare ANAF'); return }
+      const { ok, data } = await anafLookup(cui)
+      if (!ok) { setProfileAnafError(data.error || 'Eroare ANAF'); return }
       setProfileForm(f => ({
         ...f,
         company_name: data.name || f.company_name,
@@ -656,9 +656,8 @@ function CompanyForm({ form, setForm, onSave, onCancel, saved }: {
     setAnafError('')
     try {
       const cui = form.cui.replace(/[^0-9]/g, '')
-      const res = await fetch(`/api/anaf-lookup?cui=${cui}`)
-      const data = await res.json()
-      if (!res.ok) { setAnafError(data.error || 'Eroare ANAF'); return }
+      const { ok, data } = await anafLookup(cui)
+      if (!ok) { setAnafError(data.error || 'Eroare ANAF'); return }
       setForm({
         ...form,
         name: data.name || form.name,
