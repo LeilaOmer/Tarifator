@@ -65,14 +65,14 @@ export default function CompanyQuotesPage() {
 
       <div className="max-w-2xl mx-auto px-4 pt-5">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          {quotes.length === 0 && <p className="p-5 text-sm text-gray-400">Niciun fisa pentru aceasta firma.</p>}
+          {quotes.length === 0 && <p className="p-5 text-sm text-gray-500">Niciun fisa pentru aceasta firma.</p>}
           <div className="divide-y divide-gray-50">
             {quotes.map(q => (
               <div key={q.id} className="flex justify-between items-center px-5 py-4 gap-3">
                 <div className="flex-1 min-w-0">
                   <a href={`/quotes/${q.id}`} className="text-sm font-semibold text-gray-900 hover:text-blue-600">{q.title}</a>
                   <div className="flex items-center gap-2 mt-0.5">
-                    {clientName(q.client_id) && <span className="text-xs text-gray-400">{clientName(q.client_id)}</span>}
+                    {clientName(q.client_id) && <span className="text-xs text-gray-500">{clientName(q.client_id)}</span>}
                     <span className={`text-xs px-2 py-0.5 rounded-full ${q.status === 'draft' ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}`}>
                       {q.status === 'draft' ? 'Ciorna' : 'Finalizat'}
                     </span>

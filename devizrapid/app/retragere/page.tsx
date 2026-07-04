@@ -6,7 +6,7 @@ export default function RetragerePage() {
         <div>
           <a href="/login" className="text-sm text-blue-600 hover:underline">← Inapoi</a>
           <h1 className="text-2xl font-bold text-gray-900 mt-3">Drept de Retragere · Rambursare · Anulare</h1>
-          <p className="text-xs text-gray-400 mt-1">OUG 34/2014 (modificata prin Legea 240/2020) · Ultima actualizare: Iulie 2026</p>
+          <p className="text-xs text-gray-500 mt-1">OUG 34/2014 (modificata prin Legea 240/2020) · Ultima actualizare: Iulie 2026</p>
         </div>
 
         <Section title="1. Dreptul de retragere (14 zile)">
@@ -90,7 +90,7 @@ export default function RetragerePage() {
           <p className="mt-2">Dupa stergerea contului, nu veti mai putea accesa datele introduse. Va recomandam sa exportati documentele importante inainte de stergere.</p>
         </Section>
 
-        <div className="text-xs text-gray-400 pt-4 border-t border-gray-100 space-x-4">
+        <div className="text-xs text-gray-500 pt-4 border-t border-gray-100 space-x-4">
           <a href="/termeni" className="hover:text-gray-600">Termeni si conditii</a>
           <a href="/confidentialitate" className="hover:text-gray-600">Politica de confidentialitate</a>
         </div>

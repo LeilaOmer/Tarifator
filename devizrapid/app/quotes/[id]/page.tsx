@@ -502,12 +502,12 @@ export default function QuoteDetailPage() {
         {/* Header compact */}
         <div className="bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center justify-between">
           <p className="text-sm font-bold text-blue-600">{quote.quote_number}</p>
-          <p className="text-xs text-gray-400">{fmtDate(quote.created_at)}</p>
+          <p className="text-xs text-gray-500">{fmtDate(quote.created_at)}</p>
         </div>
 
         {/* Client */}
         <div className="bg-white rounded-2xl shadow-sm p-5">
-  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Beneficiar</p>
+  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Beneficiar</p>
   {c ? (
     <>
       <p className="text-base font-bold text-gray-900">{c.name}</p>
@@ -518,7 +518,7 @@ export default function QuoteDetailPage() {
     </>
   ) : (
     <div className="flex items-center justify-between gap-3">
-      <p className="text-sm text-gray-400">Fara beneficiar</p>
+      <p className="text-sm text-gray-500">Fara beneficiar</p>
       {!isFinalized && (
         <button onClick={() => setShowClientModal(true)}
           className="px-3 py-2 bg-purple-100 text-purple-700 rounded-xl text-xs font-semibold shrink-0 whitespace-nowrap">
@@ -532,14 +532,14 @@ export default function QuoteDetailPage() {
         {/* Lucrari */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Lucrari / Servicii</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Lucrari / Servicii</p>
           </div>
 
           {quote.quote_items.map(item => (
             <div key={item.id} className="px-5 py-3 flex items-center justify-between gap-3 border-b border-gray-50">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-800">{item.description}</p>
-                <p className="text-xs text-gray-400">{item.quantity} buc × {fmt(item.unit_price)}</p>
+                <p className="text-xs text-gray-500">{item.quantity} buc × {fmt(item.unit_price)}</p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <p className="text-sm font-semibold text-gray-900">{fmt(item.total)}</p>
@@ -567,14 +567,14 @@ export default function QuoteDetailPage() {
                     onChange={e => updateRow(idx, "description", e.target.value)} />
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-xs text-gray-400 mb-0.5 block">Cantitate</label>
+                      <label className="text-xs text-gray-500 mb-0.5 block">Cantitate</label>
                       <input type="number" min="0.01" step="0.01" inputMode="decimal"
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
                         placeholder="1" value={row.quantity}
                         onChange={e => updateRow(idx, "quantity", e.target.value)} />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-400 mb-0.5 block">Pret unitar (RON)</label>
+                      <label className="text-xs text-gray-500 mb-0.5 block">Pret unitar (RON)</label>
                       <input type="number" min="0" step="0.01" inputMode="decimal"
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
                         placeholder="0.00" value={row.unit_price}
@@ -601,7 +601,7 @@ export default function QuoteDetailPage() {
         {/* Discount */}
         {(!isFinalized || parseFloat(discount || "0") > 0) && (
         <div className="bg-white rounded-2xl shadow-sm p-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Discount</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Discount</p>
           {!isFinalized && (
             <div className="flex gap-2">
               <div className="flex rounded-xl overflow-hidden border border-gray-200">
@@ -691,7 +691,7 @@ export default function QuoteDetailPage() {
           <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-4 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-gray-800">Beneficiar nou</p>
-              <button onClick={() => { setShowClientModal(false); setAnafError(""); }} className="text-gray-400 text-xl leading-none">×</button>
+              <button onClick={() => { setShowClientModal(false); setAnafError(""); }} className="text-gray-500 text-xl leading-none">×</button>
             </div>
             <div className="flex gap-2">
               <input className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"

@@ -6,7 +6,7 @@ export default function TermeniPage() {
         <div>
           <a href="/login" className="text-sm text-blue-600 hover:underline">← Inapoi</a>
           <h1 className="text-2xl font-bold text-gray-900 mt-3">Termeni si Conditii</h1>
-          <p className="text-xs text-gray-400 mt-1">Ultima actualizare: Iulie 2026</p>
+          <p className="text-xs text-gray-500 mt-1">Ultima actualizare: Iulie 2026</p>
         </div>
 
         {/* Rezumat pe scurt */}
@@ -99,7 +99,7 @@ export default function TermeniPage() {
           <p className="mt-2"><strong>Forta majora:</strong> Furnizorul nu raspunde pentru neexecutarea obligatiilor cauzata de evenimente in afara controlului sau rezonabil (dezastre naturale, atacuri cibernetice la scara larga, probleme ale furnizorilor de infrastructura).</p>
         </Section>
 
-        <div className="text-xs text-gray-400 pt-4 border-t border-gray-100 space-x-4">
+        <div className="text-xs text-gray-500 pt-4 border-t border-gray-100 space-x-4">
           <a href="/confidentialitate" className="hover:text-gray-600">Politica de confidentialitate</a>
           <a href="/retragere" className="hover:text-gray-600">Drept de retragere</a>
         </div>

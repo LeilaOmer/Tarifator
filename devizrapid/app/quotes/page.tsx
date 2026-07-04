@@ -150,7 +150,7 @@ const filteredQuotes = filterCompanyId === 'all' || !filterCompanyId
               className={`flex-shrink-0 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all ${
                 filterCompanyId === 'all'
                   ? 'border-blue-500 text-blue-700'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-600'
               }`}>
               Toate
             </button>
@@ -162,7 +162,7 @@ const filteredQuotes = filterCompanyId === 'all' || !filterCompanyId
 
         {/* Creare fisa nou */}
         <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Fisa Servicii Noua</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Fisa Servicii Noua</p>
           {activeCompanyId && companyName(activeCompanyId) && (
             <p className="text-xs text-purple-600 font-medium">Firma: {companyName(activeCompanyId)}</p>
           )}
@@ -188,7 +188,7 @@ const filteredQuotes = filterCompanyId === 'all' || !filterCompanyId
         {/* Lista fise de servicii */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           {filteredQuotes.length === 0 && (
-            <p className="p-5 text-sm text-gray-400">Niciun fisa{filterCompanyId !== 'all' ? ' pentru firma selectata' : ''}.</p>
+            <p className="p-5 text-sm text-gray-500">Niciun fisa{filterCompanyId !== 'all' ? ' pentru firma selectata' : ''}.</p>
           )}
           <div className="divide-y divide-gray-50">
             {filteredQuotes.map(q => (
@@ -196,7 +196,7 @@ const filteredQuotes = filterCompanyId === 'all' || !filterCompanyId
                 <div className="flex-1 min-w-0">
                   <a href={`/quotes/${q.id}`} className="text-sm font-semibold text-gray-900 hover:text-blue-600">{q.title}</a>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    {clientName(q.client_id) && <span className="text-xs text-gray-400">{clientName(q.client_id)}</span>}
+                    {clientName(q.client_id) && <span className="text-xs text-gray-500">{clientName(q.client_id)}</span>}
                     {q.company_id && companyName(q.company_id) && (
                       <span className="text-xs text-purple-500 font-medium">{companyName(q.company_id)}</span>
                     )}
@@ -221,7 +221,7 @@ const filteredQuotes = filterCompanyId === 'all' || !filterCompanyId
           <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-4 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-gray-800">Beneficiar nou</p>
-              <button onClick={() => { setShowClientModal(false); setAnafError('') }} className="text-gray-400 text-xl leading-none">×</button>
+              <button onClick={() => { setShowClientModal(false); setAnafError('') }} className="text-gray-500 text-xl leading-none">×</button>
             </div>
             <div className="flex gap-2">
               <input className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"

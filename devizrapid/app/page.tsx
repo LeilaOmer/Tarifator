@@ -53,7 +53,7 @@ export default function LandingPage() {
           Prestezi servicii? Dictezi ce ai lucrat — fisa apare cu preturile tale.<br />
           Vinzi produse? Introduci costul — obtii pretul de vanzare cu adaos si TVA.
         </p>
-        <p className="text-sm text-gray-400 mb-10 max-w-lg">
+        <p className="text-sm text-gray-500 mb-10 max-w-lg">
           Clientul primeste un document clar pe WhatsApp. Tu pleci cu banii.
         </p>
         <Link href="/login"
@@ -64,7 +64,7 @@ export default function LandingPage() {
 
       {/* Doua instrumente */}
       <section className="border-t border-gray-100 px-6 py-16 max-w-3xl mx-auto">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-10">Ce face</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-10">Ce face</p>
         <div className="grid md:grid-cols-2 gap-12">
           <div>
             <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-3">Fisa Servicii</p>
@@ -96,7 +96,7 @@ export default function LandingPage() {
       {/* Pentru cine */}
       <section className="border-t border-gray-100 bg-gray-50 px-6 py-16">
         <div className="max-w-3xl mx-auto">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-6">Pentru cine</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-6">Pentru cine</p>
           <p className="text-2xl font-bold text-gray-900 mb-6 max-w-xl">
             Doua categorii, acelasi instrument.
           </p>
@@ -115,8 +115,8 @@ export default function LandingPage() {
 
       {/* Preturi */}
       <section className="border-t border-gray-100 px-6 py-16 max-w-3xl mx-auto">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Preturi</p>
-        <p className="text-sm text-gray-400 mb-8">Primii 50 de utilizatori inregistrati beneficiaza de pretul redus (marcat cu verde).</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Preturi</p>
+        <p className="text-sm text-gray-500 mb-8">Primii 50 de utilizatori inregistrati beneficiaza de pretul redus (marcat cu verde).</p>
         <div className="divide-y divide-gray-100 border border-gray-100 rounded-2xl overflow-hidden">
 
           <div className="px-6 py-5 flex justify-between items-center bg-green-50">
@@ -133,7 +133,7 @@ export default function LandingPage() {
               <p className="text-sm text-gray-500 mt-0.5">Fise nelimitate · 3 calcule / luna</p>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-2xl font-bold text-gray-900 whitespace-nowrap">59 <span className="text-sm font-normal text-gray-400">lei/luna</span></p>
+              <p className="text-2xl font-bold text-gray-900 whitespace-nowrap">59 <span className="text-sm font-normal text-gray-500">lei/luna</span></p>
               <p className="text-xs font-semibold text-green-600 whitespace-nowrap">39 lei primii 50</p>
             </div>
           </div>
@@ -144,7 +144,7 @@ export default function LandingPage() {
               <p className="text-sm text-gray-500 mt-0.5">Calcule nelimitate · 3 fise / luna</p>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-2xl font-bold text-gray-900 whitespace-nowrap">129 <span className="text-sm font-normal text-gray-400">lei/luna</span></p>
+              <p className="text-2xl font-bold text-gray-900 whitespace-nowrap">129 <span className="text-sm font-normal text-gray-500">lei/luna</span></p>
               <p className="text-xs font-semibold text-green-600 whitespace-nowrap">89 lei primii 50</p>
             </div>
           </div>
@@ -158,13 +158,13 @@ export default function LandingPage() {
               <p className="text-sm text-gray-500 mt-0.5">Fise si calcule nelimitate</p>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-2xl font-bold text-gray-900 whitespace-nowrap">149 <span className="text-sm font-normal text-gray-400">lei/luna</span></p>
+              <p className="text-2xl font-bold text-gray-900 whitespace-nowrap">149 <span className="text-sm font-normal text-gray-500">lei/luna</span></p>
               <p className="text-xs font-semibold text-green-600 whitespace-nowrap">99 lei primii 50</p>
             </div>
           </div>
 
         </div>
-        <p className="text-xs text-gray-400 mt-4">TVA si firmele multiple sunt gratuite pe orice plan. Primele 30 de zile: 10 fise + 10 calcule.</p>
+        <p className="text-xs text-gray-500 mt-4">TVA si firmele multiple sunt gratuite pe orice plan. Primele 30 de zile: 10 fise + 10 calcule.</p>
       </section>
 
       {/* CTA final */}
@@ -178,7 +178,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-100 px-6 py-8 max-w-3xl mx-auto flex flex-wrap justify-between items-center gap-4 text-sm text-gray-400">
+      <footer className="border-t border-gray-100 px-6 py-8 max-w-3xl mx-auto flex flex-wrap justify-between items-center gap-4 text-sm text-gray-500">
         <span>© 2025 Tarifator</span>
         <div className="flex gap-6">
           <Link href="/termeni" className="hover:text-gray-600">Termeni</Link>

@@ -233,7 +233,7 @@ export default function QuickPage() {
             <div className="border border-gray-200 rounded-xl p-3 text-gray-700 text-sm">{transcript}</div>
           )}
           {loading && (
-            <p className="text-center text-sm text-gray-400">Procesez...</p>
+            <p className="text-center text-sm text-gray-500">Procesez...</p>
           )}
           <button onClick={() => { setPreview(null); setTranscript(''); committedRef.current = '' }}
             className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold text-sm">

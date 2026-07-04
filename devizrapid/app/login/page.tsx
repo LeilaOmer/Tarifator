@@ -73,7 +73,7 @@ export default function LoginPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="Tarifator" className="w-16 h-16 mx-auto mb-3 rounded-2xl shadow-sm" />
           <h1 className="text-3xl font-bold text-gray-900">Tarifator</h1>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-gray-500 mt-1">
             {mode === 'login' ? 'Autentificare' : 'Creare cont nou'}
           </p>
         </div>
@@ -128,7 +128,7 @@ export default function LoginPage() {
 
         {mode === 'signup' && (
           <div className="space-y-3 pt-1">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Acorduri obligatorii</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Acorduri obligatorii</p>
 
             <ConsentCheck
               checked={acceptTerms}
@@ -149,7 +149,7 @@ export default function LoginPage() {
               label={<>Am luat la cunostinta <a href="/retragere" target="_blank" className="text-blue-600 underline">Politica de Retragere si Rambursare</a>, inclusiv exceptia pentru servicii digitale cu executie imediata</>}
             />
 
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-1">Optional</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-1">Optional</p>
             <ConsentCheck
               checked={acceptMarketing}
               onChange={setAcceptMarketing}
@@ -159,7 +159,7 @@ export default function LoginPage() {
         )}
 
         <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess('') }}
-          className="w-full py-2 text-sm text-gray-400 hover:text-gray-600">
+          className="w-full py-2 text-sm text-gray-500 hover:text-gray-600">
           {mode === 'login' ? 'Nu ai cont? Creeaza unul' : 'Ai deja cont? Autentifica-te'}
         </button>
 

@@ -98,7 +98,7 @@ export default function ServicesPage() {
 
         {/* Form adaugare */}
         <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Serviciu nou</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Serviciu nou</p>
           <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
             placeholder="Nume serviciu *" value={name} onChange={e => setName(e.target.value)} />
           <div className="flex gap-3">
@@ -116,14 +116,14 @@ export default function ServicesPage() {
         {/* Lista servicii */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           {services.length === 0 && (
-            <p className="p-5 text-sm text-gray-400">Niciun serviciu adaugat.</p>
+            <p className="p-5 text-sm text-gray-500">Niciun serviciu adaugat.</p>
           )}
           <div className="divide-y divide-gray-50">
             {services.map(s => (
               <div key={s.id} className="flex items-center justify-between px-5 py-4 gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-gray-900 truncate">{s.name}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{s.unit}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{s.unit}</p>
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
                   <span className="text-sm font-bold text-gray-700">{s.price_per_unit} lei/{s.unit}</span>

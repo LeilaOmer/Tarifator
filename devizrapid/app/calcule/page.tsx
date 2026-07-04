@@ -51,10 +51,10 @@ export default function CalculePage() {
 
       <div className="max-w-2xl mx-auto px-4 pt-5 space-y-3">
         {loading ? (
-          <p className="text-center text-gray-400 py-10">Se incarca...</p>
+          <p className="text-center text-gray-500 py-10">Se incarca...</p>
         ) : drafts.length === 0 ? (
           <div className="text-center py-14 space-y-3">
-            <p className="text-gray-400 text-sm">Niciun calcul salvat inca.</p>
+            <p className="text-gray-500 text-sm">Niciun calcul salvat inca.</p>
             <button onClick={() => router.push('/pricing')}
               className="text-blue-600 text-sm font-semibold bg-blue-50 px-4 py-2 rounded-xl">
               + Calcul nou
@@ -65,7 +65,7 @@ export default function CalculePage() {
             <div key={d.id} className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3">
               <div className="flex-1 min-w-0 cursor-pointer" onClick={() => router.push('/pricing?draft=' + d.id)}>
                 <p className="font-semibold text-gray-900 truncate">{d.title}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-500 mt-0.5">
                   {d.items?.length || 0} produse · adaos {d.adaos}% · {new Date(d.updated_at).toLocaleDateString('ro-RO')}
                 </p>
               </div>

@@ -6,7 +6,7 @@ export default function ConfidentialitatePage() {
         <div>
           <a href="/login" className="text-sm text-blue-600 hover:underline">← Inapoi</a>
           <h1 className="text-2xl font-bold text-gray-900 mt-3">Politica de Confidentialitate</h1>
-          <p className="text-xs text-gray-400 mt-1">GDPR — Regulamentul (UE) 2016/679 · Ultima actualizare: Iunie 2026</p>
+          <p className="text-xs text-gray-500 mt-1">GDPR — Regulamentul (UE) 2016/679 · Ultima actualizare: Iunie 2026</p>
         </div>
 
         <Section title="1. Operatorul de date">
@@ -127,7 +127,7 @@ export default function ConfidentialitatePage() {
           <p>Datele sunt stocate in baze de date securizate (Supabase, Frankfurt). Accesul la datele dvs. este protejat prin politici de securitate la nivel de rand (Row Level Security — RLS). Comunicatiile sunt criptate TLS 1.2+/HTTPS.</p>
         </Section>
 
-        <div className="text-xs text-gray-400 pt-4 border-t border-gray-100 space-x-4">
+        <div className="text-xs text-gray-500 pt-4 border-t border-gray-100 space-x-4">
           <a href="/termeni" className="hover:text-gray-600">Termeni si conditii</a>
           <a href="/retragere" className="hover:text-gray-600">Drept de retragere</a>
         </div>
@@ -150,7 +150,7 @@ function Processor({ name, role, location }: { name: string; role: string; locat
   return (
     <div className="flex gap-3 text-sm py-1 border-b border-gray-50 last:border-0">
       <span className="font-semibold text-gray-700 w-32 shrink-0">{name}</span>
-      <span className="text-gray-600">{role} · <span className="text-gray-400 text-xs">{location}</span></span>
+      <span className="text-gray-600">{role} · <span className="text-gray-500 text-xs">{location}</span></span>
     </div>
   )
 }

@@ -82,7 +82,7 @@ export default function ClientsPage() {
 
         {/* Form adaugare */}
         <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Client nou</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Client nou</p>
           <div className="flex gap-2">
             <input className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
               placeholder="CUI (optional)" value={form.cui} onChange={e => { setForm({ ...form, cui: e.target.value }); setAnafError('') }} />
@@ -111,7 +111,7 @@ export default function ClientsPage() {
 
         {/* Lista clienti */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          {clients.length === 0 && <p className="p-5 text-sm text-gray-400">Niciun client.</p>}
+          {clients.length === 0 && <p className="p-5 text-sm text-gray-500">Niciun client.</p>}
           <div className="divide-y divide-gray-50">
             {clients.map(c => (
               <div key={c.id}>
@@ -153,11 +153,11 @@ export default function ClientsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm text-gray-900">{c.name}</p>
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                        {c.cui && <span className="text-xs text-gray-400">CUI {c.cui}</span>}
-                        {c.phone && <span className="text-xs text-gray-400">{c.phone}</span>}
-                        {c.email && <span className="text-xs text-gray-400">{c.email}</span>}
-                        {c.address && <span className="text-xs text-gray-400 w-full truncate">{c.address}</span>}
-                        {c.contact_person && <span className="text-xs text-gray-400">Contact: {c.contact_person}</span>}
+                        {c.cui && <span className="text-xs text-gray-500">CUI {c.cui}</span>}
+                        {c.phone && <span className="text-xs text-gray-500">{c.phone}</span>}
+                        {c.email && <span className="text-xs text-gray-500">{c.email}</span>}
+                        {c.address && <span className="text-xs text-gray-500 w-full truncate">{c.address}</span>}
+                        {c.contact_person && <span className="text-xs text-gray-500">Contact: {c.contact_person}</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-4 shrink-0">

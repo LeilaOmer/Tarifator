@@ -244,14 +244,14 @@ export default function SettingsPage() {
           <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Abonament</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Abonament</p>
                 <p className="text-lg font-black text-gray-900 mt-0.5">
                   {sub.prelaunch ? 'Pro' : TIER_LABELS[sub.tier]}
                   {sub.prelaunch && <span className="text-xs font-semibold text-green-600 ml-2">gratuit · perioada de lansare</span>}
                   {!sub.prelaunch && sub.freemium && <span className="text-xs font-semibold text-green-600 ml-2">prima luna gratuita</span>}
                 </p>
                 {planActiveUntil && new Date(planActiveUntil) > new Date() && sub.tier !== 'free' && !sub.prelaunch && (
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     Activ pana la {new Date(planActiveUntil).toLocaleDateString('ro-RO')}
                     <button onClick={() => setShowCancelModal(true)} className="text-amber-600 hover:text-amber-800 font-semibold ml-2">Anuleaza</button>
                   </p>
@@ -261,13 +261,13 @@ export default function SettingsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div className="bg-gray-50 rounded-xl px-3 py-2.5">
-                <p className="text-xs text-gray-400">Fise Servicii (luna asta)</p>
+                <p className="text-xs text-gray-500">Fise Servicii (luna asta)</p>
                 <p className={`text-sm font-bold ${Number.isFinite(sub.fiseLimit) && sub.fise >= sub.fiseLimit ? 'text-red-600' : 'text-gray-800'}`}>
                   {Number.isFinite(sub.fiseLimit) ? `${sub.fise} / ${sub.fiseLimit}` : 'Nelimitat'}
                 </p>
               </div>
               <div className="bg-gray-50 rounded-xl px-3 py-2.5">
-                <p className="text-xs text-gray-400">Calcule Pret (luna asta)</p>
+                <p className="text-xs text-gray-500">Calcule Pret (luna asta)</p>
                 <p className={`text-sm font-bold ${Number.isFinite(sub.calculeLimit) && sub.calcule >= sub.calculeLimit ? 'text-red-600' : 'text-gray-800'}`}>
                   {Number.isFinite(sub.calculeLimit) ? `${sub.calcule} / ${sub.calculeLimit}` : 'Nelimitat'}
                 </p>
@@ -278,8 +278,8 @@ export default function SettingsPage() {
 
         {/* Mod de lucru — comutatorul TVA/firme (NU abonamentul) */}
         <div className="bg-white rounded-2xl shadow-sm p-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Mod de lucru</p>
-          <p className="text-xs text-gray-400 mb-3">Nu tine de abonament — poate fi schimbat oricand.</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Mod de lucru</p>
+          <p className="text-xs text-gray-500 mb-3">Nu tine de abonament — poate fi schimbat oricand.</p>
           <div className="grid grid-cols-2 gap-3">
             {([
               { type: 'artizan' as const, icon: '🔨', label: 'Simplu', desc: 'Fara TVA · o firma' },
@@ -295,7 +295,7 @@ export default function SettingsPage() {
                 <span className={`text-sm font-bold ${accountType === o.type ? (o.type === 'pro' ? 'text-purple-700' : 'text-blue-700') : 'text-gray-700'}`}>
                   {o.label}
                 </span>
-                <span className="text-xs text-gray-400 text-center">{o.desc}</span>
+                <span className="text-xs text-gray-500 text-center">{o.desc}</span>
               </button>
             ))}
           </div>
@@ -303,7 +303,7 @@ export default function SettingsPage() {
 
         {/* Modul principal */}
         <div className="bg-white rounded-2xl shadow-sm p-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Modul principal pe dashboard</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Modul principal pe dashboard</p>
           <div className="grid grid-cols-3 gap-2">
             {([
               { value: 'calculator', icon: '🧮', label: 'Calculator Pret' },
@@ -325,7 +325,7 @@ export default function SettingsPage() {
         {accountType === 'pro' && (
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Firmele mele</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Firmele mele</p>
               {editing !== 'new' && (
                 <button onClick={() => { setForm(emptyCompany()); setEditing('new') }}
                   className="text-sm font-semibold text-blue-600">+ Adauga</button>
@@ -336,7 +336,7 @@ export default function SettingsPage() {
                 <div className="px-5 py-4 flex items-center justify-between border-b border-gray-50">
                   <div>
                     <a href={`/companies/${c.id}/quotes`} className="text-sm font-bold text-gray-900 hover:text-blue-600">{c.name}</a>
-                    {c.cui && <p className="text-xs text-gray-400">CUI: {c.cui}</p>}
+                    {c.cui && <p className="text-xs text-gray-500">CUI: {c.cui}</p>}
                   </div>
                   <div className="flex gap-3">
                     <button onClick={() => startEdit(c)} className="text-sm text-blue-600">Editeaza</button>
@@ -347,7 +347,7 @@ export default function SettingsPage() {
               </div>
             ))}
             {companies.length === 0 && editing !== 'new' && (
-              <p className="px-5 py-4 text-sm text-gray-400">Nicio firma adaugata.</p>
+              <p className="px-5 py-4 text-sm text-gray-500">Nicio firma adaugata.</p>
             )}
             {editing !== 'new' && profileForm.company_name.trim() &&
               !companies.some(c => c.cui && profileForm.cui && c.cui === profileForm.cui) && (
@@ -355,7 +355,7 @@ export default function SettingsPage() {
                 <button onClick={createCompanyFromProfile} className="text-sm font-semibold text-blue-600">
                   + Adauga „{profileForm.company_name}" (firma contului) in lista
                 </button>
-                <p className="text-xs text-gray-400 mt-0.5">Ca sa poti emite fise pe firma cu care ti-ai creat contul.</p>
+                <p className="text-xs text-gray-500 mt-0.5">Ca sa poti emite fise pe firma cu care ti-ai creat contul.</p>
               </div>
             )}
             {editing === 'new' && (
@@ -367,7 +367,7 @@ export default function SettingsPage() {
         {/* Contul meu */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Contul meu</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Contul meu</p>
             {!profileEditing && (
               <button onClick={() => setProfileEditing(true)} className="text-sm font-semibold text-blue-600">
                 Editeaza
@@ -377,7 +377,7 @@ export default function SettingsPage() {
 
           <div className="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-400">Email cont</p>
+              <p className="text-xs text-gray-500">Email cont</p>
               <p className="text-sm font-semibold text-gray-800">{userEmail}</p>
             </div>
           </div>
@@ -391,12 +391,12 @@ export default function SettingsPage() {
                 { label: 'Adresa', value: profileForm.address },
               ].map(({ label, value }) => (
                 <div key={label} className="px-5 py-3">
-                  <p className="text-xs text-gray-400">{label}</p>
-                  <p className="text-sm font-semibold text-gray-800">{value || <span className="text-gray-300 font-normal">—</span>}</p>
+                  <p className="text-xs text-gray-500">{label}</p>
+                  <p className="text-sm font-semibold text-gray-800">{value || <span className="text-gray-400 font-normal">—</span>}</p>
                 </div>
               ))}
               <div className="px-5 py-3">
-                <p className="text-xs text-gray-400">Regim TVA</p>
+                <p className="text-xs text-gray-500">Regim TVA</p>
                 <p className="text-sm font-semibold text-gray-800">
                   {profileForm.vat_rate === 0 ? 'Non-platitor TVA' : `Platitor TVA (${profileForm.vat_rate}%)`}
                 </p>
@@ -467,7 +467,7 @@ export default function SettingsPage() {
           )}
 
           <div className="px-5 py-3 border-b border-gray-50">
-            <p className="text-xs text-gray-400 mb-2">Documente legale</p>
+            <p className="text-xs text-gray-500 mb-2">Documente legale</p>
             <div className="space-y-2">
               {[
                 { href: '/termeni', label: 'Termeni si Conditii' },
@@ -477,7 +477,7 @@ export default function SettingsPage() {
                 <a key={href} href={href}
                   className="flex items-center justify-between text-sm text-blue-600 hover:text-blue-800 py-0.5">
                   {label}
-                  <span className="text-gray-300 ml-2">→</span>
+                  <span className="text-gray-400 ml-2">→</span>
                 </a>
               ))}
             </div>
@@ -488,7 +488,7 @@ export default function SettingsPage() {
               className="text-sm font-semibold text-red-500 hover:text-red-700">
               Sterge contul
             </button>
-            <p className="text-xs text-gray-400 mt-0.5">Toate datele tale vor fi sterse definitiv.</p>
+            <p className="text-xs text-gray-500 mt-0.5">Toate datele tale vor fi sterse definitiv.</p>
           </div>
         </div>
 

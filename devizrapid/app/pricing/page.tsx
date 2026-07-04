@@ -121,7 +121,7 @@ export default function PricingPage() {
           className={`w-full py-4 rounded-2xl font-bold text-base transition-all ${listening ? 'bg-red-500 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}>
           {listening ? '🔴 Opreste inregistrarea' : '🎤 Dicteaza produse de pe factura'}
         </button>
-        {loading && <p className="text-center text-sm text-gray-400">Procesez...</p>}
+        {loading && <p className="text-center text-sm text-gray-500">Procesez...</p>}
         {!loading && voiceMsg && (
           <p className={`text-center text-sm ${voiceMsg.startsWith('Nu') ? 'text-red-400' : 'text-green-600'}`}>{voiceMsg}</p>
         )}
@@ -161,7 +161,7 @@ export default function PricingPage() {
         <div className="fixed inset-0 bg-black/60 z-30 flex flex-col">
           <div className="bg-white px-4 py-3 flex items-center justify-between shadow-sm shrink-0">
             <p className="text-sm font-bold text-gray-800">Verifica PDF-ul</p>
-            <button onClick={closePreview} className="text-gray-400 text-2xl leading-none">×</button>
+            <button onClick={closePreview} className="text-gray-500 text-2xl leading-none">×</button>
           </div>
           <div className="flex-1 overflow-y-auto bg-gray-200 p-3 space-y-3">
             {previewImages === null ? (

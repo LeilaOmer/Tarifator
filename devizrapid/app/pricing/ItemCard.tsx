@@ -82,7 +82,7 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
 
       <div className="flex gap-2">
         <div className="flex-1">
-          <label className="text-xs text-gray-400 mb-0.5 block">Pret furnizor (fara SGR)</label>
+          <label className="text-xs text-gray-500 mb-0.5 block">Pret furnizor (fara SGR)</label>
           <input
             type="number" min="0" step="0.01"
             className="w-full border border-gray-200 rounded-xl px-2.5 py-1.5 text-sm text-gray-900"
@@ -92,7 +92,7 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
           />
         </div>
         <div className="w-20">
-          <label className="text-xs text-gray-400 mb-0.5 block">Disc %</label>
+          <label className="text-xs text-gray-500 mb-0.5 block">Disc %</label>
           <input
             type="number" min="0" max="100" step="0.5"
             className="w-full border border-gray-200 rounded-xl px-2.5 py-1.5 text-sm text-gray-900"
@@ -102,7 +102,7 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
           />
         </div>
         <div className="w-20">
-          <label className="text-xs text-gray-400 mb-0.5 block">SGR lei</label>
+          <label className="text-xs text-gray-500 mb-0.5 block">SGR lei</label>
           <input
             type="number" min="0" step="0.50"
             className="w-full border border-gray-200 rounded-xl px-2.5 py-1.5 text-sm text-gray-900"
@@ -114,7 +114,7 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-400">TVA:</label>
+        <label className="text-xs text-gray-500">TVA:</label>
         <div className="flex rounded-lg overflow-hidden border border-gray-200">
           {([11, 21] as const).map(r => (
             <button
@@ -133,26 +133,26 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
           {c.vatPayer ? (
             <>
               <div className="flex justify-between">
-                <span className="text-gray-400">Pret net furnizor</span>
+                <span className="text-gray-500">Pret net furnizor</span>
                 <span className="font-medium">{fmt2(c.netPrice)} lei</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Adaos ({adaos}%)</span>
+                <span className="text-gray-500">Adaos ({adaos}%)</span>
                 <span className="font-medium">+{fmt2(c.sellExVat - c.netPrice)} lei</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Fara TVA</span>
+                <span className="text-gray-500">Fara TVA</span>
                 <span className="font-medium">{fmt2(c.sellExVat)} lei</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">TVA {item.vat}%</span>
+                <span className="text-gray-500">TVA {item.vat}%</span>
                 <span className="font-medium">+{fmt2(c.vatAmt)} lei</span>
               </div>
             </>
           ) : (
             <>
               <div className="flex justify-between">
-                <span className="text-gray-400">Pret net furnizor</span>
+                <span className="text-gray-500">Pret net furnizor</span>
                 <span className="font-medium">{fmt2(c.netPrice)} lei</span>
               </div>
               <div className="flex justify-between">
@@ -160,11 +160,11 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
                 <span className="font-medium text-orange-500">+{fmt2(c.inVatAmt)} lei</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Pret de intrare</span>
+                <span className="text-gray-500">Pret de intrare</span>
                 <span className="font-medium">{fmt2(c.costWithVat)} lei</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Adaos ({adaos}%)</span>
+                <span className="text-gray-500">Adaos ({adaos}%)</span>
                 <span className="font-medium">+{fmt2(c.adaosAmt)} lei</span>
               </div>
             </>

@@ -72,9 +72,9 @@ function UpgradeContent() {
                 ) : (
                   <p className="text-2xl font-black text-gray-900">
                     {promoActive ? tier.promoPrice : tier.price}
-                    <span className="text-base font-semibold text-gray-400"> lei/luna</span>
+                    <span className="text-base font-semibold text-gray-500"> lei/luna</span>
                     {promoActive && (
-                      <span className="text-sm font-semibold text-gray-300 line-through ml-2">{tier.price}</span>
+                      <span className="text-sm font-semibold text-gray-400 line-through ml-2">{tier.price}</span>
                     )}
                   </p>
                 )}
