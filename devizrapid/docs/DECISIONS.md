@@ -36,7 +36,7 @@ plătească pentru ce nu folosesc.
 capacitatea legală de a lucra corect.
 
 ## ADR-005 — Free e podeaua permanentă; freemium 30 de zile
-**Decizie:** Primele 30 de zile un cont nou primește 10 fișe + 10 calcule, apoi cade pe
+**Decizie:** Primele 30 de zile un cont nou primește 30 fișe + 30 calcule, apoi cade pe
 Free (3+3). Nimeni nu rămâne blocat complet.
 **De ce:** Perioadă generoasă de probă fără să existe „ziduri" care alungă userul.
 Consecință: `/trial-expired` devine cod mort (îl păstrăm, scoatem rutarea).

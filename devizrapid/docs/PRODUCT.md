@@ -37,7 +37,7 @@ cheamă „Calculator Preț".
 | Pro | 149 lei | 99 lei | nelimitat | nelimitat |
 
 - **TVA + firme multiple** sunt gratuite pentru toți (axă separată de abonament).
-- **Freemium**: primele 30 de zile de la înregistrare → 10 fișe + 10 calcule, apoi
+- **Freemium**: primele 30 de zile de la înregistrare → 30 fișe + 30 calcule, apoi
   cade pe Free (3+3). Free e podeaua permanentă.
 - **PRELAUNCH** (`lib/plan.ts`): cât e `true`, oricine e tratat ca Pro (totul
   nelimitat). Se stinge manual la lansare.

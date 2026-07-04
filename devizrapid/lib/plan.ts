@@ -13,7 +13,7 @@ export const PRELAUNCH = true
 // Prima luna dupa inregistrare: orice cont Free primeste limite ridicate (10+10)
 // in loc de 3+3, apoi cade inapoi pe Free. Free ramane podeaua permanenta.
 export const FREEMIUM_DAYS = 30
-export const FREEMIUM_LIMIT = 10
+export const FREEMIUM_LIMIT = 30
 
 export const TIER_LIMITS: Record<PlanTier, { fise: number; calcule: number }> = {
   free: { fise: 3, calcule: 3 },

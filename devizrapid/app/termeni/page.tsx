@@ -14,7 +14,7 @@ export default function TermeniPage() {
           <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">Pe scurt — ce trebuie sa stii</p>
           <ul className="space-y-2 text-sm text-blue-900">
             <li>✓ <strong>Ce e Tarifator:</strong> aplicatie pentru artizani si prestatori de servicii — genereaza fise de servicii, calculeaza preturi, exporta PDF.</li>
-            <li>✓ <strong>Plan gratuit permanent:</strong> 3 fise + 3 calcule pe luna, fara card. Primele 30 de zile de la inregistrare: 10 fise + 10 calcule.</li>
+            <li>✓ <strong>Plan gratuit permanent:</strong> 3 fise + 3 calcule pe luna, fara card. Primele 30 de zile de la inregistrare: 30 fise + 30 calcule.</li>
             <li>✓ <strong>Abonamente optionale:</strong> Artizan 59, Mercator 129, Pro 149 lei/luna (primii 50 utilizatori: preturi reduse). TVA si firmele multiple sunt gratuite pe orice plan.</li>
             <li>✓ <strong>Datele tale iti apartin:</strong> fisele, clientii si preturile introduse de tine sunt ale tale si le poti sterge oricand.</li>
             <li>✓ <strong>Retragere:</strong> ai 14 zile sa te razgandesti dupa plata. Daca ai folosit deja serviciul, rambursarea e proportionala.</li>
@@ -52,7 +52,7 @@ export default function TermeniPage() {
 
         <Section title="4. Planuri si tarife">
           <div className="space-y-2">
-            <Row label="Plan Free" value="Gratuit permanent — 3 fise/luna + 3 calcule de pret/luna, fara card. Primele 30 de zile de la inregistrare: 10 fise + 10 calcule." />
+            <Row label="Plan Free" value="Gratuit permanent — 3 fise/luna + 3 calcule de pret/luna, fara card. Primele 30 de zile de la inregistrare: 30 fise + 30 calcule." />
             <Row label="Plan Artizan" value="59 lei (RON)/luna — fise nelimitate, 3 calcule de pret/luna" />
             <Row label="Plan Mercator" value="129 lei (RON)/luna — calcule de pret nelimitate, 3 fise/luna" />
             <Row label="Plan Pro" value="149 lei (RON)/luna — fise si calcule nelimitate" />

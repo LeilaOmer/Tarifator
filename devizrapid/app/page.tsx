@@ -177,7 +177,7 @@ export default function LandingPage() {
           </div>
 
         </div>
-        <p className="text-xs text-gray-500 mt-4">TVA si firmele multiple sunt gratuite pe orice plan. Primele 30 de zile: 10 fise + 10 calcule.</p>
+        <p className="text-xs text-gray-500 mt-4">TVA si firmele multiple sunt gratuite pe orice plan. Primele 30 de zile: 30 fise + 30 calcule.</p>
       </section>
 
       {/* CTA final */}

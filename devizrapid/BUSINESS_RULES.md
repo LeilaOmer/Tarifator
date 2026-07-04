@@ -67,7 +67,7 @@ Fiecare tip de cont are limite LUNARE diferite pe cele doua module:
 | Mercator | 129 lei | 89 lei | 3 | nelimitat |
 | Pro | 149 lei | 99 lei | nelimitat | nelimitat |
 
-- **Freemium**: primele 30 de zile de la inregistrare, un cont Free primeste 10 fise + 10 calcule (in loc de 3+3), apoi cade pe Free. Free e podeaua permanenta — nimeni nu ramane blocat complet.
+- **Freemium**: primele 30 de zile de la inregistrare, un cont Free primeste 30 fise + 30 calcule (in loc de 3+3), apoi cade pe Free. Free e podeaua permanenta — nimeni nu ramane blocat complet.
 - **PRELAUNCH** (`lib/plan.ts`): cat e `true`, oricine e tratat ca Pro (totul nelimitat). Se stinge MANUAL la lansare.
 - Activarea unui abonament platit e MANUALA (se seteaza `plan_tier` + `plan_active_until` in DB) pana la integrarea unui procesator de plati.
 - Numararea consumului e pe luna calendaristica: fise = tabelul `quotes`, calcule = `pricing_usage`.
