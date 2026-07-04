@@ -29,6 +29,19 @@ iconiță, imagine OG pentru share. Rămas:
       (acum e manual). Deblochează abonamentele fără intervenție.
 - [ ] **Groq Dev tier** (limite ~10×) — permite prompt mai bogat și scanare completă a
       facturilor dense (acum promptul e slăbit intenționat — vezi ADR-015).
+- [ ] **Confirmare pe telefon (SMS OTP)** — Supabase phone auth + furnizor SMS
+      (Twilio/Vonage). Cel mai puternic anti-abuz freemium, DAR costă bani/SMS + fricțiune
+      la înregistrare. Doar când apar venituri și abuz real. (Vezi anti-abuz de mai jos.)
+
+## Anti-abuz freemium (înregistrare)
+- [x] **Făcut (2026-07-04)**: la înregistrare se resping emailurile temporare (temp-mail)
+      și duplicatele Gmail cu `+tag`/puncte (`lib/emailGuard.ts` + `/api/check-signup`);
+      buton „retrimite emailul de confirmare" pe login.
+- [ ] **Pornește confirmarea pe email** — cod deja gata (login tratează cazul „fără sesiune
+      → verifică emailul"). De făcut în Supabase: Auth → „Confirm email" = ON + SMTP propriu
+      (Resend, deja în proiect) + Redirect URL. Fără SMTP propriu, emailul built-in Supabase
+      e plafonat și ajunge în spam.
+- Telefon/SMS = pasul următor (mai sus), când merită costul.
 
 ## Idei (neangajate — NU sunt promisiuni)
 - **Audit log**: cine ce a modificat/șters/exportat și când (tabel `audit_log` cu user_id,

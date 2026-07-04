@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showResend, setShowResend] = useState(false)
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [acceptGdpr, setAcceptGdpr] = useState(false)
   const [acceptRetragere, setAcceptRetragere] = useState(false)
@@ -25,8 +26,16 @@ export default function LoginPage() {
       .catch(() => {})
   }, [mode])
 
-  async function handleSubmit() {
+  async function resendConfirmation() {
     setError(''); setSuccess('')
+    if (!email) { setError('Introdu emailul intai.'); return }
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    if (error) setError('Nu s-a putut retrimite emailul. Mai incearca in cateva minute.')
+    else setSuccess('Am retrimis emailul de confirmare. Verifica inbox-ul (si folderul Spam).')
+  }
+
+  async function handleSubmit() {
+    setError(''); setSuccess(''); setShowResend(false)
     if (!email || !password) { setError('Completeaza email si parola.'); return }
     if (password.length < 6) { setError('Parola trebuie sa aiba minim 6 caractere.'); return }
     if (mode === 'signup' && (!acceptTerms || !acceptGdpr || !acceptRetragere)) {
@@ -38,9 +47,21 @@ export default function LoginPage() {
     if (mode === 'login') {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       setLoading(false)
-      if (error) { setError('Email sau parola incorecte.'); return }
+      if (error) {
+        if (error.message.toLowerCase().includes('confirm')) {
+          setError('Emailul nu e confirmat inca. Verifica inbox-ul sau retrimite mai jos.')
+          setShowResend(true)
+        } else setError('Email sau parola incorecte.')
+        return
+      }
       router.push('/dashboard')
     } else {
+      // Anti-abuz freemium: respinge emailuri temporare + acelasi Gmail cu +tag/puncte.
+      const chk = await fetch('/api/check-signup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }),
+      }).then(r => r.json()).catch(() => ({ ok: true }))
+      if (!chk.ok) { setLoading(false); setError(chk.error || 'Email invalid.'); return }
+
       const { data, error } = await supabase.auth.signUp({ email, password })
       setLoading(false)
       if (error) {
@@ -53,13 +74,11 @@ export default function LoginPage() {
         }
         return
       }
-      if (data.user && !data.session) {
-        setSuccess('Cont creat! Verifica emailul pentru confirmare, apoi autentifica-te.')
-        setMode('login')
-      } else if (data.session) {
+      if (data.session) {
         router.push('/dashboard')
       } else {
         setSuccess('Cont creat! Verifica emailul pentru confirmare, apoi autentifica-te.')
+        setShowResend(true)
         setMode('login')
       }
     }
@@ -120,6 +139,11 @@ export default function LoginPage() {
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
         {success && <p className="text-green-600 text-sm">{success}</p>}
+        {showResend && (
+          <button onClick={resendConfirmation} className="w-full py-2 text-sm font-semibold text-blue-600">
+            Retrimite emailul de confirmare
+          </button>
+        )}
 
         <button onClick={handleSubmit} disabled={loading}
           className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl text-base disabled:bg-gray-300">
@@ -158,7 +182,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess('') }}
+        <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess(''); setShowResend(false) }}
           className="w-full py-2 text-sm text-gray-500 hover:text-gray-600">
           {mode === 'login' ? 'Nu ai cont? Creeaza unul' : 'Ai deja cont? Autentifica-te'}
         </button>
