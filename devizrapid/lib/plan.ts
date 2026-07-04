@@ -6,9 +6,20 @@ import { supabase } from '@/lib/supabase'
 // limitele lunare pe cele doua module (Fise Servicii vs Mercator/Calculator).
 export type PlanTier = 'free' | 'artizan' | 'mercator' | 'pro'
 
-// Cat timp e true, oricine e tratat ca Pro (totul nelimitat) — faza de testare
-// pre-lansare. Se stinge MANUAL la lansare, ca sa intre in vigoare limitele reale.
-export const PRELAUNCH = true
+// Pre-lansare: cat e activa, oricine e tratat ca Pro (totul nelimitat).
+// Comutatorul traieste in DB (app_config, cheia 'prelaunch') ca sa fie O SINGURA
+// parghie la lansare, comuna cu triggerele care impun limitele pe server
+// (supabase/enforce-limits.sql). Se stinge cu:
+//   update app_config set value = 'false' where key = 'prelaunch';
+// Fallback true daca tabelul nu exista inca (compatibil cu comportamentul vechi).
+let prelaunchCache: { value: boolean; at: number } | null = null
+async function isPrelaunch(): Promise<boolean> {
+  if (prelaunchCache && Date.now() - prelaunchCache.at < 60_000) return prelaunchCache.value
+  const { data, error } = await supabase.from('app_config').select('value').eq('key', 'prelaunch').maybeSingle()
+  const value = error || !data ? true : data.value === true
+  prelaunchCache = { value, at: Date.now() }
+  return value
+}
 
 // Prima luna dupa inregistrare: orice cont Free primeste limite ridicate (10+10)
 // in loc de 3+3, apoi cade inapoi pe Free. Free ramane podeaua permanenta.
@@ -42,7 +53,7 @@ export type EffectiveLimits = {
 // 1. pre-lansare (toti Pro), 2. acces gratuit pe viata, 3. abonament platit activ,
 // 4. freemium prima luna, 5. Free. Un singur select pe profil.
 export async function getEffectiveLimits(userId: string, createdAt: string): Promise<EffectiveLimits> {
-  if (PRELAUNCH) {
+  if (await isPrelaunch()) {
     return { ...TIER_LIMITS.pro, tier: 'pro', prelaunch: true, freemium: false, lifetime: false }
   }
 

@@ -9,6 +9,17 @@ proiectul să nu depindă de istoricul conversațiilor.
 
 ---
 
+## ADR-020 — Limitele de abonament impuse în DB, comutatorul de lansare în `app_config`
+**Data:** 2026-07-04.
+**Decizie:** Limitele lunare (fișe/calcule) sunt impuse prin **triggere Postgres** pe
+`quotes` și `pricing_usage` (`supabase/enforce-limits.sql`), nu doar în UI. Comutatorul
+PRELAUNCH s-a mutat din constanta de cod în tabelul `app_config` (cheia `prelaunch`),
+citit și de UI (`lib/plan.ts`, cache 60s) și de triggere.
+**De ce:** Verificarea doar în client se ocolea cu un insert direct în Supabase (RLS
+verifică doar `user_id`, nu limita) — gaură de monetizare. O singură pârghie în DB evită
+și riscul de a stinge lansarea în cod dar nu în DB (sau invers). Cost asumat: limitele
+există în două locuri (TS + SQL) — documentat în BUSINESS_RULES cap. 5.
+
 ## ADR-019 — Acces gratuit pe viață (lifetime) pentru cei care au ajutat
 **Data:** 2026-07-04.
 **Decizie:** Coloană `profiles.lifetime` (boolean). Când e `true`, userul primește **Pro

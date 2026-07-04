@@ -3,7 +3,10 @@
 Ce urmează. Grupat după orizont, nu după dată fixă. Ideile neangajate sunt clar marcate.
 
 ## Înainte de lansare (detaliile rămase)
-- [ ] **Stinge `PRELAUNCH`** (`lib/plan.ts`) — trece pe limitele reale pe niveluri.
+- [ ] **Rulează `supabase/enforce-limits.sql`** în Supabase (o dată) — creează `app_config`
+      + triggerele care impun limitele în DB + indexul unic pe numărul de fișă.
+- [ ] **La lansare, stinge pre-lansarea** cu un singur update:
+      `update app_config set value='false' where key='prelaunch';` (UI + DB se sting împreună).
 - [x] **RLS verificat și închis (2026-07-03)** — RLS pornit pe toate tabelele; politici
       corecte (scope pe `auth.uid()`, `with_check` corect la scrieri; `product_box_ratios`
       și `api_usage` doar prin service-role). Politica publică `"allow all"` de pe `counters`

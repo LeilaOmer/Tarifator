@@ -68,11 +68,12 @@ Fiecare tip de cont are limite LUNARE diferite pe cele doua module:
 | Pro | 149 lei | 99 lei | nelimitat | nelimitat |
 
 - **Freemium**: primele 30 de zile de la inregistrare, un cont Free primeste 30 fise + 30 calcule (in loc de 3+3), apoi cade pe Free. Free e podeaua permanenta — nimeni nu ramane blocat complet.
-- **PRELAUNCH** (`lib/plan.ts`): cat e `true`, oricine e tratat ca Pro (totul nelimitat). Se stinge MANUAL la lansare.
+- **PRELAUNCH** traieste in DB: `app_config`, cheia `prelaunch`. Cat e `true`, oricine e tratat ca Pro (totul nelimitat). Se stinge la lansare cu UN SINGUR update: `update app_config set value='false' where key='prelaunch';` — UI-ul (`lib/plan.ts`) si triggerele DB citesc amandoua de acolo.
+- **Limitele sunt IMPUSE si in DB** (triggere pe `quotes` si `pricing_usage` — `supabase/enforce-limits.sql`), nu doar in UI: altfel un user tehnic le-ar ocoli scriind direct in Supabase cu propriul token. Daca schimbi limitele in `lib/plan.ts`, oglindeste-le si in SQL.
 - Activarea unui abonament platit e MANUALA (se seteaza `plan_tier` + `plan_active_until` in DB) pana la integrarea unui procesator de plati.
 - Numararea consumului e pe luna calendaristica: fise = tabelul `quotes`, calcule = `pricing_usage`.
 
-Referinta: `lib/plan.ts` (`TIER_LIMITS`, `getEffectiveLimits`), `lib/usage.ts`.
+Referinta: `lib/plan.ts` (`TIER_LIMITS`, `getEffectiveLimits`), `lib/usage.ts`, `supabase/enforce-limits.sql`.
 
 ## 6. Scanare facturi — impartirea rolurilor
 
