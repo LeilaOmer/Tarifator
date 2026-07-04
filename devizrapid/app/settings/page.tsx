@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { PrimaryModule, setPrimaryModule } from '@/lib/module'
 import { PlanTier, TIER_LABELS, getEffectiveLimits } from '@/lib/plan'
 import { getMonthlyFise, getMonthlyCalcule } from '@/lib/usage'
+import { isAdminEmail } from '@/lib/admin'
 import { useRouter } from 'next/navigation'
 
 interface Company {
@@ -383,6 +384,14 @@ export default function SettingsPage() {
               <p className="text-sm font-semibold text-gray-800">{userEmail}</p>
             </div>
           </div>
+
+          {isAdminEmail(userEmail) && (
+            <div className="px-5 py-3 border-b border-gray-50">
+              <button onClick={() => router.push('/admin')} className="text-sm font-semibold text-blue-600">
+                Administrare acces pe viata →
+              </button>
+            </div>
+          )}
 
           {!profileEditing ? (
             <div className="divide-y divide-gray-50">
