@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
+import { drawBrandMargin } from "@/lib/pricing/brand";
 
 interface Profile {
   id: string;
@@ -102,6 +103,7 @@ const emptyRow = (): NewRow => ({ service_id: "", description: "", quantity: "1"
 function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: number, discountType: "pct" | "val"): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = 210; const margin = 15; let y = 20;
+  drawBrandMargin(doc, 297); // A4 portrait => inaltime 297mm
 
   const addLine = (text: string, size = 10, bold = false, color: [number, number, number] = [30, 30, 30]) => {
     doc.setFontSize(size); doc.setFont("helvetica", bold ? "bold" : "normal");
@@ -165,7 +167,7 @@ function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: numb
     doc.text(fmt(item.unit_price), colX[2], y);
     doc.text(fmt(item.total), colX[3], y);
     y += Math.max(5.5, lines.length * 4.5);
-    if (y > 260) { doc.addPage(); y = 20; }
+    if (y > 260) { doc.addPage(); drawBrandMargin(doc, 297); y = 20; }
   });
 
   y += 3; doc.setDrawColor(180, 180, 180); doc.line(margin, y, W - margin, y); y += 6;
@@ -185,8 +187,6 @@ function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: numb
   doc.text("TOTAL", W - margin - 52, y + 0.5);
   doc.text(fmt(total), W - margin, y + 0.5, { align: "right" }); y += 12;
 
-  doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(160, 160, 160);
-  doc.text("Document generat de Tarifator • Tarifator.ro", W / 2, 290, { align: "center" });
   return doc;
 }
 

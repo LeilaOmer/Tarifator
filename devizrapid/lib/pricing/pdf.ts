@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import { Item, RoundStep, RoundMode, calcItem, fmt2 } from './calc'
+import { drawBrandMargin } from './brand'
 
 const noDiac = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -36,6 +37,7 @@ export async function exportPDFContabil(
 ): Promise<PdfResult> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
   const W = 297; const margin = 10; let y = 15
+  drawBrandMargin(doc, 210) // A4 landscape => inaltime 210mm
 
   doc.setFontSize(13); doc.setFont('helvetica', 'bold')
   doc.text('Calculator Pret Vanzare', margin, y); y += 6
@@ -148,11 +150,9 @@ export async function exportPDFContabil(
     }
     cols.forEach((col, i) => doc.text(vals[i], col.x, y))
     y += 6
-    if (y > 185) { doc.addPage(); y = 15 }
+    if (y > 185) { doc.addPage(); drawBrandMargin(doc, 210); y = 15 }
   })
 
-  doc.setFontSize(7); doc.setTextColor(160, 160, 160)
-  doc.text('Generat de Tarifator', W / 2, 200, { align: 'center' })
   return { blob: doc.output('blob'), filename: `Calcul-Contabil-${fmtDate()}.pdf` }
 }
 
@@ -161,6 +161,7 @@ export async function exportPDFMagazin(
 ): Promise<PdfResult> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const W = 210; const margin = 15; let y = 20
+  drawBrandMargin(doc, 297) // A4 portrait => inaltime 297mm
 
   doc.setFontSize(14); doc.setFont('helvetica', 'bold')
   doc.text('Lista Preturi Vanzare', margin, y); y += 7
@@ -192,10 +193,8 @@ export async function exportPDFMagazin(
       y += 4
     }
     y += 7
-    if (y > 270) { doc.addPage(); y = 20 }
+    if (y > 270) { doc.addPage(); drawBrandMargin(doc, 297); y = 20 }
   })
 
-  doc.setFontSize(7); doc.setTextColor(160, 160, 160)
-  doc.text('Generat de Tarifator', W / 2, 285, { align: 'center' })
   return { blob: doc.output('blob'), filename: `Lista-Preturi-${fmtDate()}.pdf` }
 }
