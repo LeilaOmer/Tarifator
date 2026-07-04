@@ -16,6 +16,21 @@ Ce urmează. Grupat după orizont, nu după dată fixă. Ideile neangajate sunt 
       retragere. Afișarea prețului redus clarificată (rând verde separat).
 - [ ] Reinstalarea PWA pe telefon pentru iconița nouă (cache-ul păstrează vechea iconiță).
 
+## Din auditul complet (2026-07-04)
+Rezolvate în aceeași zi: **C1** resetare parolă (+ schimbare parolă în Setări), **C3**
+export date GDPR, **I2** auth+limită pe ANAF, **C2** limitele impuse în DB (`supabase/
+enforce-limits.sql`, comutator `app_config.prelaunch`), **I4** index unic pe numărul de
+fișă (în același SQL), **I5** curățare sincronă a stării de cont la schimbarea userului.
+Rămase (neblocante):
+- [ ] `buildPDF` mutat din `app/quotes/[id]` în `lib/` (regula „logica separată de UI").
+- [ ] `playSuccessSound` duplicat (quick + quotes/[id]) — de extras într-un helper.
+- [ ] Consumul de fișe numărat într-un tabel de consum (ca `pricing_usage`), nu pe
+      rândurile din `quotes` — ștergerea unei fișe nu ar mai elibera cota lunară.
+- [ ] Monitorizare erori (ex. Sentry free tier) — erorile din producție mor tăcut.
+- [ ] Mesaj în UI la scanarea PDF: „se citește doar prima pagină".
+- [ ] `canonical_email` indexat în `profiles` când userii trec de ~1000 (check-signup
+      și admin/lifetime scanează azi toți userii prin `listUsers`).
+
 ## Din analiza multi-unghi (2026-07-03)
 Făcut: contrast text mai bun (WCAG), `alert()` → toast discret, `aria-label` pe butoanele
 iconiță, imagine OG pentru share. Rămas:
