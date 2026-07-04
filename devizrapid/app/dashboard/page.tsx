@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { getEffectiveLimits } from '@/lib/plan'
 import { getMonthlyFise, getMonthlyCalcule } from '@/lib/usage'
 import { PrimaryModule, setPrimaryModule } from '@/lib/module'
+import { clearAccountLocal } from '@/lib/session'
 import { useRouter } from 'next/navigation'
 
 // Mesaj personal (de la tine), aratat O SINGURA DATA persoanei cu acces pe viata,
@@ -210,6 +211,7 @@ export default function Dashboard() {
   }
 
   async function handleLogout() {
+    clearAccountLocal()
     await supabase.auth.signOut()
     router.push('/login')
   }

@@ -7,17 +7,43 @@ export default function ActiveCompanyBanner() {
   const [name, setName] = useState<string | null>(null)
   const pathname = usePathname()
 
-useEffect(() => {
-  async function check() {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { setName(null); return }
-    if (localStorage.getItem('dashboardMode') !== 'pro') { setName(null); return }
-    const { data: prof } = await supabase.from('profiles').select('account_type').eq('id', session.user.id).single()
-    if (prof?.account_type !== 'pro') { setName(null); return }
-    setName(localStorage.getItem('activeCompanyName') || null)
-  }
-  check()
-}, [pathname])
+  useEffect(() => {
+    let cancelled = false
+    async function check() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { if (!cancelled) setName(null); return }
+
+      // Daca s-a schimbat contul pe acest device (logout+login alt cont, sau
+      // sesiune schimbata), curatam starea firmei/modului contului anterior —
+      // altfel bannerul si paginile ar folosi firma altui cont.
+      if (localStorage.getItem('lastUserId') !== session.user.id) {
+        localStorage.removeItem('activeCompanyId')
+        localStorage.removeItem('activeCompanyName')
+        localStorage.removeItem('dashboardMode')
+        localStorage.setItem('lastUserId', session.user.id)
+      }
+
+      if (localStorage.getItem('dashboardMode') !== 'pro') { if (!cancelled) setName(null); return }
+      const companyId = localStorage.getItem('activeCompanyId')
+      if (!companyId) { if (!cancelled) setName(null); return }
+
+      // Verificam ca firma apartine CONTULUI CURENT: RLS restrange `companies` la
+      // firmele proprii, deci un id de la alt cont intoarce gol => curatam si ascundem.
+      const { data: co } = await supabase.from('companies').select('name').eq('id', companyId).single()
+      if (cancelled) return
+      if (!co) {
+        localStorage.removeItem('activeCompanyId')
+        localStorage.removeItem('activeCompanyName')
+        setName(null)
+        return
+      }
+      // numele autoritar vine din DB (localStorage putea fi invechit)
+      if (co.name !== localStorage.getItem('activeCompanyName')) localStorage.setItem('activeCompanyName', co.name)
+      setName(co.name)
+    }
+    check()
+    return () => { cancelled = true }
+  }, [pathname])
 
   const publicPages = ['/', '/termeni', '/confidentialitate', '/upgrade', '/dashboard', '/pricing', '/calcule']
   if (!name || publicPages.includes(pathname)) return null

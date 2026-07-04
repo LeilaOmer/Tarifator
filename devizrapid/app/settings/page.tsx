@@ -7,6 +7,7 @@ import { PrimaryModule, setPrimaryModule } from '@/lib/module'
 import { PlanTier, TIER_LABELS, getEffectiveLimits } from '@/lib/plan'
 import { getMonthlyFise, getMonthlyCalcule } from '@/lib/usage'
 import { isAdminEmail } from '@/lib/admin'
+import { clearAccountLocal } from '@/lib/session'
 import { useRouter } from 'next/navigation'
 
 interface Company {
@@ -211,6 +212,7 @@ export default function SettingsPage() {
       headers: { Authorization: `Bearer ${session.access_token}` },
     })
     if (res.ok) {
+      clearAccountLocal()
       await supabase.auth.signOut()
       router.push('/login')
     } else {
