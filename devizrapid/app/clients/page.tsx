@@ -72,7 +72,7 @@ export default function ClientsPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
-        <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2 text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
+        <button aria-label="Inapoi" onClick={() => router.push('/dashboard')} className="flex items-center gap-2 text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
           <span className="text-xl">‹</span> Dashboard
         </button>
         <h1 className="text-base font-bold text-gray-800">Clienti</h1>
@@ -163,7 +163,7 @@ export default function ClientsPage() {
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
                       <button onClick={() => setEditing(c)} className="text-blue-500 text-sm font-medium">Editeaza</button>
-                      <button onClick={() => handleDelete(c.id)} className="text-red-400 text-xl leading-none">×</button>
+                      <button aria-label="Inchide" onClick={() => handleDelete(c.id)} className="text-red-400 text-xl leading-none">×</button>
                     </div>
                   </div>
                 )}

@@ -41,7 +41,7 @@ export default function CalculePage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
-        <button onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
+        <button aria-label="Inapoi" onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
           <span className="text-2xl leading-none">‹</span>
         </button>
         <h1 className="text-base font-bold text-gray-800">Calcule salvate</h1>
@@ -74,7 +74,7 @@ export default function CalculePage() {
                 className="text-xs font-bold text-blue-600 px-3 py-1.5 rounded-xl bg-blue-50 whitespace-nowrap">
                 Deschide
               </button>
-              <button onClick={() => handleDelete(d.id)}
+              <button aria-label="Inchide" onClick={() => handleDelete(d.id)}
                 className="text-red-400 text-xl leading-none px-1">×</button>
             </div>
           ))

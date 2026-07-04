@@ -95,7 +95,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between shadow-sm">
-        <button onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
+        <button aria-label="Inapoi" onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
           <span className="text-2xl leading-none">‹</span>
         </button>
         <div className="text-center">
@@ -161,7 +161,7 @@ export default function PricingPage() {
         <div className="fixed inset-0 bg-black/60 z-30 flex flex-col">
           <div className="bg-white px-4 py-3 flex items-center justify-between shadow-sm shrink-0">
             <p className="text-sm font-bold text-gray-800">Verifica PDF-ul</p>
-            <button onClick={closePreview} className="text-gray-500 text-2xl leading-none">×</button>
+            <button aria-label="Inchide" onClick={closePreview} className="text-gray-500 text-2xl leading-none">×</button>
           </div>
           <div className="flex-1 overflow-y-auto bg-gray-200 p-3 space-y-3">
             {previewImages === null ? (

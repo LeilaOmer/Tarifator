@@ -47,7 +47,7 @@ export default function CompanyQuotesPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
-        <button onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
+        <button aria-label="Inapoi" onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
           <span className="text-2xl leading-none">‹</span>
         </button>
         <h1 className="text-base font-bold text-gray-800 truncate max-w-[200px]">{company?.name}</h1>
@@ -81,7 +81,7 @@ export default function CompanyQuotesPage() {
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-sm font-semibold text-gray-700">{q.total} lei</span>
-                  <button onClick={() => handleDelete(q.id)} className="text-red-400 text-lg">×</button>
+                  <button aria-label="Inchide" onClick={() => handleDelete(q.id)} className="text-red-400 text-lg">×</button>
                 </div>
               </div>
             ))}

@@ -217,7 +217,7 @@ export default function QuickPage() {
     <div className="min-h-screen bg-gray-50 pb-10">
       <style>{`.fixed.bottom-24 { display: none; }`}</style>
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
-        <button onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
+        <button aria-label="Inapoi" onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
           <span className="text-2xl leading-none">‹</span>
         </button>
         <h1 className="text-base font-bold text-gray-800">Fisa Servicii Voce</h1>

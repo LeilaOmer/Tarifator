@@ -544,7 +544,7 @@ export default function QuoteDetailPage() {
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <p className="text-sm font-semibold text-gray-900">{fmt(item.total)}</p>
-                {!isFinalized && <button onClick={() => handleDeleteItem(item.id)} className="text-red-400 text-xl leading-none">×</button>}
+                {!isFinalized && <button aria-label="Inchide" onClick={() => handleDeleteItem(item.id)} className="text-red-400 text-xl leading-none">×</button>}
               </div>
             </div>
           ))}
