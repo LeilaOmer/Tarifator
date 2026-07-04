@@ -26,6 +26,16 @@ export default function LoginPage() {
       .catch(() => {})
   }, [mode])
 
+  async function forgotPassword() {
+    setError(''); setSuccess('')
+    if (!email) { setError('Introdu emailul intai, apoi apasa din nou.'); return }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-parola`,
+    })
+    if (error) setError('Nu s-a putut trimite emailul de resetare. Mai incearca in cateva minute.')
+    else setSuccess('Ti-am trimis un email cu linkul de resetare a parolei. Verifica si folderul Spam.')
+  }
+
   async function resendConfirmation() {
     setError(''); setSuccess('')
     if (!email) { setError('Introdu emailul intai.'); return }
@@ -135,6 +145,11 @@ export default function LoginPage() {
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
           />
+          {mode === 'login' && (
+            <button onClick={forgotPassword} className="text-xs text-blue-600 font-medium mt-1.5">
+              Ai uitat parola?
+            </button>
+          )}
         </div>
 
         {error && <p className="text-red-500 text-sm">{error}</p>}

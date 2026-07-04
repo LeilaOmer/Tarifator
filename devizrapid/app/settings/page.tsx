@@ -49,6 +49,10 @@ export default function SettingsPage() {
   const [profileSaved, setProfileSaved] = useState(false)
   const [profileAnafLoading, setProfileAnafLoading] = useState(false)
   const [profileAnafError, setProfileAnafError] = useState('')
+  const [pwOpen, setPwOpen] = useState(false)
+  const [pwValue, setPwValue] = useState('')
+  const [pwError, setPwError] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -110,6 +114,17 @@ export default function SettingsPage() {
     } finally {
       setProfileAnafLoading(false)
     }
+  }
+
+  async function changePassword() {
+    setPwError('')
+    if (pwValue.length < 6) { setPwError('Parola trebuie sa aiba minim 6 caractere.'); return }
+    setPwSaving(true)
+    const { error } = await supabase.auth.updateUser({ password: pwValue })
+    setPwSaving(false)
+    if (error) { setPwError('Nu s-a putut schimba parola: ' + error.message); return }
+    setPwOpen(false); setPwValue('')
+    toast('Parola a fost schimbata.', 'success')
   }
 
   async function saveAccountType(type: 'artizan' | 'pro') {
@@ -385,7 +400,24 @@ export default function SettingsPage() {
               <p className="text-xs text-gray-500">Email cont</p>
               <p className="text-sm font-semibold text-gray-800">{userEmail}</p>
             </div>
+            <button onClick={() => { setPwOpen(v => !v); setPwValue(''); setPwError('') }}
+              className="text-sm font-semibold text-blue-600 shrink-0">
+              Schimba parola
+            </button>
           </div>
+
+          {pwOpen && (
+            <div className="px-5 py-3 border-b border-gray-50 space-y-2">
+              <input type="password" autoComplete="new-password" placeholder="Parola noua (minim 6 caractere)"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+                value={pwValue} onChange={e => setPwValue(e.target.value)} />
+              {pwError && <p className="text-xs text-red-500">{pwError}</p>}
+              <button onClick={changePassword} disabled={pwSaving}
+                className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold disabled:bg-gray-300">
+                {pwSaving ? 'Se salveaza...' : 'Salveaza parola noua'}
+              </button>
+            </div>
+          )}
 
           {isAdminEmail(userEmail) && (
             <div className="px-5 py-3 border-b border-gray-50">
