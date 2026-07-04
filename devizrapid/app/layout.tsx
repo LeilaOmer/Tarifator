@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     description: '„Cat costa?" — raspunsul in secunde. Fisa servicii prin dictare vocala pentru prestatori + calculator pret cu adaos si TVA pentru comercianti. Plan gratuit permanent.',
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: 'Tarifator – Raspunsul la „Cat costa?"',
     description: 'Fisa servicii prin dictare + calculator pret cu adaos si TVA. Raspunsul instant la „cat costa?" pentru prestatori si comercianti. Plan gratuit permanent.',
   },
