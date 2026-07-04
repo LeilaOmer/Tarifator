@@ -8,6 +8,14 @@ import { getMonthlyFise, getMonthlyCalcule } from '@/lib/usage'
 import { PrimaryModule, setPrimaryModule } from '@/lib/module'
 import { useRouter } from 'next/navigation'
 
+// Mesaj personal (de la tine), aratat O SINGURA DATA persoanei cu acces pe viata,
+// la prima logare dupa ce i-ai dat accesul. Schimba textul cu cuvintele tale.
+const LIFETIME_GREETING = {
+  title: 'Mulțumesc din suflet.',
+  body: 'Ai acces complet la Tarifator, gratuit, pe viață — pentru că m-ai ajutat, aici sau în viață. E felul meu de a-ți spune că nu am uitat. Sper să-ți fie de folos.',
+  sign: '— Leyla',
+}
+
 interface Company {
   id: string
   name: string
@@ -27,6 +35,8 @@ export default function Dashboard() {
   const [usage, setUsage] = useState<{ fise: number; fiseLimit: number; calcule: number; calculeLimit: number; freemium: boolean } | null>(null)
   const [loading, setLoading] = useState(true)
   const [showWelcome, setShowWelcome] = useState(false)
+  const [showLifetimeGreeting, setShowLifetimeGreeting] = useState(false)
+  const uidRef = useRef<string>('')
   const [primaryModule, setPrimaryModuleValue] = useState<PrimaryModule | null>(null)
   const [choosingModule, setChoosingModule] = useState(false)
   const [fbOpen, setFbOpen] = useState(false)
@@ -42,7 +52,7 @@ export default function Dashboard() {
       if (!session) { router.push('/login'); return }
 
       let { data: prof } = await supabase
-        .from('profiles').select('account_type, company_name, email, cui, address, phone, bank, iban, vat_rate, primary_module').eq('id', session.user.id).single()
+        .from('profiles').select('account_type, company_name, email, cui, address, phone, bank, iban, vat_rate, primary_module, lifetime').eq('id', session.user.id).single()
       if (!prof) {
         const { error: profInsertErr } = await supabase.from('profiles').insert({ id: session.user.id, account_type: 'artizan' })
         if (profInsertErr) console.error('Nu s-a putut crea profilul:', profInsertErr.message)
@@ -51,6 +61,12 @@ export default function Dashboard() {
       }
 
       const dbAccountType: 'artizan' | 'pro' = prof.account_type === 'pro' ? 'pro' : 'artizan'
+
+      // Mesaj personal, o singura data, la persoana cu acces pe viata (per browser).
+      uidRef.current = session.user.id
+      if (prof.lifetime && typeof window !== 'undefined' && !localStorage.getItem('lifetimeGreeting_' + session.user.id)) {
+        setShowLifetimeGreeting(true)
+      }
 
       // Banda de consum apare doar cand macar un modul are limita finita —
       // pre-lansare (toti Pro) sau abonament complet nelimitat => nu o aratam.
@@ -326,6 +342,20 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
+      {showLifetimeGreeting && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6"
+          onClick={() => { localStorage.setItem('lifetimeGreeting_' + uidRef.current, '1'); setShowLifetimeGreeting(false) }}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center space-y-4" onClick={e => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="" className="w-14 h-14 rounded-2xl mx-auto" />
+            <h2 className="text-xl font-bold text-gray-900">{LIFETIME_GREETING.title}</h2>
+            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{LIFETIME_GREETING.body}</p>
+            <p className="text-sm font-semibold text-gray-800">{LIFETIME_GREETING.sign}</p>
+            <button onClick={() => { localStorage.setItem('lifetimeGreeting_' + uidRef.current, '1'); setShowLifetimeGreeting(false) }}
+              className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm">Mulțumesc</button>
+          </div>
+        </div>
+      )}
       <div className="max-w-lg mx-auto px-4 space-y-3">
 
         {/* Header */}
