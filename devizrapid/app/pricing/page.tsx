@@ -88,7 +88,8 @@ export default function PricingPage() {
 
   async function sendPreview() {
     if (!previewPdf) return
-    await sharePdfBlob(previewPdf.result)
+    const shared = await sharePdfBlob(previewPdf.result)
+    if (shared) new Audio('/success.wav').play().catch(() => {})
     closePreview()
   }
 

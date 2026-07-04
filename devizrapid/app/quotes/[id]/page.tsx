@@ -457,12 +457,13 @@ export default function QuoteDetailPage() {
     if (typeof navigator !== "undefined" && navigator.canShare) {
       const file = new File([doc.output("blob")], fileName, { type: "application/pdf" });
       if (navigator.canShare({ files: [file] })) {
-        try { await navigator.share({ files: [file], title: `Fisa Servicii ${quote.quote_number}` }); return; }
+        try { await navigator.share({ files: [file], title: `Fisa Servicii ${quote.quote_number}` }); playSuccessSound(); return; }
         catch { /* utilizatorul a anulat */ }
       }
     }
     // fallback desktop: deschide PDF in tab nou
     window.open(doc.output("bloburl"), "_blank");
+    playSuccessSound();
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Se incarca...</p></div>;

@@ -15,19 +15,20 @@ export type PdfResult = { blob: Blob; filename: string }
 // in loc sa deschida un tab de browser din care trebuie ales manual "deschide
 // ca PDF" inainte sa poata fi trimis mai departe. Apelata din pagina, dupa ce
 // utilizatorul a vazut preview-ul si a apasat efectiv "Trimite".
-export async function sharePdfBlob({ blob, filename }: PdfResult) {
+export async function sharePdfBlob({ blob, filename }: PdfResult): Promise<boolean> {
   if (typeof navigator !== 'undefined' && 'share' in navigator && 'canShare' in navigator) {
     const file = new File([blob], filename, { type: 'application/pdf' })
     if (navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({ files: [file] })
-        return
+        return true
       } catch {
-        return // utilizatorul a anulat partajarea — nu mai deschidem alt tab peste asta
+        return false // utilizatorul a anulat partajarea — nu mai deschidem alt tab peste asta
       }
     }
   }
   window.open(URL.createObjectURL(blob), '_blank')
+  return true
 }
 
 export async function exportPDFContabil(
