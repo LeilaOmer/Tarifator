@@ -50,11 +50,11 @@ export default function LandingPage() {
           „Cat costa?" — raspunsul in cateva secunde.
         </h1>
         <p className="text-xl text-gray-500 mb-4 max-w-lg leading-relaxed">
-          Prestezi servicii? Dictezi ce ai lucrat — fisa apare cu preturile tale.<br />
-          Vinzi produse? Introduci costul — obtii pretul de vanzare cu adaos si TVA.
+          Oferi un serviciu? Spui ce ai facut si fisa se completeaza singura.<br />
+          Vinzi produse? Pui factura in aplicatie si afli imediat cu cat sa vinzi.
         </p>
         <p className="text-sm text-gray-500 mb-10 max-w-lg">
-          Clientul primeste un document clar pe WhatsApp. Tu pleci cu banii.
+          Clientul primeste un document clar pe WhatsApp.
         </p>
         <Link href="/login"
           className="inline-block px-8 py-3.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">
@@ -62,53 +62,66 @@ export default function LandingPage() {
         </Link>
       </section>
 
-      {/* Doua instrumente */}
+      {/* Un singur instrument */}
       <section className="border-t border-gray-100 px-6 py-16 max-w-3xl mx-auto">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-10">Ce face</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Ce face</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-10 max-w-xl">Un singur instrument, pe care il foloseste aproape oricine.</h2>
         <div className="grid md:grid-cols-2 gap-12">
           <div>
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-3">Fisa Servicii</p>
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Dictezi. Fisa apare.</h2>
+            <h3 className="text-lg font-bold text-gray-900 mb-3">Oferi un serviciu?</h3>
             <p className="text-gray-500 leading-relaxed mb-4">
-              Spui ce ai lucrat — aplicatia recunoaste serviciile, completeaza cantitatile si calculeaza totalul. PDF-ul e gata de trimis clientului in cateva secunde.
+              Spui ce ai facut, iar serviciile si preturile tale se completeaza singure. In cateva secunde ai un document gata de trimis.
             </p>
             <ul className="space-y-2 text-sm text-gray-500">
-              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0"></span>Recunoastere vocala in romana</li>
-              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0"></span>Preturile tale, aplicate automat</li>
-              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0"></span>PDF profesional, trimis direct</li>
+              <li className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0 mt-1.5"></span>Spui ce ai facut, fisa se completeaza singura</li>
+              <li className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0 mt-1.5"></span>Iti tii clientii si serviciile la un loc, gata de refolosit</li>
+              <li className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0 mt-1.5"></span>Trimiti clientului un document ingrijit, direct pe WhatsApp</li>
             </ul>
           </div>
           <div>
-            <p className="text-xs font-semibold text-amber-500 uppercase tracking-widest mb-3">Calculator Pret</p>
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Pretul corect, la orice produs.</h2>
+            <h3 className="text-lg font-bold text-gray-900 mb-3">Vinzi produse?</h3>
             <p className="text-gray-500 leading-relaxed mb-4">
-              Introduci costul de achizitie, setezi adaosul si TVA-ul — obtii imediat pretul de vanzare si marja reala. Exporti lista ca PDF sau o trimiti direct.
+              Pui cat te-a costat, alegi adaosul si afli pe loc cu cat sa vinzi — corect, cu tot cu TVA.
             </p>
             <ul className="space-y-2 text-sm text-gray-500">
-              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-amber-400 shrink-0"></span>Adaos comercial configurabil</li>
-              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-amber-400 shrink-0"></span>TVA 11% si 21%</li>
-              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-amber-400 shrink-0"></span>Export PDF si partajare</li>
+              <li className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-green-500 shrink-0 mt-1.5"></span>Afli pe loc cu cat sa vinzi, cu adaosul tau</li>
+              <li className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-green-500 shrink-0 mt-1.5"></span>Iti arata si cat te costa marfa in realitate, cu tot cu TVA</li>
+              <li className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-green-500 shrink-0 mt-1.5"></span>Scoti lista ca PDF: una pentru tine, una pentru raft</li>
             </ul>
           </div>
         </div>
       </section>
 
-      {/* Pentru cine */}
+      {/* Scanare - highlight */}
       <section className="border-t border-gray-100 bg-gray-50 px-6 py-16">
         <div className="max-w-3xl mx-auto">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-6">Pentru cine</p>
-          <p className="text-2xl font-bold text-gray-900 mb-6 max-w-xl">
-            Doua categorii, acelasi instrument.
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Cel mai simplu</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4 max-w-xl">Pui factura, preturile ies singure.</h2>
+          <p className="text-gray-500 leading-relaxed mb-6 max-w-lg">
+            Incarci factura sau ii faci o poza, iar aplicatia scoate produsele, cantitatile si preturile — gata de folosit. Merge si cu bonurile de la Lidl, Kaufland sau Metro.
           </p>
-          <div className="grid md:grid-cols-2 gap-8 max-w-2xl">
-            <div>
-              <p className="font-semibold text-gray-900 mb-2">Prestatori de servicii</p>
-              <p className="text-gray-500 text-sm leading-relaxed">Electricieni, instalatori, tehnicieni HVAC, contabili, mecanici, curatenie — oricine emite fise de servicii si lucreaza cu clienti.</p>
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900 mb-2">Mici comercianti</p>
-              <p className="text-gray-500 text-sm leading-relaxed">Magazine, distribuitori, revanzatori — oricine cumpara produse si trebuie sa calculeze pretul de vanzare cu adaos si TVA.</p>
-            </div>
+          <ul className="space-y-2 text-sm text-gray-500 max-w-lg">
+            <li className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-green-500 shrink-0 mt-1.5"></span>Recunoaste si bonurile de casa, nu doar facturile</li>
+            <li className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-green-500 shrink-0 mt-1.5"></span>Imparte singura pretul de la cutie la bucata</li>
+            <li className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-green-500 shrink-0 mt-1.5"></span>Tine cont de reduceri si de garantia ambalajelor</li>
+          </ul>
+        </div>
+      </section>
+
+      {/* Pentru cine */}
+      <section className="border-t border-gray-100 px-6 py-16 max-w-3xl mx-auto">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-6">Pentru cine</p>
+        <p className="text-2xl font-bold text-gray-900 mb-6 max-w-xl">
+          Pentru aproape oricine da un pret.
+        </p>
+        <div className="grid md:grid-cols-2 gap-8 max-w-2xl">
+          <div>
+            <p className="font-semibold text-gray-900 mb-2">Oricine ofera un serviciu</p>
+            <p className="text-gray-500 text-sm leading-relaxed">Coafor, reparatii, instalatii, curatenie, transport, cazare, meditatii, foto — oricine face o treaba si da un pret clientului.</p>
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900 mb-2">Mici comercianti</p>
+            <p className="text-gray-500 text-sm leading-relaxed">Magazine, distribuitori, revanzatori — oricine cumpara marfa si trebuie sa puna un pret corect.</p>
           </div>
         </div>
       </section>
@@ -179,7 +192,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-gray-100 px-6 py-8 max-w-3xl mx-auto flex flex-wrap justify-between items-center gap-4 text-sm text-gray-500">
-        <span>© 2025 Tarifator</span>
+        <span>© 2026 Tarifator</span>
         <div className="flex gap-6">
           <Link href="/termeni" className="hover:text-gray-600">Termeni</Link>
           <Link href="/confidentialitate" className="hover:text-gray-600">Confidentialitate</Link>
