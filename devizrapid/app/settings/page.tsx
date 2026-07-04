@@ -53,6 +53,7 @@ export default function SettingsPage() {
   const [pwValue, setPwValue] = useState('')
   const [pwError, setPwError] = useState('')
   const [pwSaving, setPwSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -113,6 +114,45 @@ export default function SettingsPage() {
       setProfileAnafError('Eroare conexiune')
     } finally {
       setProfileAnafLoading(false)
+    }
+  }
+
+  // Export GDPR: toate datele userului intr-un JSON descarcabil. Query-urile trec
+  // prin RLS, deci ies DOAR randurile contului curent.
+  async function exportMyData() {
+    setExporting(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const [profile, cos, clients, services, quotes, drafts] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+        supabase.from('companies').select('*'),
+        supabase.from('clients').select('*'),
+        supabase.from('services').select('*'),
+        supabase.from('quotes').select('*, quote_items(*)'),
+        supabase.from('pricing_drafts').select('*'),
+      ])
+      const payload = {
+        exportat_la: new Date().toISOString(),
+        cont: { email: session.user.email, creat_la: session.user.created_at },
+        profil: profile.data ?? null,
+        firme: cos.data ?? [],
+        clienti: clients.data ?? [],
+        servicii: services.data ?? [],
+        fise: quotes.data ?? [],
+        calcule_salvate: drafts.data ?? [],
+      }
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `tarifator-datele-mele-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(a.href)
+      toast('Datele au fost exportate.', 'success')
+    } catch {
+      toast('Nu s-a putut genera exportul. Incearca din nou.')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -526,6 +566,14 @@ export default function SettingsPage() {
                 </a>
               ))}
             </div>
+          </div>
+
+          <div className="px-5 py-3 border-b border-gray-50">
+            <button onClick={exportMyData} disabled={exporting}
+              className="text-sm font-semibold text-blue-600 disabled:text-gray-400">
+              {exporting ? 'Se pregateste exportul...' : 'Exporta datele mele'}
+            </button>
+            <p className="text-xs text-gray-500 mt-0.5">Descarci un fisier JSON cu toate datele tale (GDPR).</p>
           </div>
 
           <div className="px-5 py-3">
