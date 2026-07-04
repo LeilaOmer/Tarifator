@@ -2,6 +2,7 @@
 import { toast } from '@/lib/toast'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { ensureAccountLocal } from '@/lib/session'
 import { Item, RoundStep, RoundMode, emptyItem } from '@/lib/pricing/calc'
 
 export function usePricingDraft() {
@@ -50,6 +51,7 @@ export function usePricingDraft() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return
+      ensureAccountLocal(session.user.id)
       const isPro = localStorage.getItem('dashboardMode') === 'pro'
       const companyId = isPro ? localStorage.getItem('activeCompanyId') : null
       if (companyId) {

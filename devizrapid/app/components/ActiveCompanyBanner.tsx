@@ -1,5 +1,6 @@
 'use client'
 import { supabase } from '@/lib/supabase'
+import { ensureAccountLocal } from '@/lib/session'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 
@@ -13,15 +14,9 @@ export default function ActiveCompanyBanner() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { if (!cancelled) setName(null); return }
 
-      // Daca s-a schimbat contul pe acest device (logout+login alt cont, sau
-      // sesiune schimbata), curatam starea firmei/modului contului anterior —
-      // altfel bannerul si paginile ar folosi firma altui cont.
-      if (localStorage.getItem('lastUserId') !== session.user.id) {
-        localStorage.removeItem('activeCompanyId')
-        localStorage.removeItem('activeCompanyName')
-        localStorage.removeItem('dashboardMode')
-        localStorage.setItem('lastUserId', session.user.id)
-      }
+      // Daca s-a schimbat contul pe acest device, curatam starea firmei/modului
+      // contului anterior (acelasi helper e apelat si in paginile care citesc firma).
+      ensureAccountLocal(session.user.id)
 
       if (localStorage.getItem('dashboardMode') !== 'pro') { if (!cancelled) setName(null); return }
       const companyId = localStorage.getItem('activeCompanyId')

@@ -2,6 +2,7 @@
 import { toast } from '@/lib/toast'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { ensureAccountLocal } from '@/lib/session'
 import { useRouter } from 'next/navigation'
 
 type Service = {
@@ -26,6 +27,7 @@ export default function ServicesPage() {
     async function init() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
+      ensureAccountLocal(session.user.id)
       const { data: prof } = await supabase.from('profiles').select('account_type').eq('id', session.user.id).single()
       const pro = prof?.account_type === 'pro' && localStorage.getItem('dashboardMode') === 'pro'
       setIsPro(pro)

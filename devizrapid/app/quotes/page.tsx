@@ -2,6 +2,7 @@
 import { toast } from '@/lib/toast'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { ensureAccountLocal } from '@/lib/session'
 import { anafLookup } from '@/lib/anaf'
 import { getEffectiveLimits } from '@/lib/plan'
 import { getMonthlyFise } from '@/lib/usage'
@@ -29,16 +30,18 @@ export default function QuotesPage() {
   const router = useRouter()
 
   useEffect(() => {
-  const mode = localStorage.getItem('dashboardMode')
-  const saved = mode === 'pro' ? localStorage.getItem('activeCompanyId') : null
-  setActiveCompanyId(saved)
-  setFilterCompanyId(saved || 'all')
   fetchData()
 }, [])
 
 async function fetchData() {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return
+  ensureAccountLocal(session.user.id)
+
+  const mode = localStorage.getItem('dashboardMode')
+  const saved = mode === 'pro' ? localStorage.getItem('activeCompanyId') : null
+  setActiveCompanyId(saved)
+  setFilterCompanyId(saved || 'all')
 
   const { data: prof } = await supabase.from('profiles').select('account_type').eq('id', session.user.id).single()
   const isPro = prof?.account_type === 'pro' && localStorage.getItem('dashboardMode') === 'pro'

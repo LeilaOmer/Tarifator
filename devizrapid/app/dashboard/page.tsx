@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { getEffectiveLimits } from '@/lib/plan'
 import { getMonthlyFise, getMonthlyCalcule } from '@/lib/usage'
 import { PrimaryModule, setPrimaryModule } from '@/lib/module'
-import { clearAccountLocal } from '@/lib/session'
+import { clearAccountLocal, ensureAccountLocal } from '@/lib/session'
 import { useRouter } from 'next/navigation'
 
 // Mesaj personal (de la tine), aratat O SINGURA DATA persoanei cu acces pe viata,
@@ -51,6 +51,7 @@ export default function Dashboard() {
     async function load() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
+      ensureAccountLocal(session.user.id)
 
       let { data: prof } = await supabase
         .from('profiles').select('account_type, company_name, email, cui, address, phone, bank, iban, vat_rate, primary_module, lifetime').eq('id', session.user.id).single()
