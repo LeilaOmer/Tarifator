@@ -39,8 +39,10 @@ iconiță, imagine OG pentru share. Rămas:
 - [ ] **jsPDF încărcat lazy** (`dynamic import`) în `/quotes/[id]` și `lib/pricing/pdf.ts` —
       scoate ~350 KB din bundle-ul inițial. NEatins încă: e pe calea critică de PDF, de
       făcut cu verificare vizuală a output-ului (regula din AGENTS.md).
-- [ ] **Poziționare preț Mercator** (129) e la doar 20 lei sub Pro (149) — de reconsiderat
-      dacă nu e ancorare intenționată spre Pro.
+- [ ] **Prețul lui Mercator** (129, la doar 20 lei sub Pro 149). Planul în sine NU se
+      taie — a fost cerut de un contabil, e cerere validată (vezi ADR-003). De decis:
+      preț mai mic (~79-89, „plătesc doar ce folosesc") sau păstrat ca ancoră spre Pro.
+      Ideal: întrebat contabilul care l-a cerut ce ar plăti clienții lui.
 
 ## După lansare / când apar bani
 - [ ] **Procesator de plăți** — să seteze automat `plan_tier` + `plan_active_until`

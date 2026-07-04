@@ -50,6 +50,11 @@ două module (vezi `docs/PRODUCT.md`). Numărarea e pe lună calendaristică.
 **De ce:** Monetizare reală la lansare, adaptată celor două tipuri de utilizatori:
 artizanul vrea fișe nelimitate, comerciantul vrea calcule nelimitate — nu-i punem să
 plătească pentru ce nu folosesc.
+**Origine (context important, nu șterge):** Artizan = ideea fondatoarei. **Mercator a
+fost cerut explicit de un contabil** când i s-a povestit de Artizan — deci e cerere
+validată din piață, NU se taie. Discuția deschisă e doar **prețul** lui (129 vs Pro 149
+— diferența de 20 lei îl face fie necumpărat, fie ancoră intenționată spre Pro). Pasul
+următor: întrebat contabilul care l-a cerut ce preț ar accepta clienții lui.
 
 ## ADR-004 — TVA + firme multiple gratuite pentru toți
 **Decizie:** Regimul cu TVA și firmele multiple NU se monetizează; sunt libere pe orice cont.
