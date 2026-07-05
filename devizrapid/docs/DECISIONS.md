@@ -9,6 +9,20 @@ proiectul să nu depindă de istoricul conversațiilor.
 
 ---
 
+## ADR-023 — Regulile SGR pe categorii legale, în cod
+**Data:** 2026-07-05.
+**Decizie:** SGR-ul unui produs se decide în straturi: (1) „NAVETA" în denumire → 0;
+(2) „SGR" în denumire → 0,50; (3) linia de garanție de pe document, cu aceeași
+cantitate → 0,50 pe produsul precedent; (4) **categoria legală din denumire**
+(`classifySgr`, HG 1074/2021): băuturi (apă/sucuri/bere/vin/spirtoase/energizante)
+în ambalaj 0,1–3L → 0,50; lactate/siropuri/ulei sau peste 3L → 0. Tot acolo:
+UM lipsă sau „L"/„ML" (litrajul halucinat ca unitate) → `buc`.
+**De ce:** Regulile SGR sunt LEGE, nu alegerea furnizorului — deci pot sta în cod,
+determinist. Pe facturile unde produsele nu au „SGR" în denumire și AI-ul ratează
+liniile de garanție (poze), produsul rămânea fără SGR deși legea îl cere la raft
+(apa are, iaurtul la PET nu are). Documentul rămâne primul semnal; categoria e
+plasa de siguranță care nu depinde de calitatea citirii.
+
 ## ADR-022 — PDF-ul ANAF citit determinist; garduri de cod peste orice citire AI
 **Data:** 2026-07-05.
 **Decizie:** (1) PDF-ul oficial ANAF al e-Facturii („RO eFactura", layout național

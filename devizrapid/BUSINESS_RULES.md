@@ -52,6 +52,8 @@ Referinta: `lib/pricing/calc.ts` (`calcItem`).
 ## 4. SGR (Sistemul Garantie-Returnare) — cerinta legala
 
 - SGR = **0,50 lei fix** per unitate de ambalaj returnabil.
+- **Ce produse au SGR (HG 1074/2021)**: BAUTURILE in ambalaje nereturnabile de plastic/sticla/metal intre **0,1 si 3 litri** — apa, sucuri/nectaruri/racoritoare, bere, cidru, vin, spirtoase, energizante. **NU au SGR**: laptele si lactatele (iaurt/kefir/sana), siropurile, tot ce nu e bautura (ulei/otet), ambalajele peste 3L (bidonul de 5L) sau sub 0,1L. Clasificarea e in cod (`classifySgr`, `lib/pricing/scanGuards.ts`) ca plasa de siguranta finala — semnalele de pe DOCUMENT (SGR/NAVETA in denumire, linia de garantie asociata) au prioritate.
+- **UM lipsa sau "L"/"ML"** la scanare => `buc` (litrajul din denumire nu e unitate de masura; sticlele se vand la bucata). `kg` ramane `kg` (cantarite reale).
 - NU face parte din pretul produsului; NU intra in baza de calcul a adaosului sau a TVA. Se afiseaza separat ("+0,50 SGR").
 - Linii de tip "SGR", "GARANTIE PET/STICLA/DOZA", "AMBALAJ SGR", "Garantie-Returnare" NU sunt produse — se exclud din lista; daca o astfel de linie are cantitatea = suma cantitatilor produselor de bautura, se aplica `sgr=0.50` la acele produse.
 - Produse cu "NAV"/"NAVETA" in denumire => `sgr=0` (returnate pe naveta, nu individual).

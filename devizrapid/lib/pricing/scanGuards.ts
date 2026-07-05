@@ -11,6 +11,41 @@ export function isNonProductLine(name: string): boolean {
   return /\bambalaj\b|garantie|garanti[ae]-?returnare|\breturnare\b|^sgr\b/.test(n)
 }
 
+// Clasificare SGR pe categorii LEGALE (HG 1074/2021), determinist din denumire.
+// SGR (0,50 lei) se aplica BAUTURILOR in ambalaje nereturnabile de plastic/
+// sticla/metal intre 0,1 si 3 litri: apa, sucuri/nectaruri/racoritoare, bere,
+// cidru, vin, spirtoase, energizante. EXCLUSE prin lege: laptele si lactatele
+// (iaurt/kefir/sana), siropurile; plus tot ce nu e bautura (ulei/otet) si
+// ambalajele de peste 3L (bidonul de 5L) sau sub 0,1L.
+// E plasa de siguranta finala: semnalele de pe DOCUMENT (SGR/NAVETA in denumire,
+// linia de garantie asociata) au prioritate — asta intra in joc doar cand ele tac.
+export function classifySgr(name: string): 0.5 | 0 {
+  const n = name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  if (/\bnav\b|naveta/.test(n)) return 0
+  if (/\bsgr\b/.test(n)) return 0.5
+
+  // volumul din denumire ("2.5L", "0,33L", "500ML", "1.5 L")
+  const vm = n.match(/(\d+(?:[.,]\d+)?)\s*(ml|l)\b/)
+  let vol: number | null = null
+  if (vm) {
+    vol = parseFloat(vm[1].replace(',', '.'))
+    if (vm[2] === 'ml') vol = vol / 1000
+  }
+  if (vol !== null && (vol < 0.1 || vol > 3)) return 0
+
+  // excluse prin lege, chiar in PET/sticla/doza
+  if (/lapte|iaurt|kefir|chefir|sana\b|lactat|sirop|ulei|otet/.test(n)) return 0
+
+  // bautura dupa cuvinte generice de categorie...
+  const beverage = /\bapa\b|apa min|suc\b|nectar|racoritoare|bere\b|cidru|vin\b|spumant|whisky|vodca|\bgin\b|\brom\b|tuica|palinca|cola|pepsi|fanta|sprite|tonic|limonada|ice\s*tea|energy|energizant|kombucha/.test(n)
+  // ...sau dupa ambalaj tipic de bautura mentionat explicit in denumire
+  const packaging = /\bpet\b|\bdoza\b|\bnrgb\b|\bsticla\b/.test(n)
+
+  if ((beverage || packaging) && vol !== null) return 0.5
+  if (beverage && packaging) return 0.5 // fara volum in denumire, dar ambele semnale
+  return 0
+}
+
 // O linie de garantie SGR de pe factura MARCHEAZA produsul asociat, nu doar se
 // arunca: pe facturile Metro/Supeco fiecare produs de bautura e urmat de propria
 // linie "GARANTIE PET" cu ACEEASI cantitate. Modelul e instruit sa faca

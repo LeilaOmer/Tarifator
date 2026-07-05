@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { parseEfacturaXml, isEfacturaXml, parseEfacturaAnafPdf } from '@/lib/pricing/efactura'
-import { isNonProductLine, reconcileUnitPrice, applySgrFromGuaranteeLines, type ScannedLine } from '@/lib/pricing/scanGuards'
+import { isNonProductLine, reconcileUnitPrice, applySgrFromGuaranteeLines, classifySgr, type ScannedLine } from '@/lib/pricing/scanGuards'
 
 function getSupabaseAdmin() {
   // Cheia anonima — foloseste pentru auth.getUser(token) si invoice_scan_logs.
@@ -65,7 +65,7 @@ GENERAL:
 
 FACTURA/AVIZ (doc_type=invoice), per produs:
 - price_raw = pretul UNITAR tiparit, copiat exact. price_includes_vat = true daca coloana pretului e "cu TVA"/"TTI", false daca e "net"/"fara TVA"/neutra.
-- unit = valoarea EXACTA din coloana UM, verbatim ("Buc","Cut","kg","ST"...). NU o traduce, NU o deduce din denumire. (codul decide dupa ea daca randul e cutie de impartit.)
+- unit = valoarea EXACTA din coloana UM, verbatim ("Buc","Cut","kg","ST"...). NU o traduce, NU o deduce din denumire. Daca documentul NU are coloana UM => "buc" (NU pune litrajul din denumire ca UM). (codul decide dupa ea daca randul e cutie de impartit.)
 - pieces_per_box = nr. de bucati per ambalaj DOAR daca e scris in DENUMIRE: "24BUC/CUT"=>24, "30B/CUT"=>30, "35 GR 24 BUC"=>24, denumire taiata "...GLZ (18"=>18. Altfel 1. NU-l deduce de la alt produs (o face codul).
 - quantity + line_total = cantitatea si valoarea randului (acelasi regim TVA ca price_raw). Completeaza-le MEREU cand exista coloane de cantitate si valoare — sunt verificare. Daca randul nu are cantitate proprie => quantity=1, line_total=0.
 - VERIFICARE OBLIGATORIE: quantity x price_raw ≈ line_total. Daca nu se potriveste, ai citit gresit coloana/cifrele — incearca alta combinatie de pe rand pana se potriveste. NU accepta o citire care nu se verifica.
@@ -187,7 +187,8 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
     d.items = filtered.map(item => {
       const vatNum = Number(item.vat)
       const vat = (vatNum > 0 && vatNum <= 15) ? 11 : 21
-      const sgr = Number(item.sgr) === 0.5 ? 0.5 : 0
+      // SGR: ce a citit modelul de pe bon, altfel categoria legala din denumire.
+      const sgr = Number(item.sgr) === 0.5 ? 0.5 : classifySgr(String(item.name))
       // Bon fiscal: pretul e mereu cu TVA inclus, iar impartirea la cantitate
       // (buc sau kg cantarite) si scaderea reducerii de card de fidelitate se
       // fac aici, deterministic — modelul doar citeste line_total/quantity/
@@ -197,7 +198,9 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
       const cardDiscount = Number(item.card_discount) > 0 ? Number(item.card_discount) : 0
       const netTotal = Math.max(lineTotal - cardDiscount, 0)
       const supplierPrice = Math.round((netTotal / quantity / (1 + vat / 100)) * 10000) / 10000
-      const unit = typeof item.unit === 'string' && item.unit.trim() ? item.unit : 'buc'
+      const rawUnit = typeof item.unit === 'string' ? item.unit.trim().toLowerCase() : ''
+      // ca la facturi: UM lipsa sau "L"/"ML" (litrajul din denumire) => bucata
+      const unit = !rawUnit || /^(l|lt|litru|litri|ml)$/.test(rawUnit) ? 'buc' : rawUnit
       return { name: item.name, unit, supplier_price: supplierPrice, vat, discount: 0, sgr }
     })
     return d
@@ -211,7 +214,10 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
   const prep = filtered.map(item => {
     const vatNum = Number(item.vat)
     const vat = (vatNum > 0 && vatNum <= 15) ? 11 : 21
-    const sgr = Number(item.sgr) === 0.5 ? 0.5 : 0
+    // SGR in straturi: semnalul de pe document (numele cu SGR / linia de garantie
+    // asociata, deja pus pe item.sgr) primeaza; altfel categoria LEGALA din
+    // denumire (apa/bauturi 0.1-3L => 0.50; lactate/sirop/peste 3L => 0).
+    const sgr = Number(item.sgr) === 0.5 ? 0.5 : classifySgr(String(item.name))
     const itemDiscount = Number(item.discount)
     const discount = (itemDiscount > 0 && itemDiscount <= 100) ? itemDiscount : (globalDiscounts[vat] ?? 0)
 
@@ -259,7 +265,11 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
       : 1
     const supplierPrice = Math.round((p.priceExVat / ratio) * 10000) / 10000
     const rawUnit = String(p.unit ?? '').toLowerCase().trim()
-    const unit = p.isBoxUnit ? 'buc' : (rawUnit.startsWith('buc') || !rawUnit ? 'buc' : rawUnit)
+    // UM lipsa => "buc". "L"/"ML" ca UM e aproape mereu litrajul din DENUMIRE
+    // halucinat de model in coloana de unitate (sticlele se vand la bucata, nu
+    // la litru) => tot "buc". Kg ramane kg (produse cantarite reale).
+    const unit = p.isBoxUnit || !rawUnit || rawUnit.startsWith('buc') || /^(l|lt|litru|litri|ml)$/.test(rawUnit)
+      ? 'buc' : rawUnit
     return { name: p.name, unit, supplier_price: supplierPrice, vat: p.vat, discount: p.discount, sgr: p.sgr }
   })
   return d

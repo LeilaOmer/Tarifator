@@ -17,7 +17,7 @@
 // regulat, deci extragem cu regex tintit pe blocuri <InvoiceLine>. Ruleaza la fel
 // in browser (calea principala, din hook) si pe server (siguranta, in ruta API).
 
-import { isNonProductLine, reconcileUnitPrice } from './scanGuards'
+import { isNonProductLine, reconcileUnitPrice, classifySgr } from './scanGuards'
 
 export type EfacturaItem = {
   name: string
@@ -78,9 +78,9 @@ function buildItem(name: string, priceExVat: number, percent: number): EfacturaI
   // Cota TVA declarata pe linie (o luam ca atare din factura, nu o re-deducem).
   const vat: 11 | 21 = percent > 0 && percent <= 15 ? 11 : 21
 
-  // SGR (0,50 lei/ambalaj): denumirea contine "SGR". Exceptie: "NAV"/"NAVETA"
-  // (returnat pe naveta, nu individual) => 0. (Regula din BUSINESS_RULES cap. 4.)
-  const sgr = /\bsgr\b/i.test(name) && !/\bnav\b|naveta/i.test(name) ? 0.5 : 0
+  // SGR (0,50 lei/ambalaj): semnalul din denumire (SGR/NAVETA), altfel categoria
+  // legala (apa/bauturi 0.1-3L da; lactate/sirop/peste 3L nu) — vezi scanGuards.
+  const sgr = classifySgr(name)
 
   const pieces = piecesPerBox(name)
   const supplier_price = Math.round((priceExVat / pieces) * 10000) / 10000
