@@ -9,6 +9,20 @@ proiectul să nu depindă de istoricul conversațiilor.
 
 ---
 
+## ADR-024 — Corecțiile cutie/bucată sunt partajate între utilizatori (înlocuiește ADR-010)
+**Data:** 2026-07-05.
+**Decizie:** `getKnownRatios` citește corecțiile TUTUROR utilizatorilor pentru
+furnizorul respectiv, cu prioritate: corecția PROPRIE bate corecțiile altora.
+Scrierea rămâne cu `created_by` (știm mereu cine a corectat).
+**De ce:** Ambalarea e a furnizorului, nu a clientului — același furnizor pune
+aceleași detalii de produs la toți clienții lui (ex. Albeni = cutie de 18
+oriunde), deci corecția unui user îi ajută pe toți (decizia fondatoarei,
+2026-07-05). Riscul de „otrăvire" din ADR-010 e atenuat, nu eliminat: o valoare
+greșită a altcuiva se aplică doar unde userul n-are corecția lui, iar prima lui
+corecție îl acoperă permanent (a lui are prioritate). Plafonul 2-500 din
+`/api/box-ratio` respinge valorile absurde. Dacă apare abuz real, pasul următor
+e consensul (valoarea folosită de ≥2 useri), nu întoarcerea la per-user.
+
 ## ADR-023 — Regulile SGR pe categorii legale, în cod
 **Data:** 2026-07-05.
 **Decizie:** SGR-ul unui produs se decide în straturi: (1) „NAVETA" în denumire → 0;
@@ -140,7 +154,7 @@ produs-cutie cu același preț de cutie + aceleași prime 3 cuvinte.
 **De ce:** Furnizorii nu scriu raportul pe fiecare rând; regula generală bate exemplele
 punctuale (nu putem încărca toate formatele posibile).
 
-## ADR-010 — Corecțiile manuale de raport sunt per-user, nu partajate
+## ADR-010 — Corecțiile manuale de raport sunt per-user, nu partajate — ÎNLOCUIT de ADR-024
 **Decizie:** Butonul „Corectează cutie/bucată" salvează în `product_box_ratios` cu
 `created_by`; se aplică doar la scanările ACELUI user. `getKnownRatios` e filtrat pe `created_by`.
 **De ce:** Denumirile diferă între furnizori/useri; partajarea ar „otrăvi" prețurile altora.

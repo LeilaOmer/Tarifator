@@ -38,6 +38,55 @@ export function phantomRowIndexes(rows: { name: string; verified: boolean }[]): 
   return out
 }
 
+// Deduplicare intre feliile suprapuse ale unei poze / randurile repetate de
+// model. Cheia = numele redus la litere+cifre. Doua randuri sunt ACELASI produs
+// daca cheile sunt identice sau la o litera distanta pe nume lungi
+// ("INTREG/17 B" vs "INTREGI /17 B" — acelasi rand citit usor diferit din doua
+// felii). Reguli:
+//   - pret egal => se contopesc (duplicat sigur);
+//   - pret diferit => castiga randul VERIFICAT (a trecut prin cantitate x pret
+//     ≈ valoarea randului pe server); daca amandoua sau niciunul e verificat,
+//     raman AMANDOUA — nu putem decide noi care citire e cea buna, iar doua
+//     produse reale diferite au preturi diferite si raman corect separate.
+export type DedupableItem = { name: string; supplier_price: number; verified?: boolean }
+
+const nameKey = (name: string) =>
+  name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+
+// distanta de editare <= 1 (o inserare/stergere/inlocuire), doar pe chei lungi;
+// numele scurte doar identice ("mere" vs "pere" sunt produse diferite)
+function nearlySameName(a: string, b: string): boolean {
+  if (a === b) return true
+  if (a.length < 10 || b.length < 10) return false
+  if (Math.abs(a.length - b.length) > 1) return false
+  let i = 0, j = 0, edits = 0
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue }
+    if (++edits > 1) return false
+    if (a.length > b.length) i++
+    else if (b.length > a.length) j++
+    else { i++; j++ }
+  }
+  return edits + (a.length - i) + (b.length - j) <= 1
+}
+
+export function dedupeScannedItems<T extends DedupableItem>(items: T[]): T[] {
+  const out: T[] = []
+  const keys: string[] = []
+  for (const item of items) {
+    const k = nameKey(item.name || '')
+    const price = Math.round((item.supplier_price || 0) * 100)
+    const idx = keys.findIndex(ok => nearlySameName(ok, k))
+    if (idx === -1) { out.push(item); keys.push(k); continue }
+    const existing = out[idx]
+    if (Math.round((existing.supplier_price || 0) * 100) === price) continue // duplicat sigur
+    if (item.verified && !existing.verified) { out[idx] = item; keys[idx] = k; continue }
+    if (!item.verified && existing.verified) continue
+    out.push(item); keys.push(k) // ambiguu: pastram amandoua
+  }
+  return out
+}
+
 // Clasificare SGR pe categorii LEGALE (HG 1074/2021), determinist din denumire.
 // SGR (0,50 lei) se aplica BAUTURILOR in ambalaje nereturnabile de plastic/
 // sticla/metal intre 0,1 si 3 litri: apa, sucuri/nectaruri/racoritoare, bere,

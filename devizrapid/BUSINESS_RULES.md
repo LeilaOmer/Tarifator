@@ -94,7 +94,7 @@ Principiu central: **AI-ul doar CITESTE si TRANSCRIE numere brute; TOATA aritmet
 - Decizia "se imparte pe bucata?" se ia din **coloana UM** a randului (determinist in cod), NU din text: doar UM de tip `Cut`/`Cutie`/`Bax`/`Bx`/`Set` se imparte; `Buc`/`ST`/`kg` raman ca atare.
 - Raportul bucati/cutie se ia din DENUMIRE daca e scris ("24BUC/CUT" => 24). Un "18 BUC/CUT" cand UM=Buc e doar info de ambalare — NU se imparte.
 - **Raport imprumutat de la "frate"**: un produs-cutie fara raport in nume imprumuta raportul de la alt produs-cutie cu ACELASI pret de cutie + aceleasi prime 3 cuvinte din denumire (util cand furnizorul nu scrie raportul pe fiecare rand).
-- Corectiile manuale de raport (butonul "Corecteaza cutie/bucata") se salveaza per user (`product_box_ratios`, `created_by`) si au prioritate la scanarile viitoare ale ACELUI user pentru acelasi furnizor. NU sunt partajate intre useri (evita otravirea preturilor altora).
+- Corectiile manuale de raport (butonul "Corecteaza cutie/bucata") sunt PARTAJATE intre utilizatori (ADR-024): ambalarea e a furnizorului, nu a clientului — corectia unui user ii ajuta pe toti la acelasi furnizor. Prioritate: corectia PROPRIE bate corectiile altora (fiecare se poate apara singur de o valoare gresita). Plafonul 2-500 bucati/cutie respinge valorile absurde la scriere.
 
 ## 8. Numerotare fise
 

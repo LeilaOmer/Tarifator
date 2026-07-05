@@ -28,22 +28,28 @@ function normalizeName(s: string): string {
     .trim()
 }
 
-// Raporturi bucati/cutie corectate manual anterior, DOAR de userul curent
-// (created_by = userId), pentru acelasi furnizor. Scoparea per-user, nu global:
-// altfel un user putea scrie un raport fals pe un furnizor comun si strica pe
-// tacute preturile calculate de toti ceilalti (otravire cross-tenant).
+// Raporturi bucati/cutie corectate manual, PARTAJATE intre utilizatori (ADR-024):
+// ambalarea e a furnizorului, nu a clientului — acelasi furnizor pune aceleasi
+// detalii de produs la toti clientii lui (ex. Albeni = cutie de 18 oriunde), deci
+// corectia unui user ii ajuta pe toti ceilalti. Ordinea de prioritate: corectia
+// PROPRIE bate corectiile altora — daca cineva a gresit, fiecare user se poate
+// apara corectand el insusi (corectia lui il acopera pe el, fara sa strice restul).
 async function getKnownRatios(supplierName: string, userId: string): Promise<Map<string, number>> {
   const map = new Map<string, number>()
   const name = supplierName?.trim()
   if (!name) return map
   const { data } = await getServiceRoleClient()
     .from('product_box_ratios')
-    .select('product_name, pieces_per_box')
-    .eq('created_by', userId)
+    .select('product_name, pieces_per_box, created_by')
     .ilike('supplier_name', name)
   if (data) {
-    for (const row of data as { product_name: string; pieces_per_box: number }[]) {
-      map.set(normalizeName(row.product_name), row.pieces_per_box)
+    const rows = data as { product_name: string; pieces_per_box: number; created_by: string }[]
+    for (const row of rows) {
+      if (row.created_by === userId) map.set(normalizeName(row.product_name), row.pieces_per_box)
+    }
+    for (const row of rows) {
+      const key = normalizeName(row.product_name)
+      if (!map.has(key)) map.set(key, row.pieces_per_box)
     }
   }
   return map
@@ -201,7 +207,9 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
       const rawUnit = typeof item.unit === 'string' ? item.unit.trim().toLowerCase() : ''
       // ca la facturi: UM lipsa sau "L"/"ML" (litrajul din denumire) => bucata
       const unit = !rawUnit || /^(l|lt|litru|litri|ml)$/.test(rawUnit) ? 'buc' : rawUnit
-      return { name: item.name, unit, supplier_price: supplierPrice, vat, discount: 0, sgr }
+      // verified = randul a putut fi verificat aritmetic; clientul il prefera la
+      // deduplicarea intre feliile suprapuse ale aceleiasi poze.
+      return { name: item.name, unit, supplier_price: supplierPrice, vat, discount: 0, sgr, verified: lineTotal > 0 }
     })
     return d
   }
@@ -279,7 +287,7 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
     // la litru) => tot "buc". Kg ramane kg (produse cantarite reale).
     const unit = p.isBoxUnit || !rawUnit || rawUnit.startsWith('buc') || /^(l|lt|litru|litri|ml)$/.test(rawUnit)
       ? 'buc' : rawUnit
-    return { name: p.name, unit, supplier_price: supplierPrice, vat: p.vat, discount: p.discount, sgr: p.sgr }
+    return { name: p.name, unit, supplier_price: supplierPrice, vat: p.vat, discount: p.discount, sgr: p.sgr, verified: p.verified }
   })
   return d
 }

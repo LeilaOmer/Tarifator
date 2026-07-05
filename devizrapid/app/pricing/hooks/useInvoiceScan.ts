@@ -3,9 +3,10 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Item } from '@/lib/pricing/calc'
 import { parseEfacturaXml } from '@/lib/pricing/efactura'
+import { dedupeScannedItems } from '@/lib/pricing/scanGuards'
 
 type ScanResult = { supplier: string; items: Item[] }
-type ApiItem = { name: string; unit: string; supplier_price: number; discount: number; vat: number; sgr: number }
+type ApiItem = { name: string; unit: string; supplier_price: number; discount: number; vat: number; sgr: number; verified?: boolean }
 type ApiResult = { supplier?: string; items?: ApiItem[]; error?: string; detail?: string; debug?: string }
 
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms))
@@ -89,25 +90,9 @@ function mapItems(apiItems: ApiItem[]): Item[] {
   }))
 }
 
-// Cheia = nume (redus la litere+cifre) + pret. Contopim doua intrari DOAR daca
-// se potrivesc pe AMBELE. Acelasi produs citit din doua felii suprapuse are
-// acelasi pret (calculul e determinist) + nume aproape identic ("/17 B" vs
-// "17B" devin la fel pe litere+cifre) => se unesc. Doua produse DIFERITE care
-// din intamplare se reduc la aceleasi litere+cifre au preturi diferite => raman
-// separate (asa nu mai pierdem produse crezandu-le duplicate).
-function dedupeItems(items: Item[]): Item[] {
-  const seen = new Set<string>()
-  const out: Item[] = []
-  for (const item of items) {
-    const name = item.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
-    const price = Math.round(parseFloat(item.supplierPrice || '0') * 100)
-    const key = name + '|' + price
-    if (seen.has(key)) continue
-    seen.add(key)
-    out.push(item)
-  }
-  return out
-}
+// Deduplicarea (nume aproape identice intre feliile suprapuse, randul verificat
+// castiga la pret diferit) traieste in lib/pricing/scanGuards.ts — logica pura,
+// testata izolat, partajata.
 
 export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
   const [scanning, setScanning] = useState(false)
@@ -173,9 +158,9 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
         const body = { docBase64: await readBase64(file), mimeType: file.type || 'application/pdf', fileName: file.name }
         const { ok, status, data } = await callApi(body, token)
         if (!ok) { setError(errorMessage(status, data)); return }
-        // dedupeItems si aici: modelul poate scoate acelasi rand de doua ori
+        // dedupe si aici: modelul poate scoate acelasi rand de doua ori
         // dintr-un PDF dens (vazut pe facturi reale), nu doar din felii de poza.
-        if (data.items?.length) { onSuccess({ supplier: data.supplier || '', items: dedupeItems(mapItems(data.items)) }); return }
+        if (data.items?.length) { onSuccess({ supplier: data.supplier || '', items: mapItems(dedupeScannedItems(data.items)) }); return }
         setError('Nu s-au gasit produse. Incearca o poza mai clara sau incarca PDF-ul.')
         return
       }
@@ -214,7 +199,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
       const supplier = sliceRes.find(r => r.supplier)?.supplier || ''
 
       if (combinedItems.length > 0) {
-        onSuccess({ supplier, items: dedupeItems(mapItems(combinedItems)) })
+        onSuccess({ supplier, items: mapItems(dedupeScannedItems(combinedItems)) })
         // Rezultat PARTIAL: o felie tot n-a incaput in limita chiar si dupa
         // reincercari. Anuntam clar, ca sa nu para complet cand nu e.
         if (rateLimited) setError('Am citit doar o parte din produse (limita AI atinsa). Mai apasa o data peste ~1 minut ca sa completezi restul.')

@@ -10,6 +10,15 @@ const upper = (s: string) => noDiac(s).toUpperCase()
 const fmtDate = () =>
   new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
+// Taie textul cu "..." cat sa incapa in latimea coloanei (mm), la fontul SETAT
+// in acel moment — altfel denumirile lungi intra peste coloana vecina.
+function fitText(doc: jsPDF, s: string, maxW: number): string {
+  if (doc.getTextWidth(s) <= maxW) return s
+  let t = s
+  while (t.length > 1 && doc.getTextWidth(t + '...') > maxW) t = t.slice(0, -1)
+  return t + '...'
+}
+
 export type PdfResult = { blob: Blob; filename: string }
 
 // Deschide fisa de partajare nativa (WhatsApp, email, etc.) cu PDF-ul atasat,
@@ -54,7 +63,8 @@ export async function exportPDFContabil(
   if (!vatPayer) {
     cols = hasSgr
       ? [
-          { label: 'Denumire', x: margin, w: 65 },
+          { label: 'Nr', x: margin, w: 7 },
+          { label: 'Denumire', x: margin + 7, w: 58 },
           { label: 'UM', x: 77, w: 10 },
           { label: 'Pret furn.', x: 88, w: 22 },
           { label: 'Disc%', x: 111, w: 14 },
@@ -66,7 +76,8 @@ export async function exportPDFContabil(
           { label: '+SGR', x: 271, w: 16 },
         ]
       : [
-          { label: 'Denumire', x: margin, w: 70 },
+          { label: 'Nr', x: margin, w: 7 },
+          { label: 'Denumire', x: margin + 7, w: 63 },
           { label: 'UM', x: 82, w: 10 },
           { label: 'Pret furn.', x: 93, w: 24 },
           { label: 'Disc%', x: 118, w: 16 },
@@ -79,7 +90,8 @@ export async function exportPDFContabil(
   } else {
     cols = hasSgr
       ? [
-          { label: 'Denumire', x: margin, w: 62 },
+          { label: 'Nr', x: margin, w: 7 },
+          { label: 'Denumire', x: margin + 7, w: 55 },
           { label: 'UM', x: 73, w: 10 },
           { label: 'Pret furn.', x: 84, w: 20 },
           { label: 'Disc%', x: 105, w: 12 },
@@ -92,7 +104,8 @@ export async function exportPDFContabil(
           { label: '+SGR', x: 270, w: 17 },
         ]
       : [
-          { label: 'Denumire', x: margin, w: 70 },
+          { label: 'Nr', x: margin, w: 7 },
+          { label: 'Denumire', x: margin + 7, w: 63 },
           { label: 'UM', x: 82, w: 12 },
           { label: 'Pret furn.', x: 96, w: 22 },
           { label: 'Disc%', x: 120, w: 14 },
@@ -148,7 +161,10 @@ export async function exportPDFContabil(
             fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt), fmt2(c.withVat), fmt2(c.final),
           ]
     }
-    cols.forEach((col, i) => doc.text(vals[i], col.x, y))
+    // Nr. crt. in fata + denumirea taiata la latimea coloanei ei (numele lungi
+    // nu mai intra peste UM). vals[0] e denumirea; restul raman cum sunt.
+    const row = [String(idx + 1), fitText(doc, vals[0], cols[1].w - 2), ...vals.slice(1)]
+    cols.forEach((col, i) => doc.text(row[i], col.x, y))
     y += 6
     if (y > 185) { doc.addPage(); drawPageChrome(doc, 297, 210); y = 15 }
   })
@@ -171,7 +187,8 @@ export async function exportPDFMagazin(
   doc.setFillColor(240, 240, 245)
   doc.rect(margin, y - 4, W - 2 * margin, 7, 'F')
   doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60)
-  doc.text('Denumire produs', margin, y)
+  doc.text('Nr', margin, y)
+  doc.text('Denumire produs', margin + 8, y)
   doc.text('UM', 130, y)
   doc.text('Pret vanzare', W - margin, y, { align: 'right' })
   y += 7
@@ -181,7 +198,8 @@ export async function exportPDFMagazin(
     const { final, sgr } = calcItem(item, adaos, step, mode, vatPayer)
     if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6.5, 'F') }
     doc.setFontSize(9)
-    doc.text(upper(item.name), margin, y)
+    doc.text(String(idx + 1), margin, y)
+    doc.text(fitText(doc, upper(item.name), 130 - (margin + 8) - 2), margin + 8, y)
     doc.text(upper(item.unit), 130, y)
     doc.setFont('helvetica', 'bold')
     doc.text(fmt2(final) + ' RON', W - margin, y, { align: 'right' })

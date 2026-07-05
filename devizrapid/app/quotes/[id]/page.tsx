@@ -152,21 +152,22 @@ function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: numb
 
   doc.line(margin, y, W - margin, y); y += 7;
 
-  const colX = [margin, 95, 120, 150, 178];
+  const colX = [margin, margin + 8, 95, 120, 150];
   doc.setFillColor(245, 247, 250); doc.rect(margin, y - 4, W - 2 * margin, 7, "F");
   doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.setTextColor(60, 60, 60);
-  ["Descriere", "Cant.", "Pret unit.", "Total"].forEach((h, i) => doc.text(h, colX[i], y));
+  ["Nr.", "Descriere", "Cant.", "Pret unit.", "Total"].forEach((h, i) => doc.text(h, colX[i], y));
   y += 5; doc.setDrawColor(220, 220, 220); doc.line(margin, y, W - margin, y); y += 4;
 
   doc.setFont("helvetica", "normal");
   quote.quote_items.forEach((item, idx) => {
     if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6, "F"); }
     doc.setTextColor(30, 30, 30);
-    const lines = doc.splitTextToSize(item.description, 70);
-    doc.text(lines, colX[0], y);
-    doc.text(String(item.quantity), colX[1], y);
-    doc.text(fmt(item.unit_price), colX[2], y);
-    doc.text(fmt(item.total), colX[3], y);
+    const lines = doc.splitTextToSize(item.description, 68);
+    doc.text(String(idx + 1), colX[0], y);
+    doc.text(lines, colX[1], y);
+    doc.text(String(item.quantity), colX[2], y);
+    doc.text(fmt(item.unit_price), colX[3], y);
+    doc.text(fmt(item.total), colX[4], y);
     y += Math.max(5.5, lines.length * 4.5);
     if (y > 260) { doc.addPage(); drawPageChrome(doc, 210, 297); y = 20; }
   });
