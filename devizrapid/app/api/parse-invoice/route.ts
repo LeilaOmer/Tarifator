@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { parseEfacturaXml, isEfacturaXml, parseEfacturaAnafPdf } from '@/lib/pricing/efactura'
-import { isNonProductLine, reconcileUnitPrice } from '@/lib/pricing/scanGuards'
+import { isNonProductLine, reconcileUnitPrice, applySgrFromGuaranteeLines, type ScannedLine } from '@/lib/pricing/scanGuards'
 
 function getSupabaseAdmin() {
   // Cheia anonima — foloseste pentru auth.getUser(token) si invoice_scan_logs.
@@ -144,6 +144,11 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
   if (!data || typeof data !== 'object') return null
   const d = data as Record<string, unknown>
   if (!Array.isArray(d.items)) return null
+
+  // INAINTE de a filtra liniile de garantie/ambalaj, folosim informatia din ele:
+  // o linie de garantie pune sgr=0.5 pe produsul precedent cu aceeasi cantitate
+  // (facturi Metro/Supeco, unde produsele NU au "SGR" in denumire).
+  applySgrFromGuaranteeLines(d.items as ScannedLine[])
 
   const isReceipt = d.doc_type === 'receipt'
 

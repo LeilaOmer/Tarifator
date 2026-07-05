@@ -11,6 +11,37 @@ export function isNonProductLine(name: string): boolean {
   return /\bambalaj\b|garantie|garanti[ae]-?returnare|\breturnare\b|^sgr\b/.test(n)
 }
 
+// O linie de garantie SGR de pe factura MARCHEAZA produsul asociat, nu doar se
+// arunca: pe facturile Metro/Supeco fiecare produs de bautura e urmat de propria
+// linie "GARANTIE PET" cu ACEEASI cantitate. Modelul e instruit sa faca
+// asocierea, dar cand o rateaza (scoate garantia ca produs separat), o refacem
+// aici determinist: linia de garantie pune sgr=0.5 pe produsul imediat precedent
+// daca are aceeasi cantitate (sau nu are cantitate deloc — cazul bonurilor).
+// Liniile CUMULATE de la finalul facturii (cantitate = suma tuturor produselor)
+// NU se potrivesc cu produsul precedent => nu marcheaza gresit; acolo produsele
+// au oricum "SGR" in denumire.
+export type ScannedLine = { name?: unknown; quantity?: unknown; sgr?: unknown }
+export function applySgrFromGuaranteeLines(items: ScannedLine[]): void {
+  const qty = (v: unknown) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : 0 }
+  const close = (a: number, b: number) => Math.abs(a - b) <= b * 0.02
+  for (let i = 0; i < items.length; i++) {
+    const line = items[i]
+    if (typeof line?.name !== 'string' || !isNonProductLine(line.name)) continue
+    const g = qty(line.quantity)
+    for (let j = i - 1; j >= 0; j--) {
+      const prev = items[j]
+      if (typeof prev?.name !== 'string' || isNonProductLine(prev.name)) continue
+      const p = qty(prev.quantity)
+      // aceeasi cantitate — tolerand si factorul 1000 al separatorului de mii
+      // ("4.560" citit ca 4,56 pe un rand si ca 4560 pe celalalt)
+      if (g === 0 || (p > 0 && (close(g, p) || close(g / 1000, p) || close(g * 1000, p)))) {
+        prev.sgr = 0.5
+      }
+      break // doar produsul imediat precedent; mai departe e alta marfa
+    }
+  }
+}
+
 // Alege pretul unitar CORECT dintre cel declarat (citit de model / din camp) si
 // cel derivat din valoarea randului (lineTotal / quantity). Regula de aur:
 // cantitate x pret ≈ valoarea randului — singura verificare pe care o factura
