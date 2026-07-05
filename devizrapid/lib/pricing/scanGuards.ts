@@ -53,21 +53,31 @@ export type DedupableItem = { name: string; supplier_price: number; verified?: b
 const nameKey = (name: string) =>
   name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
 
-// distanta de editare <= 1 (o inserare/stergere/inlocuire), doar pe chei lungi;
-// numele scurte doar identice ("mere" vs "pere" sunt produse diferite)
+// Acelasi nume, citit usor diferit? Doua semnale, doar pe chei lungi (numele
+// scurte doar identice — "mere" vs "pere" sunt produse diferite):
+//   1. distanta de editare <= 1 (o inserare/stergere/inlocuire);
+//   2. prefix comun >= 90% din cheia mai scurta — trunchieri diferite ale
+//      aceluiasi rand ("OREO /22 B" vs "OREO", "INTREG/17 B" vs "INTREGI").
+//      Produsele din aceeasi familie raman sub prag ("CHOCO BISCUITS" vs
+//      "CHOCO MINIS" au prefix comun ~78%, "BANCOFFEE" vs "CAPPUCINO" ~65%).
 function nearlySameName(a: string, b: string): boolean {
   if (a === b) return true
   if (a.length < 10 || b.length < 10) return false
-  if (Math.abs(a.length - b.length) > 1) return false
-  let i = 0, j = 0, edits = 0
-  while (i < a.length && j < b.length) {
-    if (a[i] === b[j]) { i++; j++; continue }
-    if (++edits > 1) return false
-    if (a.length > b.length) i++
-    else if (b.length > a.length) j++
-    else { i++; j++ }
+  if (Math.abs(a.length - b.length) <= 1) {
+    let i = 0, j = 0, edits = 0, over = false
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) { i++; j++; continue }
+      if (++edits > 1) { over = true; break }
+      if (a.length > b.length) i++
+      else if (b.length > a.length) j++
+      else { i++; j++ }
+    }
+    if (!over && edits + (a.length - i) + (b.length - j) <= 1) return true
   }
-  return edits + (a.length - i) + (b.length - j) <= 1
+  const min = Math.min(a.length, b.length)
+  let p = 0
+  while (p < min && a[p] === b[p]) p++
+  return p >= min * 0.9
 }
 
 export function dedupeScannedItems<T extends DedupableItem>(items: T[]): T[] {
@@ -79,7 +89,12 @@ export function dedupeScannedItems<T extends DedupableItem>(items: T[]): T[] {
     const idx = keys.findIndex(ok => nearlySameName(ok, k))
     if (idx === -1) { out.push(item); keys.push(k); continue }
     const existing = out[idx]
-    if (Math.round((existing.supplier_price || 0) * 100) === price) continue // duplicat sigur
+    if (Math.round((existing.supplier_price || 0) * 100) === price) {
+      // duplicat sigur — pastram citirea cu numele mai LUNG (mai completa,
+      // "OREO /22 B" bate "OREO")
+      if ((item.name || '').length > (existing.name || '').length) { out[idx] = item; keys[idx] = k }
+      continue
+    }
     if (item.verified && !existing.verified) { out[idx] = item; keys[idx] = k; continue }
     if (!item.verified && existing.verified) continue
     out.push(item); keys.push(k) // ambiguu: pastram amandoua
