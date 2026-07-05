@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Item } from '@/lib/pricing/calc'
+import { parseEfacturaXml } from '@/lib/pricing/efactura'
 
 type ScanResult = { supplier: string; items: Item[] }
 type ApiItem = { name: string; unit: string; supplier_price: number; discount: number; vat: number; sgr: number }
@@ -148,6 +149,22 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
     setScanning(true)
     setError('')
     try {
+      // e-Factura XML = date structurate: le citim determinist in cod (100% corect,
+      // gratuit, instant), fara AI si fara sa consumam din cota de scanari. Trebuie
+      // interceptat INAINTE de calea AI — altfel XML-ul ajungea trunchiat la 5000 de
+      // caractere la modelul de text, care il citea gresit si incomplet.
+      const lowerName = file.name.toLowerCase()
+      if (file.type.includes('xml') || lowerName.endsWith('.xml')) {
+        const text = await file.text()
+        const parsed = parseEfacturaXml(text)
+        if (parsed && parsed.items.length > 0) {
+          onSuccess({ supplier: parsed.supplier, items: mapItems(parsed.items) })
+        } else {
+          setError('Fisierul XML nu pare o e-Factura valida (nu am gasit produse in el).')
+        }
+        return
+      }
+
       const isImage = file.type.startsWith('image/')
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token

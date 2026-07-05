@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { parseEfacturaXml, isEfacturaXml } from '@/lib/pricing/efactura'
 
 function getSupabaseAdmin() {
   // Cheia anonima — foloseste pentru auth.getUser(token) si invoice_scan_logs.
@@ -379,6 +380,18 @@ export async function POST(req: NextRequest) {
         }
       } else {
         text = buf.toString('utf-8')
+        // e-Factura XML (UBL): date structurate, citite determinist in cod — fara AI
+        // si fara sa trunchiem la 5000 de caractere (o factura densa depasea limita si
+        // se pierdeau produse). Calea normala e in client (useInvoiceScan); asta e plasa
+        // de siguranta daca ruta e apelata direct cu un XML.
+        if (isEfacturaXml(text)) {
+          const parsed = parseEfacturaXml(text)
+          if (parsed && parsed.items.length > 0) {
+            await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
+            return NextResponse.json({ supplier: parsed.supplier, items: parsed.items })
+          }
+          return NextResponse.json({ items: [], error: 'xml_no_products' })
+        }
       }
     } else if (body.text) {
       text = body.text
