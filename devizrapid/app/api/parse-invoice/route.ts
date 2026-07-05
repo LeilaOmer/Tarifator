@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { parseEfacturaXml, isEfacturaXml } from '@/lib/pricing/efactura'
+import { parseEfacturaXml, isEfacturaXml, parseEfacturaAnafPdf } from '@/lib/pricing/efactura'
+import { isNonProductLine, reconcileUnitPrice } from '@/lib/pricing/scanGuards'
 
 function getSupabaseAdmin() {
   // Cheia anonima — foloseste pentru auth.getUser(token) si invoice_scan_logs.
@@ -163,6 +164,10 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
     if (!i || typeof i !== 'object') return false
     const item = i as Record<string, unknown>
     if (typeof item.name !== 'string' || item.name.trim() === '') return false
+    // Plasa de siguranta DETERMINISTA: modelul e instruit sa excluda liniile de
+    // garantie/ambalaj SGR, dar uneori le scapa ca produse (cu pret copiat de la
+    // vecin). Filtrul din cod nu da gres.
+    if (isNonProductLine(item.name)) return false
     // Number(...) accepta si numere, si numere ca text ("2.64"): modelul le
     // intoarce inconsistent, iar daca ceream strict typeof==='number' un raspuns
     // cu preturi ca string ar fi fost filtrat COMPLET (0 produse => vision_failed).
@@ -207,17 +212,13 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
 
     // Supapa de siguranta: pe facturi extrase din PDF cifrele de pe rand pot fi
     // lipite fara spatii ("buc92169.4687183.36") si modelul poate rupe gresit
-    // price_raw. Daca avem quantity + line_total, price corect = line_total/quantity.
-    const declaredPriceRaw = Number(item.price_raw)
-    const lineTotal = Number(item.line_total) || 0
-    const quantity = Number(item.quantity) || 0
-    let priceRaw = declaredPriceRaw
-    if (lineTotal > 0 && quantity > 0) {
-      const derived = lineTotal / quantity
-      if (!(declaredPriceRaw > 0) || Math.abs(declaredPriceRaw - derived) > Math.max(derived * 0.03, 0.01)) {
-        priceRaw = derived
-      }
-    }
+    // price_raw; pe poze, cantitatile cu separator romanesc de mii ("4.560" =
+    // 4560 buc) pot fi citite gresit. Reconcilierea (lib/pricing/scanGuards.ts)
+    // alege pretul care satisface cantitate x pret ≈ valoarea randului, tinand
+    // cont si de discount si de factorul 1000 al separatorului de mii.
+    const priceRaw = reconcileUnitPrice(
+      Number(item.price_raw) || 0, Number(item.quantity) || 0, Number(item.line_total) || 0, discount,
+    )
     const priceExVat = item.price_includes_vat === true ? priceRaw / (1 + vat / 100) : priceRaw
 
     // Decizia cutie-vs-bucata se ia DIN COLOANA UM (deterministic in cod), nu
@@ -378,6 +379,13 @@ export async function POST(req: NextRequest) {
           const imageBase64 = await pdfToImageBase64(buf)
           if (imageBase64) return await runVisionScan(supabase, user.id, imageBase64, 'image/jpeg')
         }
+
+        // PDF-ul oficial ANAF al unei e-Facturi ("RO eFactura"): layout national
+        // FIX => citit determinist in cod, fara AI (100% corect, gratuit, instant,
+        // nu consuma din cota de scanari). Doar PDF-urile cu layout propriu al
+        // furnizorului merg mai departe la modelul AI.
+        const anaf = parseEfacturaAnafPdf(text)
+        if (anaf) return NextResponse.json(anaf)
       } else {
         text = buf.toString('utf-8')
         // e-Factura XML (UBL): date structurate, citite determinist in cod — fara AI
@@ -387,7 +395,7 @@ export async function POST(req: NextRequest) {
         if (isEfacturaXml(text)) {
           const parsed = parseEfacturaXml(text)
           if (parsed && parsed.items.length > 0) {
-            await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
+            // Determinist = gratuit: nu consuma din cota de scanari (aia apara Groq).
             return NextResponse.json({ supplier: parsed.supplier, items: parsed.items })
           }
           return NextResponse.json({ items: [], error: 'xml_no_products' })
@@ -399,9 +407,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ items: [] }, { status: 400 })
     }
 
+    // 12000 de caractere (~3.5k tokeni): o factura reala de ~25 de produse are
+    // 5500-6500 de caractere de text extras — vechea taietura la 5000 pierdea
+    // coada facturii (produse lipsa) FARA nicio eroare vizibila. Cu prompt
+    // (~1.4k tokeni) + text (~3.5k) + max_tokens rezervat (3000) ramanem
+    // confortabil sub bugetul de ~30k tokeni/minut al planului Groq gratuit.
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: text.slice(0, 5000) },
+      { role: 'user', content: text.slice(0, 12000) },
     ]
     // max_tokens e rezervat integral din bugetul TPM de Groq inainte sa vada raspunsul real,
     // deci trebuie tinut jos ca sa incapa alaturi de system prompt-ul, care tot creste cu regulile noi.

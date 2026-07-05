@@ -173,7 +173,9 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
         const body = { docBase64: await readBase64(file), mimeType: file.type || 'application/pdf', fileName: file.name }
         const { ok, status, data } = await callApi(body, token)
         if (!ok) { setError(errorMessage(status, data)); return }
-        if (data.items?.length) { onSuccess({ supplier: data.supplier || '', items: mapItems(data.items) }); return }
+        // dedupeItems si aici: modelul poate scoate acelasi rand de doua ori
+        // dintr-un PDF dens (vazut pe facturi reale), nu doar din felii de poza.
+        if (data.items?.length) { onSuccess({ supplier: data.supplier || '', items: dedupeItems(mapItems(data.items)) }); return }
         setError('Nu s-au gasit produse. Incearca o poza mai clara sau incarca PDF-ul.')
         return
       }

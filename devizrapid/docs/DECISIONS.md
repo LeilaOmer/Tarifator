@@ -9,6 +9,24 @@ proiectul să nu depindă de istoricul conversațiilor.
 
 ---
 
+## ADR-022 — PDF-ul ANAF citit determinist; garduri de cod peste orice citire AI
+**Data:** 2026-07-05.
+**Decizie:** (1) PDF-ul oficial ANAF al e-Facturii („RO eFactura", layout național
+FIX) se parsează determinist (`parseEfacturaAnafPdf`), ca XML-ul — nu mai trece
+prin AI. (2) Garduri deterministe noi în `lib/pricing/scanGuards.ts`, aplicate
+peste ORICE citire AI: liniile de garanție/ambalaj SGR se filtrează și în cod
+(modelul uneori le scăpa ca produse), iar `reconcileUnitPrice` alege prețul care
+satisface `cantitate × preț ≈ valoarea rândului` — acoperind discountul (valoare
+deja netă) și separatorul românesc de mii („4.560" = 4560 bucăți). (3) Bugetul de
+text pentru PDF-urile de furnizor urcat 5000 → 12000 de caractere: o factură
+reală de ~25 de produse are 5500-6500 de caractere, vechea tăietură pierdea coada
+facturii fără nicio eroare vizibilă. (4) Dedupe și pe calea PDF, nu doar pe felii.
+**De ce:** Testul pe o factură reală în TREI formate (XML + PDF ANAF + PDF-ul
+clasic al furnizorului) a arătat: AI-ul citea eronat ambele PDF-uri, iar cele
+două formate structurate se pot citi perfect în cod — parserele independente de
+XML și PDF ANAF dau rezultate IDENTICE (23/23), verificare încrucișată. Căile
+deterministe nu consumă din cota de scanări (nu ating Groq).
+
 ## ADR-021 — e-Factura XML se citește determinist în cod, nu de AI
 **Data:** 2026-07-05.
 **Decizie:** Un fișier XML de e-Factura (UBL / RO_CIUS) se parsează 100% în cod
