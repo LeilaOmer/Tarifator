@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { anafLookup } from "@/lib/anaf";
 import jsPDF from "jspdf";
-import { drawBrandMargin } from "@/lib/pricing/brand";
+import { drawPageChrome } from "@/lib/pricing/brand";
 
 interface Profile {
   id: string;
@@ -104,7 +104,7 @@ const emptyRow = (): NewRow => ({ service_id: "", description: "", quantity: "1"
 function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: number, discountType: "pct" | "val"): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = 210; const margin = 15; let y = 20;
-  drawBrandMargin(doc, 297); // A4 portrait => inaltime 297mm
+  drawPageChrome(doc, 210, 297); // A4 portrait (W=210, H=297)
 
   const addLine = (text: string, size = 10, bold = false, color: [number, number, number] = [30, 30, 30]) => {
     doc.setFontSize(size); doc.setFont("helvetica", bold ? "bold" : "normal");
@@ -168,7 +168,7 @@ function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: numb
     doc.text(fmt(item.unit_price), colX[2], y);
     doc.text(fmt(item.total), colX[3], y);
     y += Math.max(5.5, lines.length * 4.5);
-    if (y > 260) { doc.addPage(); drawBrandMargin(doc, 297); y = 20; }
+    if (y > 260) { doc.addPage(); drawPageChrome(doc, 210, 297); y = 20; }
   });
 
   y += 3; doc.setDrawColor(180, 180, 180); doc.line(margin, y, W - margin, y); y += 6;
