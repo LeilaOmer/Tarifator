@@ -83,21 +83,43 @@ function nearlySameName(a: string, b: string): boolean {
 export function dedupeScannedItems<T extends DedupableItem>(items: T[]): T[] {
   const out: T[] = []
   const keys: string[] = []
-  for (const item of items) {
+  const origIdx: number[] = [] // pozitia originala a fiecarui rand pastrat
+
+  // FORFECARE de randuri (vazuta pe factura reala, confirmata pe original):
+  // in zona de suprapunere a feliilor, modelul re-citeste un rand cu numele
+  // unui produs si DATELE COMPLETE ale randului vecin (pret+cantitate+valoare
+  // copiate impreuna => trece verificarea aritmetica). Semnatura: gemenul
+  // fals are pretul unui VECIN al gemenului adevarat. Protectii: doar pe
+  // gemeni departati (>1 pozitie — doua loturi reale ale aceluiasi produs
+  // stau pe randuri alaturate pe factura) si doar cand semnatura e intr-un
+  // singur sens (daca si inversul e adevarat, nu decidem).
+  const priceAt = (i: number) => i >= 0 && i < items.length
+    ? Math.round((items[i].supplier_price || 0) * 100) : -1
+  const nearPrices = (i: number) => [priceAt(i - 1), priceAt(i + 1)]
+
+  for (let pos = 0; pos < items.length; pos++) {
+    const item = items[pos]
     const k = nameKey(item.name || '')
     const price = Math.round((item.supplier_price || 0) * 100)
     const idx = keys.findIndex(ok => nearlySameName(ok, k))
-    if (idx === -1) { out.push(item); keys.push(k); continue }
+    if (idx === -1) { out.push(item); keys.push(k); origIdx.push(pos); continue }
     const existing = out[idx]
-    if (Math.round((existing.supplier_price || 0) * 100) === price) {
+    const exPrice = Math.round((existing.supplier_price || 0) * 100)
+    if (exPrice === price) {
       // duplicat sigur — pastram citirea cu numele mai LUNG (mai completa,
       // "OREO /22 B" bate "OREO")
-      if ((item.name || '').length > (existing.name || '').length) { out[idx] = item; keys[idx] = k }
+      if ((item.name || '').length > (existing.name || '').length) { out[idx] = item; keys[idx] = k; origIdx[idx] = pos }
       continue
     }
-    if (item.verified && !existing.verified) { out[idx] = item; keys[idx] = k; continue }
+    if (item.verified && !existing.verified) { out[idx] = item; keys[idx] = k; origIdx[idx] = pos; continue }
     if (!item.verified && existing.verified) continue
-    out.push(item); keys.push(k) // ambiguu: pastram amandoua
+    if (Math.abs(pos - origIdx[idx]) > 1) {
+      const itemIsShear = nearPrices(origIdx[idx]).includes(price)
+      const existingIsShear = nearPrices(pos).includes(exPrice)
+      if (itemIsShear && !existingIsShear) continue // gemenul nou = forfecare
+      if (existingIsShear && !itemIsShear) { out[idx] = item; keys[idx] = k; origIdx[idx] = pos; continue }
+    }
+    out.push(item); keys.push(k); origIdx.push(pos) // ambiguu: pastram amandoua
   }
   return out
 }
