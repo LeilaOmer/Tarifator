@@ -9,6 +9,21 @@ proiectul să nu depindă de istoricul conversațiilor.
 
 ---
 
+## ADR-021 — e-Factura XML se citește determinist în cod, nu de AI
+**Data:** 2026-07-05.
+**Decizie:** Un fișier XML de e-Factura (UBL / RO_CIUS) se parsează 100% în cod
+(`lib/pricing/efactura.ts`), FĂRĂ AI: nume, preț unitar fără TVA, cotă TVA și
+cantitate se iau din câmpuri fixe; prețul de bax se împarte pe bucată după „x N"
+din denumire; SGR din denumire; liniile de AMBALAJ SGR / garanție se exclud. Se
+interceptează în client (`useInvoiceScan`) înainte de calea AI; plasă de siguranță
+și în ruta API. Nu consumă din cota de scanări (nu e AI).
+**De ce:** Înainte, XML-ul era convertit în text și trimis la modelul AI de text,
+dar TRUNCHIAT la 5000 de caractere — o factură densă pierdea majoritatea liniilor,
+iar modelul citea greșit structura UBL (ex. Coca-Cola 2.5L raportat 62.12 neîmpărțit,
+Monster 1.48 împărțit greșit la cantitate). Sursa fiind structurată, citirea poate
+fi deterministă — regula „aritmetica în cod, nu de AI" (ADR-001) dusă la capăt: și
+CITIREA e determinist când formatul o permite. Corect, gratuit, instant.
+
 ## ADR-020 — Limitele de abonament impuse în DB, comutatorul de lansare în `app_config`
 **Data:** 2026-07-04.
 **Decizie:** Limitele lunare (fișe/calcule) sunt impuse prin **triggere Postgres** pe

@@ -82,7 +82,8 @@ Principiu central: **AI-ul doar CITESTE si TRANSCRIE numere brute; TOATA aritmet
 - **Furnizor**: firma reala din antet. `Meti`/`Oblio`/`WinMENTOR` = soft de facturare, NU furnizorul. Daca nu apare, se lasa gol (nu se inventeaza).
 - **Pret**: `price_raw` = pretul unitar tiparit + `price_includes_vat` (din header: "TTI"/"cu TVA" => true; "net"/"fara TVA" => false). Verificare: `cantitate × pret ≈ valoarea randului` — daca nu se potriveste, citirea e gresita.
 - **Cutie/bucata** (cap. 7).
-- **Formate**: factura/aviz (tabel cu coloane), bon fiscal de casa de marcat (Lidl/Kaufland — layout inversat, pret cu TVA inclus, legenda de litere TVA A/B/C/D citita de pe bonul curent), e-Factura (cifre uneori lipite fara spatii).
+- **Formate**: factura/aviz (tabel cu coloane), bon fiscal de casa de marcat (Lidl/Kaufland — layout inversat, pret cu TVA inclus, legenda de litere TVA A/B/C/D citita de pe bonul curent), e-Factura.
+- **e-Factura XML (UBL / RO_CIUS)**: EXCEPTIE de la regula AI — fiind date STRUCTURATE, se citeste 100% determinist in cod (`lib/pricing/efactura.ts`), FARA AI, fara sa consume din cota de scanari. Per linie: nume + pret unitar fara TVA (`cac:Price/cbc:PriceAmount`) + cota TVA declarata (`cbc:Percent`) + cantitate. Pretul de bax se imparte pe bucata dupa "x N" din denumire; SGR din denumire; liniile de AMBALAJ SGR / garantie se exclud. Se intercepteaza in client INAINTE de calea AI (altfel XML-ul ajungea trunchiat la 5000 de caractere la modelul de text).
 - **Discount global** ("SCONTURI ACORDATE X%") si **SGR** — vezi cap. 4.
 
 ## 7. Cutie / bucata (box vs piece)
