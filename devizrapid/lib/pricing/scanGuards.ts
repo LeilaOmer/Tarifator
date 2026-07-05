@@ -11,6 +11,33 @@ export function isNonProductLine(name: string): boolean {
   return /\bambalaj\b|garantie|garanti[ae]-?returnare|\breturnare\b|^sgr\b/.test(n)
 }
 
+// Randuri-FANTOMA la scanarea pozelor: modelul citeste zona de sub un produs
+// (codul de bare + cantitatea repetata) ca un AL DOILEA produs, cu numele
+// trunchiat si fara cantitate/valoare proprii — pretul fantomei fiind deseori
+// chiar cantitatea randului real ("3.840" bucati devine pret 3,84). Vazut pe
+// factura Metro/Supeco: "APA MIN NECARB 2L" (fantoma) langa "APA MIN NECARB 2L
+// BORSEC" (real). Semnatura ceruta — AMBELE conditii, ca sa nu atingem produse
+// reale:
+//   1. randul NU are date de verificare (cantitate + valoare de rand), SI
+//   2. exista alt rand VERIFICAT (cantitate x pret ≈ valoare) al carui nume
+//      normalizat il contine ca PREFIX (acelasi rand fizic, nume trunchiat).
+// Doua produse reale distincte au amandoua cantitate+valoare pe factura => nu
+// se ating intre ele, oricat de asemanatoare le-ar fi numele.
+export function phantomRowIndexes(rows: { name: string; verified: boolean }[]): Set<number> {
+  const norm = (s: string) =>
+    s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  const keys = rows.map(r => norm(r.name))
+  const out = new Set<number>()
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].verified || keys[i].length < 6) continue // numele prea scurte, prea generice
+    for (let j = 0; j < rows.length; j++) {
+      if (i === j || !rows[j].verified) continue
+      if (keys[j].startsWith(keys[i])) { out.add(i); break }
+    }
+  }
+  return out
+}
+
 // Clasificare SGR pe categorii LEGALE (HG 1074/2021), determinist din denumire.
 // SGR (0,50 lei) se aplica BAUTURILOR in ambalaje nereturnabile de plastic/
 // sticla/metal intre 0,1 si 3 litri: apa, sucuri/nectaruri/racoritoare, bere,

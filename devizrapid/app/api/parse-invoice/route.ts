@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { parseEfacturaXml, isEfacturaXml, parseEfacturaAnafPdf } from '@/lib/pricing/efactura'
-import { isNonProductLine, reconcileUnitPrice, applySgrFromGuaranteeLines, classifySgr, type ScannedLine } from '@/lib/pricing/scanGuards'
+import { isNonProductLine, reconcileUnitPrice, applySgrFromGuaranteeLines, classifySgr, phantomRowIndexes, type ScannedLine } from '@/lib/pricing/scanGuards'
 
 function getSupabaseAdmin() {
   // Cheia anonima — foloseste pentru auth.getUser(token) si invoice_scan_logs.
@@ -61,7 +61,7 @@ GENERAL:
 - Daca in poza se vad mai multe foi suprapuse, citeste DOAR documentul din prim-plan.
 - Fara diacritice (a nu a, s nu s).
 - Ignora randurile care NU sunt produse: Subtotal, Total, TVA, "Discount cumulat", si orice rand fara denumire proprie de produs — chiar daca au numere.
-- Sub-liniile logistice ("Disponibil pe...", "Emporte immediat pe...") nu sunt produse.
+- Sub-liniile logistice ("Disponibil pe...", "Emporte immediat pe...") nu sunt produse. Nici codurile de bare / numerele de sub denumire — NU crea un al doilea produs cu nume trunchiat din acelasi rand fizic (un rand de factura = UN produs, o singura data).
 
 FACTURA/AVIZ (doc_type=invoice), per produs:
 - price_raw = pretul UNITAR tiparit, copiat exact. price_includes_vat = true daca coloana pretului e "cu TVA"/"TTI", false daca e "net"/"fara TVA"/neutra.
@@ -227,10 +227,13 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
     // 4560 buc) pot fi citite gresit. Reconcilierea (lib/pricing/scanGuards.ts)
     // alege pretul care satisface cantitate x pret ≈ valoarea randului, tinand
     // cont si de discount si de factorul 1000 al separatorului de mii.
-    const priceRaw = reconcileUnitPrice(
-      Number(item.price_raw) || 0, Number(item.quantity) || 0, Number(item.line_total) || 0, discount,
-    )
+    const quantity = Number(item.quantity) || 0
+    const lineTotal = Number(item.line_total) || 0
+    const priceRaw = reconcileUnitPrice(Number(item.price_raw) || 0, quantity, lineTotal, discount)
     const priceExVat = item.price_includes_vat === true ? priceRaw / (1 + vat / 100) : priceRaw
+    // Randul e "verificat" cand are cantitate + valoare de rand: pretul lui a
+    // trecut prin cantitate x pret ≈ valoare. Folosit la filtrul de fantome.
+    const verified = quantity > 0 && lineTotal > 0
 
     // Decizia cutie-vs-bucata se ia DIN COLOANA UM (deterministic in cod), nu
     // dintr-un boolean pe care modelul il ghicea des gresit: doar UM de tip
@@ -249,17 +252,23 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
     const prefix = normalizeName(String(item.name)).split(' ').slice(0, 3).join(' ')
     const siblingKey = Math.round(priceExVat * 100) + '|' + prefix
 
-    return { name: item.name, unit: item.unit, vat, discount, sgr, priceExVat, isBoxUnit, ownRatio, siblingKey }
+    return { name: item.name, unit: item.unit, vat, discount, sgr, priceExVat, isBoxUnit, ownRatio, siblingKey, verified }
   })
 
+  // Randurile-fantoma (zona de sub produs citita ca produs nou, cu nume trunchiat
+  // si fara cantitate/valoare) se elimina inainte de orice alta potrivire — vezi
+  // phantomRowIndexes (lib/pricing/scanGuards.ts) pentru semnatura ceruta.
+  const phantoms = phantomRowIndexes(prep.map(p => ({ name: String(p.name), verified: p.verified })))
+  const kept = prep.filter((_, i) => !phantoms.has(i))
+
   const siblingRatios = new Map<string, number>()
-  for (const p of prep) {
+  for (const p of kept) {
     if (p.isBoxUnit && p.ownRatio > 1 && !siblingRatios.has(p.siblingKey)) {
       siblingRatios.set(p.siblingKey, p.ownRatio)
     }
   }
 
-  d.items = prep.map(p => {
+  d.items = kept.map(p => {
     const ratio = p.isBoxUnit
       ? (p.ownRatio > 1 ? p.ownRatio : (siblingRatios.get(p.siblingKey) ?? 1))
       : 1
