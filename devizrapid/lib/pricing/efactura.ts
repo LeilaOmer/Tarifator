@@ -62,19 +62,22 @@ export function isEfacturaXml(text: string): boolean {
   return /<(?:\w+:)?Invoice[\s>]/i.test(text) && /<(?:\w+:)?InvoiceLine\b/i.test(text)
 }
 
-// Nr. de bucati per ambalaj din denumire ("... x 6 ...", "500ML x 4", "0.33L X 12").
-// Pretul unitar din e-Factura e pe BAX/ambalaj; il impartim la N ca sa dam pretul
-// pe bucata (cum lucreaza comerciantul si cum arata restul aplicatiei). Daca nu e
-// scris niciun "x N", ramane 1 (produs vandut la bucata).
+// Nr. de bucati per ambalaj din denumire ("... x 6 ...", "500ML x 4", "0.33L X 12",
+// plus formatul Ursus "1X24" = un bax de 24). Pretul unitar din e-Factura e pe
+// BAX/ambalaj; il impartim la N ca sa dam pretul pe bucata (cum lucreaza
+// comerciantul si cum arata restul aplicatiei). Daca nu e scris niciun "x N",
+// ramane 1 (produs vandut la bucata).
 function piecesPerBox(name: string): number {
-  const m = name.match(/\bx\s*(\d{1,4})\b/i)
+  // "1X24" / "1x6" — configuratia de bax scrisa compact (un bax de N bucati)
+  const compact = name.match(/\b1\s*[x×]\s*(\d{1,4})\b/i)
+  const m = compact || name.match(/\bx\s*(\d{1,4})\b/i)
   const n = m ? parseInt(m[1], 10) : 1
   return n > 1 ? n : 1
 }
 
 // Construieste produsul final dintr-o linie de e-Factura (comun XML + PDF ANAF):
-// mapare cota TVA -> 11/21, SGR din denumire, impartirea pretului de bax pe bucata.
-function buildItem(name: string, priceExVat: number, percent: number): EfacturaItem {
+// mapare cota TVA -> 11/21, UM, SGR din denumire, impartirea pretului de bax pe bucata.
+function buildItem(name: string, priceExVat: number, percent: number, umCode = ''): EfacturaItem {
   // Cota TVA declarata pe linie (o luam ca atare din factura, nu o re-deducem).
   const vat: 11 | 21 = percent > 0 && percent <= 15 ? 11 : 21
 
@@ -82,9 +85,28 @@ function buildItem(name: string, priceExVat: number, percent: number): EfacturaI
   // legala (apa/bauturi 0.1-3L da; lactate/sirop/peste 3L nu) — vezi scanGuards.
   const sgr = classifySgr(name)
 
-  const pieces = piecesPerBox(name)
+  // Marfa la kg/litru NU se imparte pe bucata (pretul e deja pe kg/litru);
+  // impartirea pe bucata are sens doar la bax-uri de bucati.
+  const unit = mapUnit(umCode)
+  const pieces = unit === 'buc' ? piecesPerBox(name) : 1
   const supplier_price = Math.round((priceExVat / pieces) * 10000) / 10000
-  return { name, unit: 'buc', supplier_price, discount: 0, vat, sgr }
+  return { name, unit, supplier_price, discount: 0, vat, sgr }
+}
+
+// Codul de UM (UN/ECE Rec 20/21) din e-Factura -> unitatea din aplicatie.
+// Coduri de MASURA: KGM=kilogram, GRM=gram, LTR=litru, MLT=mililitru, MTR=metru,
+// H87=bucata, C62=unitate, EA=each(bucata), NIU=numar de unitati.
+// Coduri de AMBALAJ (prefix X + Rec 21): XCS=bax(case), XBX=cutie(box), XPK=pachet,
+// XDU=?, XKG=butoi(keg), XBO=sticla — toate se trateaza ca "bucata" aici, iar
+// impartirea pe bucata o decide configuratia din DENUMIRE ("1X24", "x 6").
+function mapUnit(code: string): string {
+  const c = (code || '').trim().toUpperCase()
+  if (c === 'KGM' || c === 'KG') return 'kg'
+  if (c === 'LTR' || c === 'LT' || c === 'L') return 'l'
+  if (c === 'GRM') return 'g'
+  if (c === 'MLT') return 'ml'
+  if (c === 'MTR') return 'm'
+  return 'buc' // H87 / C62 / EA / NIU / X** (ambalaje) — la bucata
 }
 
 export function parseEfacturaXml(xml: string): EfacturaResult | null {
@@ -118,7 +140,8 @@ export function parseEfacturaXml(xml: string): EfacturaResult | null {
     priceExVat = reconcileUnitPrice(priceExVat, num(tag(line, 'InvoicedQuantity')), num(tag(line, 'LineExtensionAmount')))
     if (!(priceExVat > 0)) continue // linii negative (storno) sau fara pret — nu le putem folosi
 
-    items.push(buildItem(name, priceExVat, num(tag(line, 'Percent'))))
+    const umCode = line.match(/<(?:\w+:)?InvoicedQuantity[^>]*\bunitCode="([^"]+)"/i)?.[1] || ''
+    items.push(buildItem(name, priceExVat, num(tag(line, 'Percent')), umCode))
   }
 
   if (items.length === 0) return null
@@ -127,11 +150,14 @@ export function parseEfacturaXml(xml: string): EfacturaResult | null {
 
 // ————— PDF-ul oficial ANAF ("RO eFactura") —————
 // Layout national FIX, generat de ANAF din XML. Textul extras (pdf-parse) are
-// fiecare linie de produs in tiparul:
+// fiecare linie de produs in tiparul (ordinea coloanelor din PDF, nu logica):
 //   <cotaTVA> <NUME PRODUS> <nrLinie> <MONEDA> <cantitate> <valoare neta> <UM> <pret unitar>
 // ex: "21.00  COCA COLA 2.5L x 6 PET SGR  1  RON  10.0000  621.20  XDU  62.12000000"
-// Pretul unitar are minim 4 zecimale (formatul ANAF are 8) — asta il distinge de
-// celelalte numere si ancoreaza sfarsitul randului.
+//     "11     CIRESE               1  RON  4.500   121.62  KGM  27.0267"
+// UM-ul (litere) e ancora din mijloc; pretul unitar e numarul de DUPA UM (nu
+// confunda cu cantitatea, care e inainte de UM — capcana la marfa la kg, unde
+// cantitatea "4.500" pare pret dar e cantar). Cota TVA poate fi intreaga ("11")
+// sau cu zecimale ("21.00").
 
 export function isEfacturaAnafPdfText(text: string): boolean {
   return /RO\s*eFactura/i.test(text) || /Pretul\s*net\s*al\s*articolului/i.test(text)
@@ -144,18 +170,21 @@ export function parseEfacturaAnafPdf(text: string): EfacturaResult | null {
   const supMatch = text.match(/VANZATOR\s+([\s\S]+?)\s*(?:Nume|Nr\.)/i)
   const supplier = supMatch ? supMatch[1].replace(/\s+/g, ' ').trim() : ''
 
-  const rowRe = /(\d{1,2}[.,]\d{2})\s+([^\n]+?)\s+(\d{1,3})\s+([A-Z]{3})\s+([\d.,]+)\s+([\d.,]+)\s+([A-Za-z0-9]{1,6})\s+(\d+[.,]\d{4,})/g
+  // "Cantitate de baza" e OPTIONALA in PDF-ul ANAF: unii emitenti o lasa goala
+  // (MW, PRODCOM — 2 numere intre moneda si UM), altii o completeaza (Ursus,
+  // GNF — 3 numere). Grupul optional o absoarbe cand exista.
+  const rowRe = /(\d{1,2}(?:[.,]\d{1,2})?)\s+([^\n]+?)\s+(\d{1,3})\s+([A-Z]{3})\s+(?:([\d.,]+)\s+)?([\d.,]+)\s+([\d.,]+)\s+([A-Za-z][A-Za-z0-9]{1,5})\s+(\d+[.,]\d{2,})/g
   const items: EfacturaItem[] = []
   let m: RegExpExecArray | null
   while ((m = rowRe.exec(text))) {
-    const [, vatStr, rawName, , , qtyStr, totalStr, , priceStr] = m
+    const [, vatStr, rawName, , , , qtyStr, totalStr, umStr, priceStr] = m
     const name = rawName.replace(/\s+/g, ' ').trim()
     if (!name || isNonProductLine(name)) continue
-    // Aceeasi verificare cantitate x pret ≈ valoare ca la XML — un rand care nu
-    // se reconciliaza deloc (pret 0) e un fals-pozitiv al regexului, il sarim.
+    // Pretul unitar = numarul de DUPA UM. Verificare cantitate x pret ≈ valoare:
+    // daca nu se reconciliaza deloc (pret 0), e fals-pozitiv al regexului, il sarim.
     const priceExVat = reconcileUnitPrice(num(priceStr), num(qtyStr), num(totalStr))
     if (!(priceExVat > 0)) continue
-    items.push(buildItem(name, priceExVat, num(vatStr)))
+    items.push(buildItem(name, priceExVat, num(vatStr), umStr))
   }
 
   if (items.length === 0) return null

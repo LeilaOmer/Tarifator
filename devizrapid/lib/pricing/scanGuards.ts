@@ -8,7 +8,10 @@
 // produsul vecin). Filtrul din cod e plasa de siguranta care nu da gres.
 export function isNonProductLine(name: string): boolean {
   const n = name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
-  return /\bambalaj\b|garantie|garanti[ae]-?returnare|\breturnare\b|^sgr\b/.test(n)
+  // palet = ambalaj de transport la schimb (Ursus: "PALET STANDARD"), nu marfa;
+  // un rand care INCEPE cu "keg" e butoiul GOL dat la schimb ("KEG 30L 1x1" =
+  // garantia ambalajului), nu berea (aia are numele marcii inainte de "keg")
+  return /\bambalaj\b|garantie|garanti[ae]-?returnare|\breturnare\b|^sgr\b|\bpaleti?\b|^keg\b/.test(n)
 }
 
 // Randuri-FANTOMA la scanarea pozelor: modelul citeste zona de sub un produs
@@ -143,6 +146,11 @@ export function classifySgr(name: string): 0.5 | 0 {
   if (vm) {
     vol = parseFloat(vm[1].replace(',', '.'))
     if (vm[2] === 'ml') vol = vol / 1000
+  } else {
+    // fara unitate scrisa, dar numarul sta LIPIT de tokenul de ambalaj
+    // ("330 NRB", "500 PET") => e volumul in ml (asa scriu berariile)
+    const vp = n.match(/\b(\d{2,4})\s+(?:nrb|nrgb|pet|doza|sticla)\b/)
+    if (vp) vol = parseInt(vp[1], 10) / 1000
   }
   if (vol !== null && (vol < 0.1 || vol > 3)) return 0
 
@@ -152,7 +160,8 @@ export function classifySgr(name: string): 0.5 | 0 {
   // bautura dupa cuvinte generice de categorie...
   const beverage = /\bapa\b|apa min|suc\b|nectar|racoritoare|bere\b|cidru|vin\b|spumant|whisky|vodca|\bgin\b|\brom\b|tuica|palinca|cola|pepsi|fanta|sprite|tonic|limonada|ice\s*tea|energy|energizant|kombucha/.test(n)
   // ...sau dupa ambalaj tipic de bautura mentionat explicit in denumire
-  const packaging = /\bpet\b|\bdoza\b|\bnrgb\b|\bsticla\b/.test(n)
+  // (NRB/NRGB = sticla nereturnabila — Ursus scrie NRB, MW scrie NRGB)
+  const packaging = /\bpet\b|\bdoza\b|\bnrgb\b|\bnrb\b|\bsticla\b/.test(n)
 
   if ((beverage || packaging) && vol !== null) return 0.5
   if (beverage && packaging) return 0.5 // fara volum in denumire, dar ambele semnale
