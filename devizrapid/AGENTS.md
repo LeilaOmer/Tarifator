@@ -22,6 +22,22 @@ depinda de istoricul conversatiilor:
 Regulile de domeniu (TVA/SGR/cutie-bucata/limite) raman in `BUSINESS_RULES.md`.
 Cand iei o decizie de produs cu impact, scrie-o in fisierul potrivit din `docs/`.
 
+# Skill-uri de proiect
+
+Pe masura ce lucram, capteaza cunostintele STABILE ale proiectului in skill-uri
+Claude Code, ca sesiunile viitoare sa nu porneasca de la zero. Fa asta PROACTIV:
+cand observi o regula, o conventie sau un flux repetabil care merita reutilizat,
+creeaza sau actualizeaza direct skill-ul potrivit si anunta scurt utilizatorul ce
+ai facut (nu astepta sa ti se ceara).
+
+- Skill-urile stau in `.claude/skills/<nume>/SKILL.md` (radacina repo-ului,
+  partajate prin git).
+- Tine-le MICI si trimite catre fisierul-sursa de adevar (ex. `BUSINESS_RULES.md`,
+  `docs/`), nu duplica continutul — la fel ca skill-ul `reguli-business`.
+- Cel mai important e campul `description`: scrie clar CE face si CAND se aplica,
+  cu declansatoare concrete — pe baza lui se activeaza singur skill-ul.
+- Cand o regula capturata se schimba, actualizeaza si skill-ul, nu doar codul.
+
 # Disciplina de cod
 
 - **Nu rescrie cod care merge.** Prefera editari tintite fata de rescrieri; o
