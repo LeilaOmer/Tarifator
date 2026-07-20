@@ -9,6 +9,24 @@ proiectul să nu depindă de istoricul conversațiilor.
 
 ---
 
+## ADR-025 — Agentul TikTok: tonurile sunt strategii de marketing, definite în cod
+**Data:** 2026-07-20.
+**Decizie:** Agentul de conținut TikTok (`lib/tiktok/generate.ts`) produce, pentru
+ACEEAȘI idee, 3 variante conduse de câte o **strategie de marketing**, nu doar de
+un stil de scriere. Fiecare strategie (`TIKTOK_STRATEGIES`) e un obiect tipizat cu:
+obiectiv, etapă de funnel, audiență, pârghie psihologică, tip de CTA, KPI și un
+`styleBrief` (stilul DERIVĂ din strategie). Cele 3: **educational** (consideration —
+autoritate/încredere, CTA soft spre încercare, KPI saves), **funny** (awareness —
+relatabilitate/umor, CTA share, KPI share-uri), **controversial** (awareness —
+provocare/apartenență, CTA comment, KPI comentarii). Metadatele strategiei se
+atașează DETERMINIST în cod la parsare; modelul primește strategia ca brief și
+produce doar conținutul (hook/scenariu/descriere/hashtags/cta/videoPrompt).
+**De ce:** Un „stil" spune doar cum sună; o strategie spune ce urmărește, pe cine
+țintește și cum arată succesul — decizie de marketing, deci logică de business.
+Ca și aritmetica (ADR-001), stă determinist în cod, nu în AI: o schimbi într-un
+singur loc, e testabilă și nu depinde de toanele modelului. Testat cu runner-ul
+built-in Node (`node --test`, TypeScript nativ, zero dependențe): 17 teste.
+
 ## ADR-024 — Corecțiile cutie/bucată sunt partajate între utilizatori (înlocuiește ADR-010)
 **Data:** 2026-07-05.
 **Decizie:** `getKnownRatios` citește corecțiile TUTUROR utilizatorilor pentru

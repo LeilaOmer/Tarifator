@@ -7,8 +7,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  TIKTOK_TONES,
-  TIKTOK_TONE_LABELS,
+  TIKTOK_STRATEGY_IDS,
+  TIKTOK_STRATEGIES,
   buildUserMessage,
   buildVariantsSystemPrompt,
   buildSingleSystemPrompt,
@@ -17,18 +17,20 @@ import {
   generateTikTokVariants,
   generateTikTokContent,
   type ChatFn,
-  type TikTokTone,
+  type TikTokStrategyId,
 } from './generate.ts'
 
-// Un corp valid de varianta, pentru un ton dat.
-function variantBody(tone: TikTokTone) {
+// Corpul de continut trimis de "model": doar id-ul strategiei + continut.
+// NU include metadatele strategiei (obiectiv/kpi) — acelea le ataseaza codul.
+function variantBody(id: TikTokStrategyId) {
   return {
-    tone,
-    hook: `hook ${tone}`,
-    script: `[Scena 1 - 0-3s] ${tone}`,
-    description: `descriere ${tone} 🎬`,
+    strategy: id,
+    hook: `hook ${id}`,
+    script: `[Scena 1 - 0-3s] ${id}`,
+    description: `descriere ${id} 🎬`,
     hashtags: ['#tarifator', '#meseriasi'],
-    videoPrompt: `english video prompt for ${tone}`,
+    cta: `cta ${id}`,
+    videoPrompt: `english video prompt for ${id}`,
   }
 }
 
@@ -44,29 +46,39 @@ function validVariantsJson(): string {
   })
 }
 
-// --- Constante / tipuri ---
+// --- Strategii (contractul de business) ---
 
-test('exista exact 3 tonuri, in ordinea canonica', () => {
-  assert.deepEqual([...TIKTOK_TONES], ['educational', 'funny', 'controversial'])
-  for (const tone of TIKTOK_TONES) {
-    assert.equal(typeof TIKTOK_TONE_LABELS[tone], 'string')
-    assert.ok(TIKTOK_TONE_LABELS[tone].length > 0)
+test('exista exact 3 strategii, in ordinea canonica', () => {
+  assert.deepEqual([...TIKTOK_STRATEGY_IDS], ['educational', 'funny', 'controversial'])
+})
+
+test('fiecare strategie e completa: obiectiv, funnel, parghie, CTA, KPI', () => {
+  for (const id of TIKTOK_STRATEGY_IDS) {
+    const s = TIKTOK_STRATEGIES[id]
+    assert.equal(s.id, id)
+    for (const field of ['label', 'objective', 'audience', 'lever', 'ctaType', 'kpi', 'styleBrief'] as const) {
+      assert.ok(s[field].length > 0, `${id}.${field} gol`)
+    }
+    assert.ok(['awareness', 'consideration', 'conversion'].includes(s.funnelStage))
   }
+})
+
+test('strategiile au obiective distincte (nu doar stiluri)', () => {
+  const objectives = TIKTOK_STRATEGY_IDS.map((id) => TIKTOK_STRATEGIES[id].objective)
+  assert.equal(new Set(objectives).size, 3)
 })
 
 // --- buildUserMessage ---
 
 test('buildUserMessage include tema cand e data', () => {
-  const msg = buildUserMessage('pentru electricieni')
-  assert.match(msg, /pentru electricieni/)
+  assert.match(buildUserMessage('pentru electricieni'), /pentru electricieni/)
 })
 
 test('buildUserMessage cere agentului sa aleaga cand tema lipseste', () => {
-  const msg = buildUserMessage(null)
-  assert.match(msg, /alege tu/i)
+  assert.match(buildUserMessage(null), /alege tu/i)
 })
 
-// --- Prompturile contin adevarul despre produs (nu inventat) ---
+// --- Prompturile contin adevarul despre produs + strategiile ---
 
 test('prompturile ancoreaza in functii reale Tarifator', () => {
   for (const p of [buildSingleSystemPrompt(), buildVariantsSystemPrompt()]) {
@@ -76,11 +88,13 @@ test('prompturile ancoreaza in functii reale Tarifator', () => {
   }
 })
 
-test('promptul de variante descrie cele 3 tonuri', () => {
+test('promptul de variante briefeaza cele 3 strategii cu obiectiv si KPI', () => {
   const p = buildVariantsSystemPrompt()
-  assert.match(p, /educational/)
-  assert.match(p, /funny/)
-  assert.match(p, /controversial/)
+  for (const id of TIKTOK_STRATEGY_IDS) {
+    assert.match(p, new RegExp(id))
+  }
+  assert.match(p, /obiectiv =/)
+  assert.match(p, /KPI/)
 })
 
 // --- parseVariantSet ---
@@ -90,20 +104,29 @@ test('parseVariantSet intoarce 3 variante in ordine canonica, indiferent de ordi
   assert.equal(set.topic, 'tema x')
   assert.equal(set.idea, 'Cum scapi de pretul dat din burta')
   assert.deepEqual(
-    set.variants.map((v) => v.tone),
+    set.variants.map((v) => v.strategy.id),
     ['educational', 'funny', 'controversial'],
   )
-  // fiecare varianta e completa si tipizata
   for (const v of set.variants) {
     assert.ok(v.hook.length > 0)
     assert.ok(v.script.length > 0)
     assert.ok(v.description.length > 0)
+    assert.ok(v.cta.length > 0)
     assert.ok(Array.isArray(v.hashtags) && v.hashtags.length > 0)
     assert.match(v.videoPrompt, /english/)
   }
 })
 
-test('parseVariantSet accepta si variante ca obiect cheiat pe ton', () => {
+test('parseVariantSet ataseaza metadatele strategiei din COD, nu din model', () => {
+  // Modelul trimite doar id + continut; obiectivul/kpi vin din TIKTOK_STRATEGIES.
+  const set = parseVariantSet(validVariantsJson(), null)
+  const edu = set.variants.find((v) => v.strategy.id === 'educational')!
+  assert.equal(edu.strategy.objective, TIKTOK_STRATEGIES.educational.objective)
+  assert.equal(edu.strategy.kpi, TIKTOK_STRATEGIES.educational.kpi)
+  assert.equal(edu.strategy.funnelStage, 'consideration')
+})
+
+test('parseVariantSet accepta si variante ca obiect cheiat pe strategie', () => {
   const raw = JSON.stringify({
     idea: 'idee comuna',
     variants: {
@@ -113,19 +136,18 @@ test('parseVariantSet accepta si variante ca obiect cheiat pe ton', () => {
     },
   })
   const set = parseVariantSet(raw, null)
-  assert.equal(set.topic, null)
   assert.deepEqual(
-    set.variants.map((v) => v.tone),
+    set.variants.map((v) => v.strategy.id),
     ['educational', 'funny', 'controversial'],
   )
 })
 
-test('parseVariantSet arunca eroare cand lipseste un ton', () => {
+test('parseVariantSet arunca eroare cand lipseste o strategie', () => {
   const raw = JSON.stringify({
     idea: 'idee',
     variants: [variantBody('educational'), variantBody('funny')],
   })
-  assert.throws(() => parseVariantSet(raw, null), /Lipsesc variante.*controversial/)
+  assert.throws(() => parseVariantSet(raw, null), /Lipsesc strategii.*controversial/)
 })
 
 test('parseVariantSet arunca eroare fara idee', () => {
@@ -159,11 +181,12 @@ test('parseContent normalizeaza continutul unic', () => {
     script: 'script',
     description: 'desc',
     hashtags: ['#a'],
+    cta: 'incearca gratis',
     videoPrompt: 'prompt',
   })
   const c = parseContent(raw)
   assert.equal(c.idea, 'ideea')
-  assert.equal(c.hook, 'hook')
+  assert.equal(c.cta, 'incearca gratis')
   assert.deepEqual(c.hashtags, ['#a'])
 })
 
@@ -173,7 +196,6 @@ test('generateTikTokVariants foloseste chat-ul injectat si intoarce set tipizat'
   let calls = 0
   const fakeChat: ChatFn = async (messages) => {
     calls++
-    // primeste system + user
     assert.equal(messages.length, 2)
     assert.equal(messages[0].role, 'system')
     assert.equal(messages[1].role, 'user')
@@ -194,10 +216,12 @@ test('generateTikTokContent foloseste chat-ul injectat', async () => {
       script: 's',
       description: 'd',
       hashtags: ['#x'],
+      cta: 'c',
       videoPrompt: 'p',
     })
   const c = await generateTikTokContent({}, { chat: fakeChat })
   assert.equal(c.idea, 'o idee')
   assert.equal(c.hook, 'h')
+  assert.equal(c.cta, 'c')
   assert.deepEqual(c.hashtags, ['#x'])
 })
