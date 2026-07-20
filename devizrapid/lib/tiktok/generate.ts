@@ -1,18 +1,84 @@
 // Nucleul agentului TikTok pentru Tarifator (DevizRapid).
 //
 // Un "agent" aici = o functie pura care primeste un context si intoarce un
-// rezultat structurat. Genereaza intr-un singur apel Groq: idee, scenariu,
-// descriere, hashtaguri si un prompt pentru generatoarele video (Veo, Kling,
-// CapCut etc.). Logica sta separata de UI (vezi AGENTS.md): rutele API si UI
-// doar cheama aceasta functie.
+// rezultat structurat si TIPIZAT. Genereaza continut de clip TikTok ancorat in
+// functionalitatile REALE ale produsului (vezi TARIFATOR_CONTEXT, extras din
+// docs/PRODUCT.md + docs/VISION.md), nu inventat.
 //
-// IMPORTANT: continutul se bazeaza pe functionalitatile REALE ale Tarifator
-// (vezi contextul TARIFATOR_CONTEXT de mai jos, extras din docs/PRODUCT.md si
-// docs/VISION.md), nu pe presupuneri. Cand produsul se schimba, se actualizeaza
-// contextul de mai jos, nu doar promptul.
+// Pentru ACEEASI idee poate produce 3 variante cu tonuri diferite:
+// educational, amuzant si controversat (vezi generateTikTokVariants).
+//
+// Design pentru testabilitate: apelul catre Groq e injectabil (ChatFn), iar
+// parsarea/normalizarea sunt functii pure exportate — asa testele ruleaza fara
+// retea, fara cheie API si fara cost. Logica sta separata de UI (vezi AGENTS.md).
 
-// Adevarul despre produs, condensat pentru model. Fara diacritice (conventia
-// codului din acest proiect). Sursa: docs/PRODUCT.md + docs/VISION.md.
+// ---------------------------------------------------------------------------
+// Tipuri (contractul public, tipizat cu TypeScript)
+// ---------------------------------------------------------------------------
+
+// Cele trei tonuri cerute. `as const` -> tip literal + lista iterabila la runtime.
+export const TIKTOK_TONES = ['educational', 'funny', 'controversial'] as const
+export type TikTokTone = (typeof TIKTOK_TONES)[number]
+
+// Etichete pentru UI (in romana).
+export const TIKTOK_TONE_LABELS: Record<TikTokTone, string> = {
+  educational: 'Educational',
+  funny: 'Amuzant',
+  controversial: 'Controversat',
+}
+
+// Un concept de clip complet, de sine statator (o singura varianta cu idee).
+export interface TikTokContent {
+  idea: string
+  hook: string
+  script: string
+  description: string
+  hashtags: string[]
+  videoPrompt: string
+}
+
+// O varianta tonala dintr-un set: imparte aceeasi idee cu celelalte, difera tonul.
+export interface TikTokVariant {
+  tone: TikTokTone
+  hook: string
+  script: string
+  description: string
+  hashtags: string[]
+  videoPrompt: string
+}
+
+// Set de 3 variante pentru ACEEASI idee (cate una pentru fiecare ton).
+export interface TikTokVariantSet {
+  topic: string | null
+  idea: string
+  variants: TikTokVariant[]
+}
+
+export interface GenerateOptions {
+  // Tema optionala data de user (ex: "pentru electricieni", "despre scanare factura").
+  // Daca lipseste, agentul alege singur un unghi bazat pe produs.
+  topic?: string
+}
+
+export interface ChatMessage {
+  role: 'system' | 'user'
+  content: string
+}
+
+// Abstractie peste modelul de chat: primeste mesaje, intoarce textul brut.
+// Implicit merge la Groq; in teste se injecteaza o versiune falsa.
+export type ChatFn = (messages: ChatMessage[]) => Promise<string>
+
+export interface GenerateDeps {
+  chat?: ChatFn
+}
+
+// ---------------------------------------------------------------------------
+// Contextul REAL despre produs (sursa: docs/PRODUCT.md + docs/VISION.md).
+// Fara diacritice (conventia codului). Cand produsul se schimba, se actualizeaza
+// AICI, nu doar in prompt.
+// ---------------------------------------------------------------------------
+
 const TARIFATOR_CONTEXT = `
 TARIFATOR (DevizRapid) — ce este si ce face REAL:
 
@@ -67,52 +133,182 @@ REGULI pentru continut:
   solutiei in aplicatie, si un call-to-action clar.
 `.trim()
 
-const SYSTEM_PROMPT = `Esti un content strategist pentru TikTok care promoveaza aplicatia Tarifator (DevizRapid).
-Primesti contextul REAL al produsului si, optional, o tema. Generezi UN concept de clip TikTok complet.
-
-${TARIFATOR_CONTEXT}
-
-Raspunzi DOAR cu JSON valid, fara text in plus, fara markdown, fara backticks.
-Structura EXACTA a raspunsului:
-{
-  "idea": "conceptul clipului intr-o fraza (unghiul + cui i se adreseaza)",
-  "hook": "primele 2-3 secunde, replica de deschidere care opreste scroll-ul",
-  "script": "scenariul complet, pe scene, cu indicatii de imagine si replici. Foloseste formatul:\\n[Scena 1 - 0-3s] ...\\n[Scena 2 - 3-8s] ...\\n[CTA] ...",
-  "description": "descrierea (caption) pentru postare, scurta si captivanta, cu emoji potrivite si un CTA",
-  "hashtags": ["#lista", "#de", "#hashtaguri", "relevante pentru Romania si nisa (meseriasi, comercianti, business, aplicatii)"],
-  "videoPrompt": "un prompt in ENGLEZA pentru generatoare text-to-video (Veo, Kling, Runway) sau montaj CapCut: descrie scenele vizuale, tipul de plan, atmosfera, textul pe ecran. Optimizat pentru unelte AI video."
+// Ce inseamna fiecare ton. Sunt DIFERITE — acelasi produs, alta abordare.
+const TONE_BRIEFS: Record<TikTokTone, string> = {
+  educational:
+    'EDUCATIONAL: invata publicul ceva concret si util (cum economiseste timp, ' +
+    'cum evita greseli de pret/TVA, cum trimite un document clar clientului). ' +
+    'Ton calm, credibil, de expert prietenos. Fara glume, mizeaza pe valoare reala.',
+  funny:
+    'AMUZANT: umor si exagerare comica, scenete relatable din viata meseriasului ' +
+    'sau comerciantului (ex: pretul "din burta" care iese prost). Face publicul sa ' +
+    'rada si sa dea share. Fara sa jigneasca pe cineva.',
+  controversial:
+    'CONTROVERSAT: o opinie transanta care starneste dezbatere in comentarii ' +
+    '(ex: "sa dai pret din burta e lipsa de respect fata de client"). Provocator, ' +
+    'dar corect si fara dezinformare. Fara atacuri la persoana, fara clickbait mincinos.',
 }
 
-Reguli:
-- Scenariul si descrierea sunt in ROMANA naturala (diacriticele sunt OK in text).
-- videoPrompt este in ENGLEZA (uneltele video functioneaza mai bine asa).
-- 8-15 hashtaguri, mix de nisa si generale, fiecare incepand cu #.
-- Totul trebuie sa fie fidel functiilor REALE ale Tarifator de mai sus.`
+// Descrie schema unei variante o singura data (refolosita in prompturi).
+const VARIANT_JSON_SHAPE =
+  '"hook": "primele 2-3 secunde, replica ce opreste scroll-ul", ' +
+  '"script": "scenariul complet pe scene, cu indicatii de imagine si replici, ' +
+  'in formatul \\"[Scena 1 - 0-3s] ...\\n[Scena 2 - 3-8s] ...\\n[CTA] ...\\"", ' +
+  '"description": "caption scurt si captivant pentru postare, cu emoji si un CTA", ' +
+  '"hashtags": ["#lista", "#de", "#hashtaguri"], ' +
+  '"videoPrompt": "prompt in ENGLEZA pentru generatoare text-to-video (Veo, Kling, ' +
+  'Runway) sau montaj CapCut: descrie scenele vizuale, tipul de plan, atmosfera, ' +
+  'textul pe ecran"'
 
-export interface TikTokContent {
-  idea: string
-  hook: string
-  script: string
-  description: string
-  hashtags: string[]
-  videoPrompt: string
+// Reguli comune de stil pentru orice iesire.
+const OUTPUT_RULES =
+  'Reguli: scenariul si descrierea sunt in ROMANA naturala (diacriticele sunt OK). ' +
+  'videoPrompt este in ENGLEZA. 8-15 hashtaguri, fiecare incepand cu #. Totul ' +
+  'trebuie sa fie fidel functiilor REALE ale Tarifator. Raspunzi DOAR cu JSON valid, ' +
+  'fara text in plus, fara markdown, fara backticks.'
+
+// Prompt pentru o singura varianta cu idee proprie.
+export function buildSingleSystemPrompt(): string {
+  return (
+    'Esti un content strategist pentru TikTok care promoveaza aplicatia Tarifator ' +
+    '(DevizRapid). Generezi UN concept de clip complet.\n\n' +
+    TARIFATOR_CONTEXT +
+    '\n\nStructura EXACTA a raspunsului (JSON):\n{ "idea": "conceptul intr-o fraza ' +
+    '(unghiul + cui i se adreseaza)", ' +
+    VARIANT_JSON_SHAPE +
+    ' }\n\n' +
+    OUTPUT_RULES
+  )
 }
 
-export interface GenerateOptions {
-  // Tema optionala data de user (ex: "pentru electricieni", "despre scanare factura").
-  // Daca lipseste, agentul alege singur un unghi bazat pe produs.
-  topic?: string
+// Prompt pentru 3 variante tonale ale ACELEIASI idei.
+export function buildVariantsSystemPrompt(): string {
+  return (
+    'Esti un content strategist pentru TikTok care promoveaza aplicatia Tarifator ' +
+    '(DevizRapid). Pornesti de la O SINGURA idee si o tratezi in 3 tonuri diferite.\n\n' +
+    TARIFATOR_CONTEXT +
+    '\n\nCele 3 tonuri (aceeasi idee, abordari diferite):\n' +
+    `- educational: ${TONE_BRIEFS.educational}\n` +
+    `- funny: ${TONE_BRIEFS.funny}\n` +
+    `- controversial: ${TONE_BRIEFS.controversial}\n\n` +
+    'Structura EXACTA a raspunsului (JSON): { "idea": "ideea comuna, intr-o fraza", ' +
+    '"variants": [ { "tone": "educational", ' +
+    VARIANT_JSON_SHAPE +
+    ' }, { "tone": "funny", ' +
+    VARIANT_JSON_SHAPE +
+    ' }, { "tone": "controversial", ' +
+    VARIANT_JSON_SHAPE +
+    ' } ] }\n\nToate cele 3 variante pornesc de la ACEEASI idee, doar tonul difera.\n\n' +
+    OUTPUT_RULES
+  )
 }
 
-// Genereaza un concept de clip TikTok complet, ancorat in produsul real.
-// Arunca eroare daca lipseste cheia Groq sau daca modelul nu intoarce JSON valid.
-export async function generateTikTokContent(opts: GenerateOptions = {}): Promise<TikTokContent> {
+export function buildUserMessage(topic: string | null): string {
+  return topic
+    ? `Tema ceruta: ${topic}`
+    : 'Fara tema anume — alege tu cel mai bun unghi pentru un clip nou, bazat pe o ' +
+        'functie reala a Tarifator.'
+}
+
+// ---------------------------------------------------------------------------
+// Parsare + normalizare (functii pure, testabile fara retea)
+// ---------------------------------------------------------------------------
+
+function asString(x: unknown): string {
+  return typeof x === 'string' ? x.trim() : ''
+}
+
+function asStringArray(x: unknown): string[] {
+  if (!Array.isArray(x)) return []
+  return x.map((s) => String(s).trim()).filter(Boolean)
+}
+
+// Extrage obiectul JSON din raspunsul brut al modelului. response_format=json_object
+// garanteaza JSON, dar pastram fallback-ul cu regex (ca la celelalte rute AI).
+function extractJsonObject(raw: string): Record<string, unknown> {
+  const match = raw.match(/\{[\s\S]*\}/)
+  if (!match) throw new Error('Modelul nu a intors JSON')
+  try {
+    const parsed = JSON.parse(match[0])
+    if (parsed && typeof parsed === 'object') return parsed as Record<string, unknown>
+    throw new Error('nu e obiect')
+  } catch {
+    throw new Error('Modelul nu a intors JSON valid')
+  }
+}
+
+// Normalizeaza campurile comune de continut (folosit de ambele forme).
+function normalizeBody(v: Record<string, unknown>): Omit<TikTokContent, 'idea'> {
+  return {
+    hook: asString(v.hook),
+    script: asString(v.script),
+    description: asString(v.description),
+    hashtags: asStringArray(v.hashtags),
+    videoPrompt: asString(v.videoPrompt),
+  }
+}
+
+// Parseaza un raspuns cu o singura varianta (cu idee proprie).
+export function parseContent(raw: string): TikTokContent {
+  const obj = extractJsonObject(raw)
+  const idea = asString(obj.idea)
+  if (!idea) throw new Error('Raspunsul nu contine o idee')
+  return { idea, ...normalizeBody(obj) }
+}
+
+// Accepta variantele fie ca lista ([{tone,...}]), fie ca obiect ({educational:{...}}).
+// Intoarce o harta ton -> corp brut.
+function indexVariants(raw: unknown): Map<TikTokTone, Record<string, unknown>> {
+  const map = new Map<TikTokTone, Record<string, unknown>>()
+  const isTone = (t: unknown): t is TikTokTone =>
+    typeof t === 'string' && (TIKTOK_TONES as readonly string[]).includes(t)
+
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      if (item && typeof item === 'object') {
+        const tone = (item as Record<string, unknown>).tone
+        if (isTone(tone)) map.set(tone, item as Record<string, unknown>)
+      }
+    }
+  } else if (raw && typeof raw === 'object') {
+    for (const [key, val] of Object.entries(raw as Record<string, unknown>)) {
+      if (isTone(key) && val && typeof val === 'object') {
+        map.set(key, val as Record<string, unknown>)
+      }
+    }
+  }
+  return map
+}
+
+// Parseaza un set de 3 variante. Intoarce variantele mereu in ordinea canonica
+// (educational, funny, controversial), indiferent cum le-a ordonat modelul.
+// Arunca eroare daca lipseste vreun ton — mai bine esec clar decat set incomplet.
+export function parseVariantSet(raw: string, topic: string | null): TikTokVariantSet {
+  const obj = extractJsonObject(raw)
+  const idea = asString(obj.idea)
+  if (!idea) throw new Error('Raspunsul nu contine o idee')
+
+  const indexed = indexVariants(obj.variants)
+  const missing = TIKTOK_TONES.filter((t) => !indexed.has(t))
+  if (missing.length > 0) {
+    throw new Error(`Lipsesc variante: ${missing.join(', ')}`)
+  }
+
+  const variants: TikTokVariant[] = TIKTOK_TONES.map((tone) => ({
+    tone,
+    ...normalizeBody(indexed.get(tone)!),
+  }))
+
+  return { topic, idea, variants }
+}
+
+// ---------------------------------------------------------------------------
+// Apelul real catre Groq (izolat, injectabil)
+// ---------------------------------------------------------------------------
+
+const groqChat: ChatFn = async (messages) => {
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) throw new Error('GROQ_API_KEY lipseste')
-
-  const userMessage = opts.topic?.trim()
-    ? `Tema ceruta: ${opts.topic.trim()}`
-    : 'Fara tema anume — alege tu cel mai bun unghi pentru un clip nou, bazat pe o functie reala a Tarifator.'
 
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -122,41 +318,48 @@ export async function generateTikTokContent(opts: GenerateOptions = {}): Promise
     },
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userMessage },
-      ],
+      messages,
       // Continut creativ -> temperatura mai mare decat la extractie (0.1).
-      temperature: 0.8,
+      temperature: 0.85,
+      // 3 variante complete incap confortabil aici.
+      max_tokens: 4000,
       response_format: { type: 'json_object' },
     }),
   })
 
-  if (!res.ok) {
-    throw new Error(`Groq a raspuns cu status ${res.status}`)
-  }
-
+  if (!res.ok) throw new Error(`Groq a raspuns cu status ${res.status}`)
   const data = await res.json()
-  const raw: string = data.choices?.[0]?.message?.content || '{}'
+  return data.choices?.[0]?.message?.content || '{}'
+}
 
-  let parsed: Partial<TikTokContent>
-  try {
-    // response_format=json_object garanteaza JSON, dar pastram un fallback cu
-    // regex ca la celelalte rute, in caz ca modelul mai adauga text.
-    const match = raw.match(/\{[\s\S]*\}/)
-    parsed = JSON.parse(match ? match[0] : raw)
-  } catch {
-    throw new Error('Modelul nu a intors JSON valid')
-  }
+// ---------------------------------------------------------------------------
+// API public al agentului
+// ---------------------------------------------------------------------------
 
-  return {
-    idea: parsed.idea?.trim() || '',
-    hook: parsed.hook?.trim() || '',
-    script: parsed.script?.trim() || '',
-    description: parsed.description?.trim() || '',
-    hashtags: Array.isArray(parsed.hashtags)
-      ? parsed.hashtags.map((h) => String(h).trim()).filter(Boolean)
-      : [],
-    videoPrompt: parsed.videoPrompt?.trim() || '',
-  }
+// Genereaza UN concept de clip (o singura varianta, cu idee proprie).
+export async function generateTikTokContent(
+  opts: GenerateOptions = {},
+  deps: GenerateDeps = {},
+): Promise<TikTokContent> {
+  const chat = deps.chat ?? groqChat
+  const topic = opts.topic?.trim() || null
+  const raw = await chat([
+    { role: 'system', content: buildSingleSystemPrompt() },
+    { role: 'user', content: buildUserMessage(topic) },
+  ])
+  return parseContent(raw)
+}
+
+// Genereaza 3 variante (educational, amuzant, controversat) pentru ACEEASI idee.
+export async function generateTikTokVariants(
+  opts: GenerateOptions = {},
+  deps: GenerateDeps = {},
+): Promise<TikTokVariantSet> {
+  const chat = deps.chat ?? groqChat
+  const topic = opts.topic?.trim() || null
+  const raw = await chat([
+    { role: 'system', content: buildVariantsSystemPrompt() },
+    { role: 'user', content: buildUserMessage(topic) },
+  ])
+  return parseVariantSet(raw, topic)
 }
