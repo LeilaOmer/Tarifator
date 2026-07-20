@@ -108,6 +108,48 @@ export const GOALS: Record<TikTokGoal, GoalDef> = {
 }
 
 // ---------------------------------------------------------------------------
+// Axa 3: platform (UNDE se posteaza). Acelasi format pe toate (video vertical
+// scurt 9:16), dar difera hashtagurile, stilul caption-ului, link-ul si CTA-ul.
+// Extensibila. Determinista in cod ca celelalte axe.
+// ---------------------------------------------------------------------------
+
+export const PLATFORM_IDS = ['tiktok', 'instagram', 'facebook'] as const
+export type SocialPlatform = (typeof PLATFORM_IDS)[number]
+
+export interface PlatformDef {
+  id: SocialPlatform
+  label: string
+  brief: string // regulile platformei pentru descriere / hashtaguri / CTA
+}
+
+export const PLATFORMS: Record<SocialPlatform, PlatformDef> = {
+  tiktok: {
+    id: 'tiktok',
+    label: 'TikTok',
+    brief:
+      'TikTok: video vertical 9:16 scurt. 8-15 hashtaguri (mix de nisa si generale). ' +
+      'Caption scurt, cu hook. Fara link in descriere (link-ul e in bio). ' +
+      'CTA-ul mizeaza pe comentarii si share.',
+  },
+  instagram: {
+    id: 'instagram',
+    label: 'Instagram Reels',
+    brief:
+      'Instagram Reels: video vertical 9:16. DOAR 3-5 hashtaguri focusate. ' +
+      'Caption mai ingrijit, cu storytelling. Fara link in descriere (link-ul e in bio). ' +
+      'CTA-ul mizeaza pe "salveaza" si mesaj/DM.',
+  },
+  facebook: {
+    id: 'facebook',
+    label: 'Facebook Reels',
+    brief:
+      'Facebook Reels: video vertical 9:16, public mai matur. Hashtaguri putine (0-3), ' +
+      'aproape optionale. Caption poate fi mai lung si explicit. Link-ul e PERMIS direct ' +
+      'in descriere. CTA-ul poate trimite spre link ("afla mai mult").',
+  },
+}
+
+// ---------------------------------------------------------------------------
 // Reteta = o pereche (content_type x goal). Cele doua axe fiind ortogonale,
 // setul implicit alege 3 combinatii bune de pornire; le poti schimba aici.
 // Constrangere MVP: content_type-urile din set sunt UNICE (cheia de potrivire
@@ -153,9 +195,10 @@ export interface TikTokVariant {
   videoPrompt: string
 }
 
-// Set de 3 variante pentru ACEEASI idee.
+// Set de 3 variante pentru ACEEASI idee, tintite pe o platforma.
 export interface TikTokVariantSet {
   topic: string | null
+  platform: SocialPlatform
   idea: string
   variants: TikTokVariant[]
 }
@@ -164,6 +207,8 @@ export interface GenerateOptions {
   // Tema optionala data de user (ex: "pentru electricieni", "despre scanare factura").
   // Daca lipseste, agentul alege singur un unghi bazat pe produs.
   topic?: string
+  // Platforma tinta (default: tiktok). Adapteaza hashtaguri/caption/link/CTA.
+  platform?: SocialPlatform
 }
 
 export interface ChatMessage {
@@ -254,9 +299,10 @@ const BODY_JSON_SHAPE =
 // Reguli comune de stil pentru orice iesire.
 const OUTPUT_RULES =
   'Reguli: scenariul, descrierea si cta sunt in ROMANA naturala (diacriticele sunt ' +
-  'OK). videoPrompt este in ENGLEZA. 8-15 hashtaguri, fiecare incepand cu #. Totul ' +
-  'trebuie sa fie fidel functiilor REALE ale Tarifator. Raspunzi DOAR cu JSON valid, ' +
-  'fara text in plus, fara markdown, fara backticks.'
+  'OK). videoPrompt este in ENGLEZA. Numarul si stilul hashtagurilor urmeaza regula ' +
+  'PLATFORMEI de mai sus; fiecare hashtag incepe cu #. Totul trebuie sa fie fidel ' +
+  'functiilor REALE ale Tarifator. Raspunzi DOAR cu JSON valid, fara text in plus, ' +
+  'fara markdown, fara backticks.'
 
 // Descrie o reteta ca brief pentru model (derivat din CONTENT_TYPES + GOALS).
 function recipeBrief(r: VariantRecipe): string {
@@ -270,12 +316,14 @@ function recipeBrief(r: VariantRecipe): string {
 }
 
 // Prompt pentru o singura varianta cu idee proprie.
-export function buildSingleSystemPrompt(): string {
+export function buildSingleSystemPrompt(platform: SocialPlatform = 'tiktok'): string {
   return (
-    'Esti un content strategist pentru TikTok care promoveaza aplicatia Tarifator ' +
-    '(DevizRapid). Generezi UN concept de clip complet, cu un call-to-action clar.\n\n' +
+    `Esti un content strategist pentru ${PLATFORMS[platform].label} care promoveaza ` +
+    'aplicatia Tarifator (DevizRapid). Generezi UN concept de clip complet, cu un ' +
+    'call-to-action clar.\n\n' +
     TARIFATOR_CONTEXT +
-    '\n\nStructura EXACTA a raspunsului (JSON):\n{ "idea": "conceptul intr-o fraza ' +
+    `\n\nPLATFORMA TINTA — ${PLATFORMS[platform].brief}\n\n` +
+    'Structura EXACTA a raspunsului (JSON):\n{ "idea": "conceptul intr-o fraza ' +
     '(unghiul + cui i se adreseaza)", ' +
     BODY_JSON_SHAPE +
     ' }\n\n' +
@@ -284,18 +332,22 @@ export function buildSingleSystemPrompt(): string {
 }
 
 // Prompt pentru variante ale ACELEIASI idei, cate una per reteta (content_type x goal).
-export function buildVariantsSystemPrompt(recipes: VariantRecipe[] = DEFAULT_RECIPES): string {
+export function buildVariantsSystemPrompt(
+  recipes: VariantRecipe[] = DEFAULT_RECIPES,
+  platform: SocialPlatform = 'tiktok',
+): string {
   const briefs = recipes.map(recipeBrief).join('\n')
   const shapes = recipes
     .map((r) => `{ "content_type": "${r.contentType}", ${BODY_JSON_SHAPE} }`)
     .join(', ')
   return (
-    'Esti un content strategist pentru TikTok care promoveaza aplicatia Tarifator ' +
-    '(DevizRapid). Pornesti de la O SINGURA idee si o tratezi in mai multe variante. ' +
-    'Fiecare varianta are un content_type (formatul creativ) si un goal (obiectivul), ' +
-    'combinate asa:\n\n' +
+    `Esti un content strategist pentru ${PLATFORMS[platform].label} care promoveaza ` +
+    'aplicatia Tarifator (DevizRapid). Pornesti de la O SINGURA idee si o tratezi in ' +
+    'mai multe variante. Fiecare varianta are un content_type (formatul creativ) si un ' +
+    'goal (obiectivul), combinate asa:\n\n' +
     TARIFATOR_CONTEXT +
-    '\n\nVariantele cerute (aceeasi idee, combinatii diferite):\n' +
+    `\n\nPLATFORMA TINTA — ${PLATFORMS[platform].brief}\n\n` +
+    'Variantele cerute (aceeasi idee, combinatii diferite):\n' +
     briefs +
     '\n\nStructura EXACTA a raspunsului (JSON): { "idea": "ideea comuna, intr-o fraza", ' +
     `"variants": [ ${shapes} ] }\n\n` +
@@ -396,6 +448,7 @@ function indexByContentType(raw: unknown): Map<TikTokContentType, Record<string,
 export function parseVariantSet(
   raw: string,
   topic: string | null,
+  platform: SocialPlatform = 'tiktok',
   recipes: VariantRecipe[] = DEFAULT_RECIPES,
 ): TikTokVariantSet {
   const obj = extractJsonObject(raw)
@@ -414,7 +467,7 @@ export function parseVariantSet(
     ...normalizeBody(indexed.get(r.contentType)!),
   }))
 
-  return { topic, idea, variants }
+  return { topic, platform, idea, variants }
 }
 
 // ---------------------------------------------------------------------------
@@ -458,8 +511,9 @@ export async function generateTikTokContent(
 ): Promise<TikTokContent> {
   const chat = deps.chat ?? groqChat
   const topic = opts.topic?.trim() || null
+  const platform = opts.platform ?? 'tiktok'
   const raw = await chat([
-    { role: 'system', content: buildSingleSystemPrompt() },
+    { role: 'system', content: buildSingleSystemPrompt(platform) },
     { role: 'user', content: buildUserMessage(topic) },
   ])
   return parseContent(raw)
@@ -474,9 +528,10 @@ export async function generateTikTokVariants(
 ): Promise<TikTokVariantSet> {
   const chat = deps.chat ?? groqChat
   const topic = opts.topic?.trim() || null
+  const platform = opts.platform ?? 'tiktok'
   const raw = await chat([
-    { role: 'system', content: buildVariantsSystemPrompt(recipes) },
+    { role: 'system', content: buildVariantsSystemPrompt(recipes, platform) },
     { role: 'user', content: buildUserMessage(topic) },
   ])
-  return parseVariantSet(raw, topic, recipes)
+  return parseVariantSet(raw, topic, platform, recipes)
 }

@@ -3,7 +3,12 @@ import { randomUUID } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import { verifyBearer } from '@/lib/apiAuth'
 import { allowDaily } from '@/lib/rateLimit'
-import { generateTikTokVariants, GROQ_MODEL } from '@/lib/tiktok/generate'
+import {
+  generateTikTokVariants,
+  GROQ_MODEL,
+  PLATFORM_IDS,
+  type SocialPlatform,
+} from '@/lib/tiktok/generate'
 import { variantSetToRows } from '@/lib/tiktok/store'
 
 // Agent TikTok — pasul 2 (persistenta). Pentru ACEEASI idee genereaza 3 variante,
@@ -26,16 +31,21 @@ export async function POST(req: NextRequest) {
   }
 
   let topic: string | undefined
+  let platform: SocialPlatform = 'tiktok'
   try {
     const body = await req.json().catch(() => ({}))
     if (typeof body?.topic === 'string') topic = body.topic
+    // Platforma acceptata doar din lista cunoscuta; altfel ramane tiktok.
+    if ((PLATFORM_IDS as readonly string[]).includes(body?.platform)) {
+      platform = body.platform
+    }
   } catch {
-    // corp gol / invalid -> agentul alege singur unghiul
+    // corp gol / invalid -> agentul alege singur unghiul, platforma ramane tiktok
   }
 
   let set
   try {
-    set = await generateTikTokVariants({ topic })
+    set = await generateTikTokVariants({ topic, platform })
   } catch (e) {
     const message = e instanceof Error ? e.message : 'eroare necunoscuta'
     return NextResponse.json({ error: 'generation_failed', message }, { status: 500 })

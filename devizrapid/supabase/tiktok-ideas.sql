@@ -18,6 +18,7 @@ create table if not exists tiktok_ideas (
 
   -- provenienta / metadate de invatare
   topic text,                         -- tema ceruta (null = agentul a ales singur)
+  platform text not null default 'tiktok',  -- tiktok | instagram | facebook
   idea text not null,                 -- ideea comuna a setului
   content_type text not null,         -- educational | funny | controversial | story ...
   goal text not null,                 -- awareness | engagement | conversion
@@ -50,7 +51,7 @@ create table if not exists tiktok_ideas (
 create index if not exists tiktok_ideas_user_created_idx
   on tiktok_ideas (user_id, created_at desc);
 create index if not exists tiktok_ideas_perf_idx
-  on tiktok_ideas (content_type, goal);
+  on tiktok_ideas (platform, content_type, goal);
 
 -- RLS: fiecare user vede si isi gestioneaza DOAR propriile idei.
 alter table tiktok_ideas enable row level security;

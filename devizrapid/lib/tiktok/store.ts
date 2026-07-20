@@ -7,7 +7,12 @@
 // saves, completate manual dupa postare), poti invata ce combinatie a mers.
 // Schema: supabase/tiktok-ideas.sql.
 
-import type { TikTokContentType, TikTokGoal, TikTokVariantSet } from './generate.ts'
+import type {
+  SocialPlatform,
+  TikTokContentType,
+  TikTokGoal,
+  TikTokVariantSet,
+} from './generate.ts'
 
 // Un rand in `tiktok_ideas` = O varianta (nu tot setul), ca sa poti urmari
 // performanta fiecarei variante separat. Cele 3 variante ale unei idei impart
@@ -16,6 +21,7 @@ export interface TikTokIdeaRow {
   user_id: string
   set_id: string
   topic: string | null
+  platform: SocialPlatform
   idea: string
   content_type: TikTokContentType
   goal: TikTokGoal
@@ -40,6 +46,7 @@ export function variantSetToRows(set: TikTokVariantSet, meta: RowMeta): TikTokId
     user_id: meta.userId,
     set_id: meta.setId,
     topic: set.topic,
+    platform: set.platform,
     idea: set.idea,
     content_type: v.contentType,
     goal: v.goal,

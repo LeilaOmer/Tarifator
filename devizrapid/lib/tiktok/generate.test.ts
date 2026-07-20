@@ -11,6 +11,8 @@ import {
   CONTENT_TYPES,
   GOAL_IDS,
   GOALS,
+  PLATFORM_IDS,
+  PLATFORMS,
   DEFAULT_RECIPES,
   buildUserMessage,
   buildVariantsSystemPrompt,
@@ -67,6 +69,22 @@ test('content_type si goal sunt liste distincte, complete', () => {
   }
 })
 
+test('platform e o a treia axa distincta, completa', () => {
+  assert.deepEqual([...PLATFORM_IDS], ['tiktok', 'instagram', 'facebook'])
+  for (const id of PLATFORM_IDS) {
+    assert.equal(PLATFORMS[id].id, id)
+    assert.ok(PLATFORMS[id].brief.length > 0)
+  }
+})
+
+test('promptul adapteaza brief-ul la platforma ceruta', () => {
+  const ig = buildVariantsSystemPrompt(DEFAULT_RECIPES, 'instagram')
+  const fb = buildVariantsSystemPrompt(DEFAULT_RECIPES, 'facebook')
+  assert.match(ig, /Instagram/)
+  assert.match(ig, /3-5 hashtaguri/)
+  assert.match(fb, /Link-ul e PERMIS/) // regula specifica Facebook
+})
+
 test('setul implicit are content_type-uri unice (cheia de potrivire)', () => {
   const types = DEFAULT_RECIPES.map((r) => r.contentType)
   assert.equal(new Set(types).size, types.length)
@@ -109,6 +127,7 @@ test('promptul de variante briefeaza content_type SI goal', () => {
 test('parseVariantSet intoarce variantele in ordinea retetelor, indiferent de ordinea din JSON', () => {
   const set = parseVariantSet(validVariantsJson(), 'tema x')
   assert.equal(set.topic, 'tema x')
+  assert.equal(set.platform, 'tiktok') // default
   assert.equal(set.idea, 'Cum scapi de pretul dat din burta')
   assert.deepEqual(
     set.variants.map((v) => v.contentType),
@@ -130,6 +149,11 @@ test('parseVariantSet ataseaza goal-ul din RETETA (cod), nu din model', () => {
     const v = set.variants.find((x) => x.contentType === r.contentType)!
     assert.equal(v.goal, r.goal)
   }
+})
+
+test('parseVariantSet propaga platforma in set', () => {
+  const set = parseVariantSet(validVariantsJson(), null, 'instagram')
+  assert.equal(set.platform, 'instagram')
 })
 
 test('parseVariantSet accepta si variante ca obiect cheiat pe content_type', () => {
@@ -199,7 +223,7 @@ test('parseContent normalizeaza continutul unic', () => {
 // --- Maparea la randuri DB (persistenta) ---
 
 test('variantSetToRows produce cate un rand per varianta, cu metadate', () => {
-  const set = parseVariantSet(validVariantsJson(), 'electricieni')
+  const set = parseVariantSet(validVariantsJson(), 'electricieni', 'facebook')
   const rows = variantSetToRows(set, { userId: 'u1', setId: 's1', model: 'm1' })
   assert.equal(rows.length, DEFAULT_RECIPES.length)
   for (const row of rows) {
@@ -207,6 +231,7 @@ test('variantSetToRows produce cate un rand per varianta, cu metadate', () => {
     assert.equal(row.set_id, 's1') // acelasi set_id grupeaza variantele
     assert.equal(row.model, 'm1')
     assert.equal(row.topic, 'electricieni')
+    assert.equal(row.platform, 'facebook') // platforma se salveaza per rand
     assert.equal(row.idea, set.idea)
     // camelCase -> snake_case
     assert.ok('content_type' in row && 'video_prompt' in row)
@@ -230,9 +255,13 @@ test('generateTikTokVariants foloseste chat-ul injectat si intoarce set tipizat'
     assert.match(messages[1].content, /electricieni/)
     return validVariantsJson()
   }
-  const set = await generateTikTokVariants({ topic: 'electricieni' }, { chat: fakeChat })
+  const set = await generateTikTokVariants(
+    { topic: 'electricieni', platform: 'instagram' },
+    { chat: fakeChat },
+  )
   assert.equal(calls, 1)
   assert.equal(set.topic, 'electricieni')
+  assert.equal(set.platform, 'instagram')
   assert.equal(set.variants.length, DEFAULT_RECIPES.length)
 })
 

@@ -9,6 +9,27 @@ proiectul să nu depindă de istoricul conversațiilor.
 
 ---
 
+## ADR-027 — Agentul de conținut: a treia axă `platform` (multi-platformă)
+**Data:** 2026-07-20. **Extinde ADR-026.**
+**Decizie:** Pe lângă `content_type` și `goal`, agentul primește o a treia axă
+ortogonală: **`platform`** = `tiktok | instagram | facebook` (extensibilă),
+determinist în cod (`PLATFORMS`, cu `brief` per platformă). Formatul e același pe
+toate (video vertical scurt 9:16, deci `videoPrompt`-ul e neschimbat), dar brief
+adaptează per platformă: **hashtaguri** (TikTok 8-15 / Instagram 3-5 / Facebook
+0-3), **stilul caption-ului**, dacă **link-ul** e permis în descriere (doar
+Facebook) și **tipul de CTA**. Platforma se alege per cerere (default `tiktok`),
+se propagă în promptul de sistem și se salvează pe fiecare rând în coloana nouă
+`platform`. Indexul de performanță devine `(platform, content_type, goal)`.
+Migrare pentru tabelul existent: `supabase/tiktok-ideas-add-platform.sql` (idempotentă).
+Numele `tiktok_ideas` / `lib/tiktok/` rămân pentru moment (fără re-migrare inutilă),
+deși agentul e de-acum multi-platformă.
+**De ce:** Reels (Instagram/Facebook) și TikTok sunt același format, deci ~90% din
+conținut se refolosește; diferă doar „ambalajul". O axă în plus (nu o rescriere)
+acoperă corect cele trei și duce mai departe învățarea din ADR-026: poți întreba
+„ce **platformă** × content_type × goal a mers cel mai bine". Cost: tot 0 € (același
+Groq). Ambele scripturi SQL verificate pe Postgres real (tabel nou + upgrade tabel
+existent). `npm test` (20/20), `tsc`, `npm run build` — verzi.
+
 ## ADR-026 — Agentul TikTok: două axe separate (content_type + goal) și tabel cu metadate
 **Data:** 2026-07-20. **Rafinează ADR-025.**
 **Decizie:** „Strategia" unică din ADR-025 se desparte în **două axe ortogonale**
