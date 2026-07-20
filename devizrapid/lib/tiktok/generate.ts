@@ -5,69 +5,49 @@
 // functionalitatile REALE ale produsului (vezi TARIFATOR_CONTEXT, extras din
 // docs/PRODUCT.md + docs/VISION.md), nu inventat.
 //
-// Pentru ACEEASI idee produce 3 variante, fiecare condusa de o STRATEGIE DE
-// MARKETING diferita (nu doar un stil de scriere): educational, amuzant,
-// controversat. Fiecare strategie isi defineste obiectivul, etapa de funnel,
-// audienta, parghia psihologica, tipul de CTA si KPI-ul (vezi TIKTOK_STRATEGIES).
+// Pentru ACEEASI idee produce 3 variante. Fiecare varianta e definita de DOUA
+// axe ORTOGONALE (nu una singura — vezi ADR-025/ADR-026):
+//   - content_type = formatul creativ (CUM arata): educational, funny,
+//     controversial, story...
+//   - goal = obiectivul de marketing (CE urmareste): awareness, engagement,
+//     conversion.
+// Ele sunt separate ca sa poti mixa liber (ex. "educational" pentru "awareness"
+// SAU pentru "conversion") si ca sa poti invata din date ce combinatie merge.
 //
-// Decizie de arhitectura (ADR-025): strategia e logica de business — traieste
-// DETERMINIST in cod, nu in AI (la fel ca aritmetica preturilor, ADR-001).
-// Modelul primeste strategia ca brief si produce doar continutul care o serveste;
-// metadatele strategiei se ataseaza in cod, nu se cer de la model.
+// Decizie de arhitectura: content_type + goal sunt logica de business — traiesc
+// DETERMINIST in cod, nu in AI (ca aritmetica preturilor, ADR-001). Modelul
+// primeste brieful si produce doar continutul; axele se ataseaza in cod.
 //
 // Design pentru testabilitate: apelul catre Groq e injectabil (ChatFn), iar
 // parsarea/normalizarea sunt functii pure exportate — asa testele ruleaza fara
 // retea, fara cheie API si fara cost. Logica sta separata de UI (vezi AGENTS.md).
 
+export const GROQ_MODEL = 'llama-3.3-70b-versatile'
+
 // ---------------------------------------------------------------------------
-// Strategii de marketing (contractul de business, tipizat)
+// Axa 1: content_type (formatul creativ). Extensibila.
 // ---------------------------------------------------------------------------
 
-// Cele 3 strategii. `as const` -> tip literal + lista iterabila la runtime.
-export const TIKTOK_STRATEGY_IDS = ['educational', 'funny', 'controversial'] as const
-export type TikTokStrategyId = (typeof TIKTOK_STRATEGY_IDS)[number]
+export const CONTENT_TYPE_IDS = ['educational', 'funny', 'controversial', 'story'] as const
+export type TikTokContentType = (typeof CONTENT_TYPE_IDS)[number]
 
-// Etapa din palnia de marketing pe care o serveste strategia.
-export type FunnelStage = 'awareness' | 'consideration' | 'conversion'
-
-// O strategie de marketing completa: NU doar "cum suna", ci CE urmareste.
-export interface MarketingStrategy {
-  id: TikTokStrategyId
-  label: string // eticheta pentru UI (ro)
-  objective: string // ce urmareste clipul
-  funnelStage: FunnelStage // unde in palnie actioneaza
-  audience: string // cui i se adreseaza in primul rand
-  lever: string // parghia psihologica folosita
-  ctaType: string // tipul de call-to-action urmarit
-  kpi: string // ce inseamna succes (metrica de urmarit)
-  styleBrief: string // stilul de scriere — DERIVA din strategie
+export interface ContentTypeDef {
+  id: TikTokContentType
+  label: string
+  styleBrief: string // CUM se scrie
 }
 
-// Sursa unica de adevar pentru strategii. Cand se schimba marketingul, se
-// editeaza AICI (si ADR-025), nu in prompt.
-export const TIKTOK_STRATEGIES: Record<TikTokStrategyId, MarketingStrategy> = {
+export const CONTENT_TYPES: Record<TikTokContentType, ContentTypeDef> = {
   educational: {
     id: 'educational',
-    label: 'Educational',
-    objective: 'Arata valoarea reala si castiga increderea; pozitioneaza aplicatia ca instrument serios',
-    funnelStage: 'consideration',
-    audience: 'Meseriasi/comercianti care cauta o solutie dar sunt sceptici',
-    lever: 'Autoritate si competenta — demonstrezi ca rezolvi corect problema',
-    ctaType: 'Soft: invitatie la incercare gratuita (primele 3 fise/calcule)',
-    kpi: 'Salvari (saves) si click pe profil/link — semnal de consideration',
+    label: 'Educativ',
     styleBrief:
       'Scrie calm, clar, demonstrativ. Arata aplicatia rezolvand pas cu pas o ' +
-      'problema reala. Fara glume; mizezi pe valoare concreta.',
+      'problema reala. Fara glume; mizezi pe valoare concreta si utila.',
   },
   funny: {
     id: 'funny',
     label: 'Amuzant',
-    objective: 'Reach maxim si shareability; notorietate in varful palniei',
-    funnelStage: 'awareness',
-    audience: 'Publicul larg de meseriasi/comercianti, inclusiv cei care nu cauta activ',
-    lever: 'Relatabilitate si umor — te regasesti, razi si dai share',
-    ctaType: 'Share: trimite unui prieten din breasla care se regaseste',
-    kpi: 'Share-uri si vizualizari (coeficient de viralitate)',
     styleBrief:
       'Scrie ca o sceneta comica, cu exagerare si punchline. Relatable, sa ' +
       'provoace rasul si share-ul. Fara sa jignesti pe cineva.',
@@ -75,17 +55,75 @@ export const TIKTOK_STRATEGIES: Record<TikTokStrategyId, MarketingStrategy> = {
   controversial: {
     id: 'controversial',
     label: 'Controversat',
-    objective: 'Engagement in comentarii; declanseaza dezbaterea (semnal puternic pentru algoritm)',
-    funnelStage: 'awareness',
-    audience: 'Oameni cu opinii despre breasla (prestatori/comercianti cu experienta)',
-    lever: 'Provocare si apartenenta la breasla — iei o pozitie, ceilalti reactioneaza',
-    ctaType: 'Comment: "tu ce parere ai?" — invita raspunsul in comentarii',
-    kpi: 'Comentarii si rata de engagement',
     styleBrief:
       'Ia o pozitie transanta de la prima replica. Invita contra-argumente. ' +
       'Corect, fara dezinformare, fara atac la persoana, fara clickbait mincinos.',
   },
+  story: {
+    id: 'story',
+    label: 'Poveste',
+    styleBrief:
+      'Poveste la persoana I, cu inceput-cuprins-final: un meserias/comerciant ' +
+      'real cu o problema, momentul de cotitura si rezultatul. Autentic, emotional.',
+  },
 }
+
+// ---------------------------------------------------------------------------
+// Axa 2: goal (obiectivul de marketing). Determina CTA-ul si KPI-ul.
+// ---------------------------------------------------------------------------
+
+export const GOAL_IDS = ['awareness', 'engagement', 'conversion'] as const
+export type TikTokGoal = (typeof GOAL_IDS)[number]
+
+export interface GoalDef {
+  id: TikTokGoal
+  label: string
+  intent: string // ce urmareste
+  ctaType: string // tipul de call-to-action potrivit obiectivului
+  kpi: string // ce inseamna succes (metrica de urmarit)
+}
+
+export const GOALS: Record<TikTokGoal, GoalDef> = {
+  awareness: {
+    id: 'awareness',
+    label: 'Notorietate',
+    intent: 'Reach maxim, sa fii vazut de cat mai multi — varful palniei',
+    ctaType: 'Share: trimite unui prieten din breasla care se regaseste',
+    kpi: 'Vizualizari si share-uri (coeficient de viralitate)',
+  },
+  engagement: {
+    id: 'engagement',
+    label: 'Interactiune',
+    intent: 'Reactii si comentarii — semnal puternic pentru algoritm',
+    ctaType: 'Comment: "tu ce parere ai?" — invita raspunsul in comentarii',
+    kpi: 'Comentarii si rata de engagement',
+  },
+  conversion: {
+    id: 'conversion',
+    label: 'Conversie',
+    intent: 'Determina publicul sa incerce/sa se inscrie in aplicatie',
+    ctaType: 'Soft: invitatie la incercare gratuita (primele 3 fise/calcule)',
+    kpi: 'Click pe link, inscrieri si salvari (saves)',
+  },
+}
+
+// ---------------------------------------------------------------------------
+// Reteta = o pereche (content_type x goal). Cele doua axe fiind ortogonale,
+// setul implicit alege 3 combinatii bune de pornire; le poti schimba aici.
+// Constrangere MVP: content_type-urile din set sunt UNICE (cheia de potrivire
+// cu raspunsul modelului).
+// ---------------------------------------------------------------------------
+
+export interface VariantRecipe {
+  contentType: TikTokContentType
+  goal: TikTokGoal
+}
+
+export const DEFAULT_RECIPES: VariantRecipe[] = [
+  { contentType: 'educational', goal: 'conversion' },
+  { contentType: 'funny', goal: 'awareness' },
+  { contentType: 'controversial', goal: 'engagement' },
+]
 
 // ---------------------------------------------------------------------------
 // Tipuri de continut (rezultatul agentului, tipizat)
@@ -102,10 +140,11 @@ export interface TikTokContent {
   videoPrompt: string
 }
 
-// O varianta dintr-un set: imparte aceeasi idee cu celelalte, dar e condusa de
-// o strategie de marketing diferita (atasata determinist din cod).
+// O varianta dintr-un set: imparte aceeasi idee cu celelalte, dar are propriile
+// axe (content_type + goal), atasate DETERMINIST din reteta (cod), nu din model.
 export interface TikTokVariant {
-  strategy: MarketingStrategy
+  contentType: TikTokContentType
+  goal: TikTokGoal
   hook: string
   script: string
   description: string
@@ -114,7 +153,7 @@ export interface TikTokVariant {
   videoPrompt: string
 }
 
-// Set de 3 variante pentru ACEEASI idee, cate una per strategie.
+// Set de 3 variante pentru ACEEASI idee.
 export interface TikTokVariantSet {
   topic: string | null
   idea: string
@@ -200,14 +239,14 @@ REGULI pentru continut:
   solutiei in aplicatie, si un call-to-action clar.
 `.trim()
 
-// Schema campurilor de continut (fara strategy/idea), refolosita in prompturi.
+// Schema campurilor de continut (fara axe/idea), refolosita in prompturi.
 const BODY_JSON_SHAPE =
   '"hook": "primele 2-3 secunde, replica ce opreste scroll-ul", ' +
   '"script": "scenariul complet pe scene, cu indicatii de imagine si replici, ' +
   'in formatul \\"[Scena 1 - 0-3s] ...\\n[Scena 2 - 3-8s] ...\\n[CTA] ...\\"", ' +
   '"description": "caption scurt si captivant pentru postare, cu emoji", ' +
   '"hashtags": ["#lista", "#de", "#hashtaguri"], ' +
-  '"cta": "replica de call-to-action, aliniata la tipul cerut de strategie", ' +
+  '"cta": "replica de call-to-action, aliniata la tipul cerut de obiectiv", ' +
   '"videoPrompt": "prompt in ENGLEZA pentru generatoare text-to-video (Veo, Kling, ' +
   'Runway) sau montaj CapCut: descrie scenele vizuale, tipul de plan, atmosfera, ' +
   'textul pe ecran"'
@@ -219,12 +258,14 @@ const OUTPUT_RULES =
   'trebuie sa fie fidel functiilor REALE ale Tarifator. Raspunzi DOAR cu JSON valid, ' +
   'fara text in plus, fara markdown, fara backticks.'
 
-// Descrie o strategie ca brief pentru model (derivat din TIKTOK_STRATEGIES).
-function strategyBrief(s: MarketingStrategy): string {
+// Descrie o reteta ca brief pentru model (derivat din CONTENT_TYPES + GOALS).
+function recipeBrief(r: VariantRecipe): string {
+  const ct = CONTENT_TYPES[r.contentType]
+  const g = GOALS[r.goal]
   return (
-    `- ${s.id}: obiectiv = ${s.objective}; etapa = ${s.funnelStage}; ` +
-    `audienta = ${s.audience}; parghie = ${s.lever}; CTA = ${s.ctaType}; ` +
-    `succes (KPI) = ${s.kpi}. STIL: ${s.styleBrief}`
+    `- content_type "${ct.id}" x goal "${g.id}": ` +
+    `STIL: ${ct.styleBrief} ` +
+    `OBIECTIV: ${g.intent}. CTA: ${g.ctaType}. Succes (KPI): ${g.kpi}.`
   )
 }
 
@@ -242,24 +283,23 @@ export function buildSingleSystemPrompt(): string {
   )
 }
 
-// Prompt pentru 3 variante ale ACELEIASI idei, fiecare condusa de o strategie.
-export function buildVariantsSystemPrompt(): string {
-  const briefs = TIKTOK_STRATEGY_IDS.map((id) => strategyBrief(TIKTOK_STRATEGIES[id])).join('\n')
-  const shapes = TIKTOK_STRATEGY_IDS.map(
-    (id) => `{ "strategy": "${id}", ${BODY_JSON_SHAPE} }`,
-  ).join(', ')
+// Prompt pentru variante ale ACELEIASI idei, cate una per reteta (content_type x goal).
+export function buildVariantsSystemPrompt(recipes: VariantRecipe[] = DEFAULT_RECIPES): string {
+  const briefs = recipes.map(recipeBrief).join('\n')
+  const shapes = recipes
+    .map((r) => `{ "content_type": "${r.contentType}", ${BODY_JSON_SHAPE} }`)
+    .join(', ')
   return (
     'Esti un content strategist pentru TikTok care promoveaza aplicatia Tarifator ' +
-    '(DevizRapid). Pornesti de la O SINGURA idee si o tratezi prin 3 STRATEGII de ' +
-    'marketing diferite. Fiecare strategie are alt obiectiv, alta parghie si alt CTA ' +
-    '— nu doar alt stil.\n\n' +
+    '(DevizRapid). Pornesti de la O SINGURA idee si o tratezi in mai multe variante. ' +
+    'Fiecare varianta are un content_type (formatul creativ) si un goal (obiectivul), ' +
+    'combinate asa:\n\n' +
     TARIFATOR_CONTEXT +
-    '\n\nCele 3 strategii (aceeasi idee, obiective diferite):\n' +
+    '\n\nVariantele cerute (aceeasi idee, combinatii diferite):\n' +
     briefs +
     '\n\nStructura EXACTA a raspunsului (JSON): { "idea": "ideea comuna, intr-o fraza", ' +
     `"variants": [ ${shapes} ] }\n\n` +
-    'Toate cele 3 variante pornesc de la ACEEASI idee; difera strategia (obiectiv, ' +
-    'parghie, CTA, stil).\n\n' +
+    'Toate variantele pornesc de la ACEEASI idee; difera content_type-ul si obiectivul.\n\n' +
     OUTPUT_RULES
   )
 }
@@ -298,7 +338,6 @@ function extractJsonObject(raw: string): Record<string, unknown> {
   }
 }
 
-// Normalizeaza campurile de continut (fara strategie — aceea se ataseaza separat).
 interface ContentBody {
   hook: string
   script: string
@@ -327,23 +366,23 @@ export function parseContent(raw: string): TikTokContent {
   return { idea, ...normalizeBody(obj) }
 }
 
-// Accepta variantele fie ca lista ([{strategy,...}]), fie ca obiect ({educational:{...}}).
-// Intoarce o harta id-strategie -> corp brut.
-function indexVariants(raw: unknown): Map<TikTokStrategyId, Record<string, unknown>> {
-  const map = new Map<TikTokStrategyId, Record<string, unknown>>()
-  const isId = (t: unknown): t is TikTokStrategyId =>
-    typeof t === 'string' && (TIKTOK_STRATEGY_IDS as readonly string[]).includes(t)
+// Indexeaza variantele modelului dupa content_type (cheia de potrivire cu reteta).
+// Accepta si lista ([{content_type,...}]) si obiect ({educational:{...}}).
+function indexByContentType(raw: unknown): Map<TikTokContentType, Record<string, unknown>> {
+  const map = new Map<TikTokContentType, Record<string, unknown>>()
+  const isType = (t: unknown): t is TikTokContentType =>
+    typeof t === 'string' && (CONTENT_TYPE_IDS as readonly string[]).includes(t)
 
   if (Array.isArray(raw)) {
     for (const item of raw) {
       if (item && typeof item === 'object') {
-        const id = (item as Record<string, unknown>).strategy
-        if (isId(id)) map.set(id, item as Record<string, unknown>)
+        const ct = (item as Record<string, unknown>).content_type
+        if (isType(ct)) map.set(ct, item as Record<string, unknown>)
       }
     }
   } else if (raw && typeof raw === 'object') {
     for (const [key, val] of Object.entries(raw as Record<string, unknown>)) {
-      if (isId(key) && val && typeof val === 'object') {
+      if (isType(key) && val && typeof val === 'object') {
         map.set(key, val as Record<string, unknown>)
       }
     }
@@ -351,23 +390,28 @@ function indexVariants(raw: unknown): Map<TikTokStrategyId, Record<string, unkno
   return map
 }
 
-// Parseaza un set de 3 variante. Ataseaza metadatele strategiei DETERMINIST din
-// cod (nu din model). Variantele ies mereu in ordinea canonica a strategiilor.
-// Arunca eroare daca lipseste vreo strategie — mai bine esec clar decat set incomplet.
-export function parseVariantSet(raw: string, topic: string | null): TikTokVariantSet {
+// Parseaza un set de variante pe baza retetelor. content_type + goal se iau
+// DETERMINIST din reteta (nu din model — sunt logica de business). Variantele ies
+// in ordinea retetelor. Arunca eroare daca lipseste vreo reteta din raspuns.
+export function parseVariantSet(
+  raw: string,
+  topic: string | null,
+  recipes: VariantRecipe[] = DEFAULT_RECIPES,
+): TikTokVariantSet {
   const obj = extractJsonObject(raw)
   const idea = asString(obj.idea)
   if (!idea) throw new Error('Raspunsul nu contine o idee')
 
-  const indexed = indexVariants(obj.variants)
-  const missing = TIKTOK_STRATEGY_IDS.filter((id) => !indexed.has(id))
+  const indexed = indexByContentType(obj.variants)
+  const missing = recipes.filter((r) => !indexed.has(r.contentType))
   if (missing.length > 0) {
-    throw new Error(`Lipsesc strategii: ${missing.join(', ')}`)
+    throw new Error(`Lipsesc variante: ${missing.map((r) => r.contentType).join(', ')}`)
   }
 
-  const variants: TikTokVariant[] = TIKTOK_STRATEGY_IDS.map((id) => ({
-    strategy: TIKTOK_STRATEGIES[id],
-    ...normalizeBody(indexed.get(id)!),
+  const variants: TikTokVariant[] = recipes.map((r) => ({
+    contentType: r.contentType,
+    goal: r.goal,
+    ...normalizeBody(indexed.get(r.contentType)!),
   }))
 
   return { topic, idea, variants }
@@ -388,7 +432,7 @@ const groqChat: ChatFn = async (messages) => {
       Authorization: 'Bearer ' + apiKey,
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_MODEL,
       messages,
       // Continut creativ -> temperatura mai mare decat la extractie (0.1).
       temperature: 0.85,
@@ -421,16 +465,18 @@ export async function generateTikTokContent(
   return parseContent(raw)
 }
 
-// Genereaza 3 variante pentru ACEEASI idee, cate una per strategie de marketing.
+// Genereaza mai multe variante pentru ACEEASI idee, cate una per reteta
+// (content_type x goal). Implicit foloseste DEFAULT_RECIPES (3 variante).
 export async function generateTikTokVariants(
   opts: GenerateOptions = {},
   deps: GenerateDeps = {},
+  recipes: VariantRecipe[] = DEFAULT_RECIPES,
 ): Promise<TikTokVariantSet> {
   const chat = deps.chat ?? groqChat
   const topic = opts.topic?.trim() || null
   const raw = await chat([
-    { role: 'system', content: buildVariantsSystemPrompt() },
+    { role: 'system', content: buildVariantsSystemPrompt(recipes) },
     { role: 'user', content: buildUserMessage(topic) },
   ])
-  return parseVariantSet(raw, topic)
+  return parseVariantSet(raw, topic, recipes)
 }

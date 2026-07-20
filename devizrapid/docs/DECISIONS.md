@@ -9,7 +9,30 @@ proiectul să nu depindă de istoricul conversațiilor.
 
 ---
 
-## ADR-025 — Agentul TikTok: tonurile sunt strategii de marketing, definite în cod
+## ADR-026 — Agentul TikTok: două axe separate (content_type + goal) și tabel cu metadate
+**Data:** 2026-07-20. **Rafinează ADR-025.**
+**Decizie:** „Strategia" unică din ADR-025 se desparte în **două axe ortogonale**
+(ca `account_type` vs `plan_tier`, ADR-002), ținute distincte în cod și în DB:
+- **`content_type`** = formatul creativ (CUM arată): `educational | funny |
+  controversial | story | ...` (extensibil) — `CONTENT_TYPES` cu `styleBrief`.
+- **`goal`** = obiectivul de marketing (CE urmărește): `awareness | engagement |
+  conversion` — `GOALS` cu `ctaType` + `kpi`.
+O variantă = o **rețetă** = o pereche (content_type × goal). Setul implicit
+`DEFAULT_RECIPES`: educational×conversion, funny×awareness, controversial×engagement.
+Ambele axe se atașează DETERMINIST din rețetă (cod), nu din model.
+Persistență: tabelul **`tiktok_ideas`** (`supabase/tiktok-ideas.sql`), un rând per
+variantă (cele 3 împart `set_id` + `idea`), cu metadate (`content_type`, `goal`,
+`topic`, `model`, data) și coloane de performanță (`views/likes/comments/shares/
+saves`, `status`, `posted_at`, `tiktok_url`) completate manual după postare.
+Salvarea se face din rută cu service-role; RLS dă owner-ului select/update/delete.
+**De ce:** Un singur „strategy" lega formatul de obiectiv; separarea lor lasă să
+mixezi liber (ex. „educational" pentru „awareness" SAU „conversion") și, cel mai
+important, permite ÎNVĂȚAREA din date: peste 3-6 luni interoghezi „ce content_type ×
+goal a avut cel mai bun engagement/conversie". De aceea salvăm metadatele, nu doar
+textul. Un rând per variantă (nu per set) face performanța fiecărei variante
+măsurabilă separat. Verificat: `npm test` (17/17), `tsc`, `npm run build` — verzi.
+
+## ADR-025 — Agentul TikTok: tonurile sunt strategii de marketing, definite în cod (rafinat de ADR-026)
 **Data:** 2026-07-20.
 **Decizie:** Agentul de conținut TikTok (`lib/tiktok/generate.ts`) produce, pentru
 ACEEAȘI idee, 3 variante conduse de câte o **strategie de marketing**, nu doar de

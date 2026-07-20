@@ -7,8 +7,11 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  TIKTOK_STRATEGY_IDS,
-  TIKTOK_STRATEGIES,
+  CONTENT_TYPE_IDS,
+  CONTENT_TYPES,
+  GOAL_IDS,
+  GOALS,
+  DEFAULT_RECIPES,
   buildUserMessage,
   buildVariantsSystemPrompt,
   buildSingleSystemPrompt,
@@ -17,24 +20,25 @@ import {
   generateTikTokVariants,
   generateTikTokContent,
   type ChatFn,
-  type TikTokStrategyId,
+  type TikTokContentType,
 } from './generate.ts'
+import { variantSetToRows } from './store.ts'
 
-// Corpul de continut trimis de "model": doar id-ul strategiei + continut.
-// NU include metadatele strategiei (obiectiv/kpi) — acelea le ataseaza codul.
-function variantBody(id: TikTokStrategyId) {
+// Corpul de continut trimis de "model": doar content_type + continut.
+// NU include goal — acela vine din reteta (cod).
+function variantBody(ct: TikTokContentType) {
   return {
-    strategy: id,
-    hook: `hook ${id}`,
-    script: `[Scena 1 - 0-3s] ${id}`,
-    description: `descriere ${id} 🎬`,
+    content_type: ct,
+    hook: `hook ${ct}`,
+    script: `[Scena 1 - 0-3s] ${ct}`,
+    description: `descriere ${ct} 🎬`,
     hashtags: ['#tarifator', '#meseriasi'],
-    cta: `cta ${id}`,
-    videoPrompt: `english video prompt for ${id}`,
+    cta: `cta ${ct}`,
+    videoPrompt: `english video prompt for ${ct}`,
   }
 }
 
-// JSON valid cu toate cele 3 variante (ordine amestecata dinadins).
+// JSON valid cu variantele setului implicit (ordine amestecata dinadins).
 function validVariantsJson(): string {
   return JSON.stringify({
     idea: 'Cum scapi de pretul dat din burta',
@@ -46,26 +50,31 @@ function validVariantsJson(): string {
   })
 }
 
-// --- Strategii (contractul de business) ---
+// --- Cele doua axe (content_type si goal sunt SEPARATE) ---
 
-test('exista exact 3 strategii, in ordinea canonica', () => {
-  assert.deepEqual([...TIKTOK_STRATEGY_IDS], ['educational', 'funny', 'controversial'])
-})
-
-test('fiecare strategie e completa: obiectiv, funnel, parghie, CTA, KPI', () => {
-  for (const id of TIKTOK_STRATEGY_IDS) {
-    const s = TIKTOK_STRATEGIES[id]
-    assert.equal(s.id, id)
-    for (const field of ['label', 'objective', 'audience', 'lever', 'ctaType', 'kpi', 'styleBrief'] as const) {
-      assert.ok(s[field].length > 0, `${id}.${field} gol`)
-    }
-    assert.ok(['awareness', 'consideration', 'conversion'].includes(s.funnelStage))
+test('content_type si goal sunt liste distincte, complete', () => {
+  assert.ok(CONTENT_TYPE_IDS.includes('educational'))
+  assert.ok(CONTENT_TYPE_IDS.includes('story')) // extensibil
+  assert.deepEqual([...GOAL_IDS], ['awareness', 'engagement', 'conversion'])
+  for (const id of CONTENT_TYPE_IDS) {
+    assert.equal(CONTENT_TYPES[id].id, id)
+    assert.ok(CONTENT_TYPES[id].styleBrief.length > 0)
+  }
+  for (const id of GOAL_IDS) {
+    assert.equal(GOALS[id].id, id)
+    assert.ok(GOALS[id].ctaType.length > 0)
+    assert.ok(GOALS[id].kpi.length > 0)
   }
 })
 
-test('strategiile au obiective distincte (nu doar stiluri)', () => {
-  const objectives = TIKTOK_STRATEGY_IDS.map((id) => TIKTOK_STRATEGIES[id].objective)
-  assert.equal(new Set(objectives).size, 3)
+test('setul implicit are content_type-uri unice (cheia de potrivire)', () => {
+  const types = DEFAULT_RECIPES.map((r) => r.contentType)
+  assert.equal(new Set(types).size, types.length)
+  // fiecare reteta referentiaza axe valide
+  for (const r of DEFAULT_RECIPES) {
+    assert.ok((CONTENT_TYPE_IDS as readonly string[]).includes(r.contentType))
+    assert.ok((GOAL_IDS as readonly string[]).includes(r.goal))
+  }
 })
 
 // --- buildUserMessage ---
@@ -78,7 +87,7 @@ test('buildUserMessage cere agentului sa aleaga cand tema lipseste', () => {
   assert.match(buildUserMessage(null), /alege tu/i)
 })
 
-// --- Prompturile contin adevarul despre produs + strategiile ---
+// --- Prompturile: adevar despre produs + cele doua axe ---
 
 test('prompturile ancoreaza in functii reale Tarifator', () => {
   for (const p of [buildSingleSystemPrompt(), buildVariantsSystemPrompt()]) {
@@ -88,45 +97,42 @@ test('prompturile ancoreaza in functii reale Tarifator', () => {
   }
 })
 
-test('promptul de variante briefeaza cele 3 strategii cu obiectiv si KPI', () => {
+test('promptul de variante briefeaza content_type SI goal', () => {
   const p = buildVariantsSystemPrompt()
-  for (const id of TIKTOK_STRATEGY_IDS) {
-    assert.match(p, new RegExp(id))
-  }
-  assert.match(p, /obiectiv =/)
+  assert.match(p, /content_type/)
+  assert.match(p, /goal/)
   assert.match(p, /KPI/)
 })
 
 // --- parseVariantSet ---
 
-test('parseVariantSet intoarce 3 variante in ordine canonica, indiferent de ordinea din JSON', () => {
+test('parseVariantSet intoarce variantele in ordinea retetelor, indiferent de ordinea din JSON', () => {
   const set = parseVariantSet(validVariantsJson(), 'tema x')
   assert.equal(set.topic, 'tema x')
   assert.equal(set.idea, 'Cum scapi de pretul dat din burta')
   assert.deepEqual(
-    set.variants.map((v) => v.strategy.id),
-    ['educational', 'funny', 'controversial'],
+    set.variants.map((v) => v.contentType),
+    DEFAULT_RECIPES.map((r) => r.contentType),
   )
   for (const v of set.variants) {
     assert.ok(v.hook.length > 0)
     assert.ok(v.script.length > 0)
-    assert.ok(v.description.length > 0)
     assert.ok(v.cta.length > 0)
     assert.ok(Array.isArray(v.hashtags) && v.hashtags.length > 0)
     assert.match(v.videoPrompt, /english/)
   }
 })
 
-test('parseVariantSet ataseaza metadatele strategiei din COD, nu din model', () => {
-  // Modelul trimite doar id + continut; obiectivul/kpi vin din TIKTOK_STRATEGIES.
+test('parseVariantSet ataseaza goal-ul din RETETA (cod), nu din model', () => {
+  // Modelul trimite doar content_type; goal-ul vine determinist din DEFAULT_RECIPES.
   const set = parseVariantSet(validVariantsJson(), null)
-  const edu = set.variants.find((v) => v.strategy.id === 'educational')!
-  assert.equal(edu.strategy.objective, TIKTOK_STRATEGIES.educational.objective)
-  assert.equal(edu.strategy.kpi, TIKTOK_STRATEGIES.educational.kpi)
-  assert.equal(edu.strategy.funnelStage, 'consideration')
+  for (const r of DEFAULT_RECIPES) {
+    const v = set.variants.find((x) => x.contentType === r.contentType)!
+    assert.equal(v.goal, r.goal)
+  }
 })
 
-test('parseVariantSet accepta si variante ca obiect cheiat pe strategie', () => {
+test('parseVariantSet accepta si variante ca obiect cheiat pe content_type', () => {
   const raw = JSON.stringify({
     idea: 'idee comuna',
     variants: {
@@ -137,17 +143,17 @@ test('parseVariantSet accepta si variante ca obiect cheiat pe strategie', () => 
   })
   const set = parseVariantSet(raw, null)
   assert.deepEqual(
-    set.variants.map((v) => v.strategy.id),
-    ['educational', 'funny', 'controversial'],
+    set.variants.map((v) => v.contentType),
+    DEFAULT_RECIPES.map((r) => r.contentType),
   )
 })
 
-test('parseVariantSet arunca eroare cand lipseste o strategie', () => {
+test('parseVariantSet arunca eroare cand lipseste o varianta', () => {
   const raw = JSON.stringify({
     idea: 'idee',
     variants: [variantBody('educational'), variantBody('funny')],
   })
-  assert.throws(() => parseVariantSet(raw, null), /Lipsesc strategii.*controversial/)
+  assert.throws(() => parseVariantSet(raw, null), /Lipsesc variante.*controversial/)
 })
 
 test('parseVariantSet arunca eroare fara idee', () => {
@@ -190,6 +196,28 @@ test('parseContent normalizeaza continutul unic', () => {
   assert.deepEqual(c.hashtags, ['#a'])
 })
 
+// --- Maparea la randuri DB (persistenta) ---
+
+test('variantSetToRows produce cate un rand per varianta, cu metadate', () => {
+  const set = parseVariantSet(validVariantsJson(), 'electricieni')
+  const rows = variantSetToRows(set, { userId: 'u1', setId: 's1', model: 'm1' })
+  assert.equal(rows.length, DEFAULT_RECIPES.length)
+  for (const row of rows) {
+    assert.equal(row.user_id, 'u1')
+    assert.equal(row.set_id, 's1') // acelasi set_id grupeaza variantele
+    assert.equal(row.model, 'm1')
+    assert.equal(row.topic, 'electricieni')
+    assert.equal(row.idea, set.idea)
+    // camelCase -> snake_case
+    assert.ok('content_type' in row && 'video_prompt' in row)
+    assert.ok(row.content_type.length > 0)
+    assert.ok(row.goal.length > 0)
+  }
+  // goal-ul din rand oglindeste reteta
+  const eduRow = rows.find((r) => r.content_type === 'educational')!
+  assert.equal(eduRow.goal, 'conversion')
+})
+
 // --- Flux end-to-end cu Groq injectat (fara retea) ---
 
 test('generateTikTokVariants foloseste chat-ul injectat si intoarce set tipizat', async () => {
@@ -205,7 +233,7 @@ test('generateTikTokVariants foloseste chat-ul injectat si intoarce set tipizat'
   const set = await generateTikTokVariants({ topic: 'electricieni' }, { chat: fakeChat })
   assert.equal(calls, 1)
   assert.equal(set.topic, 'electricieni')
-  assert.equal(set.variants.length, 3)
+  assert.equal(set.variants.length, DEFAULT_RECIPES.length)
 })
 
 test('generateTikTokContent foloseste chat-ul injectat', async () => {
