@@ -1,7 +1,7 @@
-// Nucleul agentului TikTok pentru Tarifator (DevizRapid).
+// Nucleul agentului de continut social pentru Tarifator (DevizRapid).
 //
 // Un "agent" aici = o functie pura care primeste un context si intoarce un
-// rezultat structurat si TIPIZAT. Genereaza continut de clip TikTok ancorat in
+// rezultat structurat si TIPIZAT. Genereaza continut de clip social ancorat in
 // functionalitatile REALE ale produsului (vezi TARIFATOR_CONTEXT, extras din
 // docs/PRODUCT.md + docs/VISION.md), nu inventat.
 //
@@ -29,15 +29,15 @@ export const GROQ_MODEL = 'llama-3.3-70b-versatile'
 // ---------------------------------------------------------------------------
 
 export const CONTENT_TYPE_IDS = ['educational', 'funny', 'controversial', 'story'] as const
-export type TikTokContentType = (typeof CONTENT_TYPE_IDS)[number]
+export type SocialContentType = (typeof CONTENT_TYPE_IDS)[number]
 
 export interface ContentTypeDef {
-  id: TikTokContentType
+  id: SocialContentType
   label: string
   styleBrief: string // CUM se scrie
 }
 
-export const CONTENT_TYPES: Record<TikTokContentType, ContentTypeDef> = {
+export const CONTENT_TYPES: Record<SocialContentType, ContentTypeDef> = {
   educational: {
     id: 'educational',
     label: 'Educativ',
@@ -73,17 +73,17 @@ export const CONTENT_TYPES: Record<TikTokContentType, ContentTypeDef> = {
 // ---------------------------------------------------------------------------
 
 export const GOAL_IDS = ['awareness', 'engagement', 'conversion'] as const
-export type TikTokGoal = (typeof GOAL_IDS)[number]
+export type SocialGoal = (typeof GOAL_IDS)[number]
 
 export interface GoalDef {
-  id: TikTokGoal
+  id: SocialGoal
   label: string
   intent: string // ce urmareste
   ctaType: string // tipul de call-to-action potrivit obiectivului
   kpi: string // ce inseamna succes (metrica de urmarit)
 }
 
-export const GOALS: Record<TikTokGoal, GoalDef> = {
+export const GOALS: Record<SocialGoal, GoalDef> = {
   awareness: {
     id: 'awareness',
     label: 'Notorietate',
@@ -157,8 +157,8 @@ export const PLATFORMS: Record<SocialPlatform, PlatformDef> = {
 // ---------------------------------------------------------------------------
 
 export interface VariantRecipe {
-  contentType: TikTokContentType
-  goal: TikTokGoal
+  contentType: SocialContentType
+  goal: SocialGoal
 }
 
 export const DEFAULT_RECIPES: VariantRecipe[] = [
@@ -172,7 +172,7 @@ export const DEFAULT_RECIPES: VariantRecipe[] = [
 // ---------------------------------------------------------------------------
 
 // Un concept de clip complet, de sine statator (o singura varianta cu idee).
-export interface TikTokContent {
+export interface SocialContent {
   idea: string
   hook: string
   script: string
@@ -184,9 +184,9 @@ export interface TikTokContent {
 
 // O varianta dintr-un set: imparte aceeasi idee cu celelalte, dar are propriile
 // axe (content_type + goal), atasate DETERMINIST din reteta (cod), nu din model.
-export interface TikTokVariant {
-  contentType: TikTokContentType
-  goal: TikTokGoal
+export interface SocialVariant {
+  contentType: SocialContentType
+  goal: SocialGoal
   hook: string
   script: string
   description: string
@@ -196,11 +196,11 @@ export interface TikTokVariant {
 }
 
 // Set de 3 variante pentru ACEEASI idee, tintite pe o platforma.
-export interface TikTokVariantSet {
+export interface SocialVariantSet {
   topic: string | null
   platform: SocialPlatform
   idea: string
-  variants: TikTokVariant[]
+  variants: SocialVariant[]
 }
 
 export interface GenerateOptions {
@@ -280,7 +280,7 @@ REGULI pentru continut:
   "contabilitate", fara integrari inexistente). Ramai la ce e REAL.
 - Publicul e roman, needucat tehnic, ocupat, practic. Ton direct, prietenos, de
   incredere. Fara corporatism.
-- Un clip TikTok bun are: hook in primele 2 secunde, o problema concreta, aratarea
+- Un clip scurt bun are: hook in primele 2 secunde, o problema concreta, aratarea
   solutiei in aplicatie, si un call-to-action clar.
 `.trim()
 
@@ -411,7 +411,7 @@ function normalizeBody(v: Record<string, unknown>): ContentBody {
 }
 
 // Parseaza un raspuns cu o singura varianta (cu idee proprie).
-export function parseContent(raw: string): TikTokContent {
+export function parseContent(raw: string): SocialContent {
   const obj = extractJsonObject(raw)
   const idea = asString(obj.idea)
   if (!idea) throw new Error('Raspunsul nu contine o idee')
@@ -420,9 +420,9 @@ export function parseContent(raw: string): TikTokContent {
 
 // Indexeaza variantele modelului dupa content_type (cheia de potrivire cu reteta).
 // Accepta si lista ([{content_type,...}]) si obiect ({educational:{...}}).
-function indexByContentType(raw: unknown): Map<TikTokContentType, Record<string, unknown>> {
-  const map = new Map<TikTokContentType, Record<string, unknown>>()
-  const isType = (t: unknown): t is TikTokContentType =>
+function indexByContentType(raw: unknown): Map<SocialContentType, Record<string, unknown>> {
+  const map = new Map<SocialContentType, Record<string, unknown>>()
+  const isType = (t: unknown): t is SocialContentType =>
     typeof t === 'string' && (CONTENT_TYPE_IDS as readonly string[]).includes(t)
 
   if (Array.isArray(raw)) {
@@ -450,7 +450,7 @@ export function parseVariantSet(
   topic: string | null,
   platform: SocialPlatform = 'tiktok',
   recipes: VariantRecipe[] = DEFAULT_RECIPES,
-): TikTokVariantSet {
+): SocialVariantSet {
   const obj = extractJsonObject(raw)
   const idea = asString(obj.idea)
   if (!idea) throw new Error('Raspunsul nu contine o idee')
@@ -461,7 +461,7 @@ export function parseVariantSet(
     throw new Error(`Lipsesc variante: ${missing.map((r) => r.contentType).join(', ')}`)
   }
 
-  const variants: TikTokVariant[] = recipes.map((r) => ({
+  const variants: SocialVariant[] = recipes.map((r) => ({
     contentType: r.contentType,
     goal: r.goal,
     ...normalizeBody(indexed.get(r.contentType)!),
@@ -505,10 +505,10 @@ const groqChat: ChatFn = async (messages) => {
 // ---------------------------------------------------------------------------
 
 // Genereaza UN concept de clip (o singura varianta, cu idee proprie).
-export async function generateTikTokContent(
+export async function generateSocialContent(
   opts: GenerateOptions = {},
   deps: GenerateDeps = {},
-): Promise<TikTokContent> {
+): Promise<SocialContent> {
   const chat = deps.chat ?? groqChat
   const topic = opts.topic?.trim() || null
   const platform = opts.platform ?? 'tiktok'
@@ -521,11 +521,11 @@ export async function generateTikTokContent(
 
 // Genereaza mai multe variante pentru ACEEASI idee, cate una per reteta
 // (content_type x goal). Implicit foloseste DEFAULT_RECIPES (3 variante).
-export async function generateTikTokVariants(
+export async function generateSocialVariants(
   opts: GenerateOptions = {},
   deps: GenerateDeps = {},
   recipes: VariantRecipe[] = DEFAULT_RECIPES,
-): Promise<TikTokVariantSet> {
+): Promise<SocialVariantSet> {
   const chat = deps.chat ?? groqChat
   const topic = opts.topic?.trim() || null
   const platform = opts.platform ?? 'tiktok'

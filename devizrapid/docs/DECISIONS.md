@@ -9,6 +9,24 @@ proiectul să nu depindă de istoricul conversațiilor.
 
 ---
 
+## ADR-028 — Redenumire: agentul e „de conținut social", nu „TikTok"
+**Data:** 2026-07-20. **Corectează denumirile din ADR-025→027.**
+**Decizie:** Fiindcă agentul e multi-platformă (ADR-027), numele „TikTok" din cod
+devenise înșelător. Redenumit consistent la `social`:
+- modul `lib/tiktok/` → **`lib/social/`**; rută `/api/tiktok-agent` → **`/api/social-agent`**;
+- tabel `tiktok_ideas` → **`social_content`** (+ indexuri/policy-uri `social_content_*`);
+  coloana `tiktok_url` → **`post_url`** (link de clip, orice platformă);
+- tipuri: `TikTokContent/Variant/VariantSet/ContentType/Goal/IdeaRow` →
+  `SocialContent / SocialVariant / SocialVariantSet / SocialContentType / SocialGoal /
+  SocialContentRow`; funcții `generateTikTok*` → `generateSocial*`;
+- cheia de rate-limit `tiktok-agent` → `social-agent`.
+Cuvântul `tiktok` rămâne DOAR ca **valoare** a axei `platform` (`'tiktok'`), unde e
+corect. Fișierul SQL: `supabase/social-content.sql` (înlocuiește `tiktok-ideas*.sql`).
+**De ce:** Numele trebuie să reflecte realitatea (trei platforme), altfel derutează.
+Făcut acum cât tabelul e gol (fără migrare de date). Referințele la vechile nume din
+ADR-026/027 se citesc prin această corecție. Verificat: SQL rulat pe Postgres real,
+`npm test` (20/20), `tsc`, `npm run build` — verzi.
+
 ## ADR-027 — Agentul de conținut: a treia axă `platform` (multi-platformă)
 **Data:** 2026-07-20. **Extinde ADR-026.**
 **Decizie:** Pe lângă `content_type` și `goal`, agentul primește o a treia axă

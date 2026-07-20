@@ -1,30 +1,30 @@
 // Persistenta agentului TikTok: transforma un set de variante in randuri pentru
-// tabelul `tiktok_ideas`. Functie PURA (fara acces la DB) — usor de testat, iar
-// scrierea efectiva se face in ruta API (app/api/tiktok-agent/route.ts).
+// tabelul `social_content`. Functie PURA (fara acces la DB) — usor de testat, iar
+// scrierea efectiva se face in ruta API (app/api/social-agent/route.ts).
 //
 // Salvam METADATE, nu doar text: content_type, goal, tema, model si data. Peste
 // 3-6 luni, alaturi de coloanele de performanta (views/likes/comments/shares/
 // saves, completate manual dupa postare), poti invata ce combinatie a mers.
-// Schema: supabase/tiktok-ideas.sql.
+// Schema: supabase/social-content.sql.
 
 import type {
   SocialPlatform,
-  TikTokContentType,
-  TikTokGoal,
-  TikTokVariantSet,
+  SocialContentType,
+  SocialGoal,
+  SocialVariantSet,
 } from './generate.ts'
 
-// Un rand in `tiktok_ideas` = O varianta (nu tot setul), ca sa poti urmari
+// Un rand in `social_content` = O varianta (nu tot setul), ca sa poti urmari
 // performanta fiecarei variante separat. Cele 3 variante ale unei idei impart
 // acelasi set_id si aceeasi idee.
-export interface TikTokIdeaRow {
+export interface SocialContentRow {
   user_id: string
   set_id: string
   topic: string | null
   platform: SocialPlatform
   idea: string
-  content_type: TikTokContentType
-  goal: TikTokGoal
+  content_type: SocialContentType
+  goal: SocialGoal
   hook: string
   script: string
   description: string
@@ -41,7 +41,7 @@ export interface RowMeta {
 }
 
 // Transforma un set de variante in randuri gata de inserat. camelCase -> snake_case.
-export function variantSetToRows(set: TikTokVariantSet, meta: RowMeta): TikTokIdeaRow[] {
+export function variantSetToRows(set: SocialVariantSet, meta: RowMeta): SocialContentRow[] {
   return set.variants.map((v) => ({
     user_id: meta.userId,
     set_id: meta.setId,

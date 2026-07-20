@@ -4,17 +4,17 @@ import { createClient } from '@supabase/supabase-js'
 import { verifyBearer } from '@/lib/apiAuth'
 import { allowDaily } from '@/lib/rateLimit'
 import {
-  generateTikTokVariants,
+  generateSocialVariants,
   GROQ_MODEL,
   PLATFORM_IDS,
   type SocialPlatform,
-} from '@/lib/tiktok/generate'
-import { variantSetToRows } from '@/lib/tiktok/store'
+} from '@/lib/social/generate'
+import { variantSetToRows } from '@/lib/social/store'
 
-// Agent TikTok — pasul 2 (persistenta). Pentru ACEEASI idee genereaza 3 variante,
+// Agent de continut social — pasul 2 (persistenta). Pentru ACEEASI idee genereaza 3 variante,
 // fiecare definita de doua axe: content_type (formatul creativ) si goal
-// (obiectivul de marketing). Salveaza fiecare varianta ca rand in `tiktok_ideas`
-// cu metadate (schema: supabase/tiktok-ideas.sql), ca sa poti invata ce a mers.
+// (obiectivul de marketing). Salveaza fiecare varianta ca rand in `social_content`
+// cu metadate (schema: supabase/social-content.sql), ca sa poti invata ce a mers.
 //
 // Acelasi tipar ca celelalte rute AI: auth cu Bearer token + limita zilnica.
 export async function POST(req: NextRequest) {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  if (!(await allowDaily(userId, 'tiktok-agent', 50))) {
+  if (!(await allowDaily(userId, 'social-agent', 50))) {
     return NextResponse.json(
       { error: 'rate_limit', message: 'Limita zilnica atinsa. Revino maine.' },
       { status: 429 },
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
   let set
   try {
-    set = await generateTikTokVariants({ topic, platform })
+    set = await generateSocialVariants({ topic, platform })
   } catch (e) {
     const message = e instanceof Error ? e.message : 'eroare necunoscuta'
     return NextResponse.json({ error: 'generation_failed', message }, { status: 500 })
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   // Salvare. Generarea a reusit deja, deci un esec la salvare NU trebuie sa
   // ascunda rezultatul: intoarcem continutul si semnalam saved:false + eroarea
-  // (ex: tabelul lipseste -> ruleaza supabase/tiktok-ideas.sql).
+  // (ex: tabelul lipseste -> ruleaza supabase/social-content.sql).
   const setId = randomUUID()
   let saved = false
   let saveError: string | null = null
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
       auth: { autoRefreshToken: false, persistSession: false },
     })
     const rows = variantSetToRows(set, { userId, setId, model: GROQ_MODEL })
-    const { error } = await admin.from('tiktok_ideas').insert(rows)
+    const { error } = await admin.from('social_content').insert(rows)
     if (error) saveError = error.message
     else saved = true
   }

@@ -1,4 +1,4 @@
-// Teste pentru nucleul agentului TikTok.
+// Teste pentru nucleul agentului de continut social.
 // Ruleaza cu runner-ul built-in din Node (`node --test`), pe TypeScript nativ —
 // zero dependente, zero cost. Apelul catre Groq e injectat (ChatFn fals), deci
 // testele nu ating reteaua si nu au nevoie de cheie API.
@@ -19,16 +19,16 @@ import {
   buildSingleSystemPrompt,
   parseContent,
   parseVariantSet,
-  generateTikTokVariants,
-  generateTikTokContent,
+  generateSocialVariants,
+  generateSocialContent,
   type ChatFn,
-  type TikTokContentType,
+  type SocialContentType,
 } from './generate.ts'
 import { variantSetToRows } from './store.ts'
 
 // Corpul de continut trimis de "model": doar content_type + continut.
 // NU include goal — acela vine din reteta (cod).
-function variantBody(ct: TikTokContentType) {
+function variantBody(ct: SocialContentType) {
   return {
     content_type: ct,
     hook: `hook ${ct}`,
@@ -245,7 +245,7 @@ test('variantSetToRows produce cate un rand per varianta, cu metadate', () => {
 
 // --- Flux end-to-end cu Groq injectat (fara retea) ---
 
-test('generateTikTokVariants foloseste chat-ul injectat si intoarce set tipizat', async () => {
+test('generateSocialVariants foloseste chat-ul injectat si intoarce set tipizat', async () => {
   let calls = 0
   const fakeChat: ChatFn = async (messages) => {
     calls++
@@ -255,7 +255,7 @@ test('generateTikTokVariants foloseste chat-ul injectat si intoarce set tipizat'
     assert.match(messages[1].content, /electricieni/)
     return validVariantsJson()
   }
-  const set = await generateTikTokVariants(
+  const set = await generateSocialVariants(
     { topic: 'electricieni', platform: 'instagram' },
     { chat: fakeChat },
   )
@@ -265,7 +265,7 @@ test('generateTikTokVariants foloseste chat-ul injectat si intoarce set tipizat'
   assert.equal(set.variants.length, DEFAULT_RECIPES.length)
 })
 
-test('generateTikTokContent foloseste chat-ul injectat', async () => {
+test('generateSocialContent foloseste chat-ul injectat', async () => {
   const fakeChat: ChatFn = async () =>
     JSON.stringify({
       idea: 'o idee',
@@ -276,7 +276,7 @@ test('generateTikTokContent foloseste chat-ul injectat', async () => {
       cta: 'c',
       videoPrompt: 'p',
     })
-  const c = await generateTikTokContent({}, { chat: fakeChat })
+  const c = await generateSocialContent({}, { chat: fakeChat })
   assert.equal(c.idea, 'o idee')
   assert.equal(c.hook, 'h')
   assert.equal(c.cta, 'c')
