@@ -343,6 +343,16 @@ export default function Dashboard() {
     </a>
   )
 
+  const socialTile = (
+    <a href="/social" className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
+      <span className="text-xl">🎬</span>
+      <div>
+        <p className="font-semibold text-sm text-gray-900">Continut social</p>
+        <p className="text-gray-500 text-xs">Idei TikTok / Reels</p>
+      </div>
+    </a>
+  )
+
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
       {showLifetimeGreeting && (
@@ -451,7 +461,7 @@ export default function Dashboard() {
                 <>
                   {/* Modul principal: Calculator Pret. Fisele raman accesibile, dar comprimate intr-un singur link. */}
                   <div className="grid grid-cols-1 gap-3">{mercatorTile}</div>
-                  <div className="grid grid-cols-2 gap-3">{calculePretTile}</div>
+                  <div className="grid grid-cols-2 gap-3">{calculePretTile}{socialTile}</div>
                   <a href="/quotes" className="flex items-center justify-between bg-white rounded-2xl shadow-sm px-4 py-3 hover:shadow active:scale-95 transition-all">
                     <span className="text-sm font-semibold text-gray-500">📋 Vezi si Fise Servicii</span>
                     <span className="text-gray-400">→</span>
@@ -465,6 +475,7 @@ export default function Dashboard() {
                     {fiseServiciiTile}
                     {serviciiTile}
                     {clientiTile}
+                    {socialTile}
                   </div>
                   <a href="/pricing" className="flex items-center justify-between bg-white rounded-2xl shadow-sm px-4 py-3 hover:shadow active:scale-95 transition-all">
                     <span className="text-sm font-semibold text-gray-500">🧮 Vezi si Calculator Pret</span>
@@ -479,6 +490,7 @@ export default function Dashboard() {
                     {calculePretTile}
                     {serviciiTile}
                     {clientiTile}
+                    {socialTile}
                   </div>
                 </>
               )}
