@@ -22,6 +22,11 @@ depinda de istoricul conversatiilor:
 Regulile de domeniu (TVA/SGR/cutie-bucata/limite) raman in `BUSINESS_RULES.md`.
 Cand iei o decizie de produs cu impact, scrie-o in fisierul potrivit din `docs/`.
 
+Metoda de audit de securitate / pregatire pentru productie sta in
+`docs/AUDIT-LANSARE.md` (skill: `audit-lansare`) — un audit adversarial bazat pe
+dovezi, mulat pe suprafata de atac a aplicatiei. Complementar cu `reguli-business`
+(logica de business), nu inlocuitor.
+
 # Skill-uri de proiect
 
 Pe masura ce lucram, capteaza cunostintele STABILE ale proiectului in skill-uri
