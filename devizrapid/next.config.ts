@@ -7,23 +7,33 @@ const supabaseOrigin = (() => {
 })()
 const supabaseWs = supabaseOrigin.replace(/^http/, 'ws')
 
+// Pe deploy-urile de Preview, Vercel injecteaza toolbar-ul lui de feedback de pe
+// vercel.live (+ realtime via pusher). Pe PRODUCTIE nu apare, deci il permitem
+// DOAR in afara productiei ca sa nu slabim CSP-ul real. VERCEL_ENV e 'production'
+// / 'preview' / undefined (local) — orice != production => permitem vercel.live.
+const isProd = process.env.VERCEL_ENV === 'production'
+const live      = isProd ? '' : 'https://vercel.live'
+const liveWs    = isProd ? '' : 'wss://ws-us3.pusher.com https://sockjs-us3.pusher.com'
+const liveImg   = isProd ? '' : 'https://vercel.live https://vercel.com'
+const liveFont  = isProd ? '' : 'https://vercel.live https://assets.vercel.com'
+
 // CSP conservator: inchide clickjacking / injectie de baza (frame-ancestors,
-// object-src, base-uri, form-action) si scopeaza connect/img, DAR lasa
-// script/style 'unsafe-inline' ca sa nu strice hidratarea Next. De rulat pe un
-// Preview inainte de productie (o directiva prea stricta pica silentios in browser).
+// object-src, base-uri, form-action) si scopeaza connect/img/frame, DAR lasa
+// script/style 'unsafe-inline' ca sa nu strice hidratarea Next. Testat pe Preview.
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${live}`,
+  `style-src 'self' 'unsafe-inline' ${live}`,
+  `img-src 'self' data: blob: ${liveImg}`,
+  `font-src 'self' data: ${liveFont}`,
   "worker-src 'self' blob:",
-  `connect-src 'self' ${supabaseOrigin} ${supabaseWs}`.replace(/\s+/g, ' ').trim(),
-].join('; ')
+  `frame-src 'self' ${live}`,
+  `connect-src 'self' ${supabaseOrigin} ${supabaseWs} ${live} ${liveWs}`,
+].map(d => d.replace(/\s+/g, ' ').trim()).join('; ')
 
 const securityHeaders = [
   { key: 'Content-Security-Policy', value: csp },
