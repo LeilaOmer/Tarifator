@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { isDisposableEmail, canonicalEmail } from '@/lib/emailGuard'
+import { allowDailyByIp, clientIp } from '@/lib/rateLimit'
 
 // Verificare inainte de inregistrare (anti-abuz freemium):
 //  - respinge emailuri temporare (temp-mail),
@@ -16,6 +17,12 @@ function adminClient(): SupabaseClient | null {
 }
 
 export async function POST(req: NextRequest) {
+  // Ruta e PUBLICA (pre-signup). Throttle pe IP ca sa nu fie folosita la nesfarsit
+  // pentru enumerare de conturi / apeluri repetate de listUsers de la un singur IP.
+  if (!(await allowDailyByIp(clientIp(req), 'check-signup', 60))) {
+    return NextResponse.json({ ok: true }) // fail-open, nu blocam inregistrarea reala
+  }
+
   const body = await req.json().catch(() => ({}))
   const email = typeof body.email === 'string' ? body.email.trim() : ''
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
