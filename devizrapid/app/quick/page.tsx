@@ -23,6 +23,7 @@ export default function QuickPage() {
   const [listening, setListening] = useState(false)
   const [loading, setLoading] = useState(false)
   const [preview, setPreview] = useState<{ client_name: string; items: PreviewItem[] } | null>(null)
+  const [unmatched, setUnmatched] = useState<string[]>([]) // dictate care nu s-au potrivit cu un serviciu
   const router = useRouter()
   const committedRef = useRef('')
   const previewRef = useRef<{ client_name: string; items: PreviewItem[] } | null>(null)
@@ -125,6 +126,9 @@ export default function QuickPage() {
       }
     }).filter(Boolean)
     setPreview({ client_name: data.client_name || '', items })
+    // ce a dictat dar nu s-a potrivit cu niciun serviciu salvat — il ARATAM, nu-l
+    // aruncam tacut (asa userul stie ca "teava" n-a fost prinsa si o poate adauga).
+    setUnmatched(Array.isArray(data.unmatched) ? data.unmatched : [])
     setTranscript('')
     committedRef.current = ''
     setLoading(false)
@@ -252,19 +256,32 @@ export default function QuickPage() {
               <input className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 flex-1"
                 value={preview.client_name} onChange={e => setPreview({ ...preview, client_name: e.target.value })} />
             </div>
-            <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
-              {preview.items.map((item, i) => (
-                <div key={i} className="flex justify-between items-center p-3 text-sm">
-                  <span className="font-medium text-gray-900">{item.name}</span>
-                  <span className="text-gray-500">x{item.quantity} × {item.unit_price} lei = <strong className="text-gray-800">{item.total} lei</strong></span>
-                </div>
-              ))}
-            </div>
+            {preview.items.length > 0 && (
+              <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
+                {preview.items.map((item, i) => (
+                  <div key={i} className="flex justify-between items-center p-3 text-sm">
+                    <span className="font-medium text-gray-900">{item.name}</span>
+                    <span className="text-gray-500">x{item.quantity} × {item.unit_price} lei = <strong className="text-gray-800">{item.total} lei</strong></span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {unmatched.length > 0 && (
+              // culori amber prin hex direct: paleta remapeaza amber->verde, iar un
+              // avertisment verde ar arata ca "e ok" — aici NU e ok
+              <div className="rounded-xl p-3 text-sm" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+                <p className="font-semibold" style={{ color: '#b45309' }}>Nerecunoscute: {unmatched.join(', ')}</p>
+                <p className="mt-0.5" style={{ color: '#92700e' }}>
+                  Nu se potrivesc cu niciun serviciu salvat.{' '}
+                  <button onClick={() => router.push('/services')} className="underline font-medium">Adauga-le in Servicii</button>{' '}si redicteaza.
+                </p>
+              </div>
+            )}
             <div className="flex justify-between font-bold text-lg border-t border-gray-100 pt-3">
               <span className="text-gray-800">Total</span>
               <span className="text-blue-600">{preview.items.reduce((s, i) => s + i.total, 0)} lei</span>
             </div>
-            <button onClick={handleConfirm} disabled={loading}
+            <button onClick={handleConfirm} disabled={loading || preview.items.length === 0}
               className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
               {loading ? 'Salvez...' : 'Confirma si salveaza'}
             </button>

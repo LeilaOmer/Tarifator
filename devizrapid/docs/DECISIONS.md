@@ -9,6 +9,21 @@ proiectul să nu depindă de istoricul conversațiilor.
 
 ---
 
+## ADR-025 — Potrivirea dictare→serviciu se face în cod, nu de model
+**Data:** 2026-07-13.
+**Decizie:** La dictarea fișelor, modelul (`parse-quote`) întoarce DOAR eticheta
+auzită (`label`) + `quantity`, nu un `service_id`. Legarea de serviciul salvat o
+face codul (`lib/services/matchService.ts`): normalizare fără diacritice, scoatere
+de cuvinte de umplutură/unități/numere, potrivire pe egalitate/substring/suprapunere
+de cuvinte cu prag; termenii ambigui (ex. „montaj" pentru două servicii) rămân
+NEPOTRIVIȚI intenționat. Ce nu se potrivește se întoarce în `unmatched` și se
+afișează în preview („Nerecunoscute: …"), nu se mai aruncă tăcut (`if(!service)
+return null`).
+**De ce:** Bug real — „3 m de țeavă" nu era prins deși „țeavă" era serviciu salvat:
+modelul e slab la echo-ul exact al unui id, dar bun la „ce a spus omul". Mutarea
+potrivirii în cod (regula „logica în cod, nu de AI") o face deterministă și
+testabilă (12 cazuri reale). Ambiguu → nepotrivit e mai sigur decât legat greșit.
+
 ## ADR-024 — Corecțiile cutie/bucată sunt partajate între utilizatori (înlocuiește ADR-010)
 **Data:** 2026-07-05.
 **Decizie:** `getKnownRatios` citește corecțiile TUTUROR utilizatorilor pentru

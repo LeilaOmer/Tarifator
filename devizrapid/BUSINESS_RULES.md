@@ -122,7 +122,7 @@ Repere scurte, ca sa te orientezi rapid. Sunt STABILE (locatiile nu se muta des)
 - **Abonamente + limite**: `lib/plan.ts` (`TIER_LIMITS`, `getEffectiveLimits`, `PRELAUNCH`), consum lunar in `lib/usage.ts`.
 - **Numerotare fise**: `lib/quoteNumber.ts`.
 - **Generare PDF**: calculator → `lib/pricing/pdf.ts`; fisa → `app/quotes/[id]/page.tsx` (`buildPDF`). Preview mobil: `lib/pricing/pdfPreview.ts`.
-- **Dictare voce**: `app/api/transcribe/route.ts` (Whisper) → `app/api/parse-quote/route.ts` / `parse-pricing`.
+- **Dictare voce**: `app/api/transcribe/route.ts` (Whisper) → `app/api/parse-quote/route.ts` / `parse-pricing`. La fișe, modelul întoarce DOAR eticheta auzită + cantitatea; potrivirea etichetă→serviciu salvat se face determinist în cod (`lib/services/matchService.ts`, tolerant la diacritice/plural/„de"/unități), iar ce nu se potrivește se ARATĂ ca „nerecunoscut", nu dispare tăcut.
 - **Auth pe rutele API**: `lib/apiAuth.ts` (`verifyBearer`), rate-limit `lib/rateLimit.ts`.
 - **Module + mod de lucru pe dashboard**: `app/dashboard/page.tsx`, `lib/module.ts`.
 
