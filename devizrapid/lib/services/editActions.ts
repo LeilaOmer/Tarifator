@@ -54,6 +54,36 @@ export function hasDestructiveIntent(command: string): boolean {
   return DESTRUCTIVE_RE.test(noDiacritics(command))
 }
 
+// Omul cere sa se ADUNE la cat exista deja ("mai pune doua", "inca o priza").
+const CUMULATIVE_RE = /\b(mai|inca|plus|suplimentar|adaug\w*|pune si|si inca)\b/
+// Omul CORECTEAZA o valoare gresita ("2 calorifere nu 9", "de fapt 3", "gresit").
+const CORRECTION_RE = /\bnu\b|\bde fapt\b|\bgresit\w*\b|\bcorect\w*\b|\bschimb\w*\b|\bmodific\w*\b|\bde cat\b/
+
+/**
+ * `add` (cumuleaza) vs `set` (inlocuieste) se decide din CUVINTELE OMULUI, nu
+ * din alegerea modelului.
+ *
+ * DE CE (bug real, raportat): la "2 calorifere nu 9" — o CORECTIE — modelul a
+ * emis `add` cu 2, iar codul a cumulat cuminte: 9 + 2 = 11. Alegerea intre a
+ * aduna si a inlocui e semantica fina, exact genul de decizie la care modelul
+ * greseste, iar greseala schimba TACIT o cantitate dintr-un document dat
+ * clientului.
+ *
+ * Regula, in ordine:
+ *   1. exista semnal de corectie ("nu", "de fapt", "gresit") => `set`;
+ *   2. exista semnal de cumulare ("mai", "inca", "adauga")   => `add`;
+ *   3. altfel => `set`. Implicitul sigur e "numarul rostit e valoarea exacta":
+ *      daca gresim un `set` in loc de `add`, omul repeta cu "mai"; daca gresim
+ *      invers, cantitatea creste in tacere si ajunge asa pe fisa.
+ */
+export function resolveQuantityOp(modelOp: EditOp, command: string): EditOp {
+  if (modelOp !== 'add' && modelOp !== 'set') return modelOp
+  const c = noDiacritics(command)
+  if (CORRECTION_RE.test(c)) return 'set'
+  if (CUMULATIVE_RE.test(c)) return 'add'
+  return 'set'
+}
+
 const MAX_QTY = 100_000
 
 const qty = (v: unknown): number =>
@@ -90,7 +120,8 @@ export function applyEditActions<T extends EditableLine>(
   const allowDestructive = command === '' || hasDestructiveIntent(command)
 
   for (const a of actions) {
-    const op = normalizeOp(a.op)
+    // `add` vs `set` se re-decide din comanda omului; `remove`/`clear` raman.
+    const op = command === '' ? normalizeOp(a.op) : resolveQuantityOp(normalizeOp(a.op), command)
 
     if (op === 'clear') {
       if (!allowDestructive) { blockedDestructive++; continue }

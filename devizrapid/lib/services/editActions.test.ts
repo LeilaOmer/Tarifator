@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { applyEditActions, normalizeOp, type EditAction } from './editActions'
+import { applyEditActions, normalizeOp, resolveQuantityOp, type EditAction } from './editActions'
 
 const services = [
   { id: 's1', name: 'Teava PPR 20mm' },
@@ -173,5 +173,60 @@ describe('GARD: stergerile cer intentia OMULUI, nu doar a modelului', () => {
 
   it('fara comanda (apel din alte fluxuri) comportamentul ramane deschis', () => {
     expect(applyEditActions(current, [{ op: 'clear' }], services, mk).items).toEqual([])
+  })
+})
+
+describe('BUG RAPORTAT: "2 calorifere nu 9" nu mai da 11', () => {
+  const calor = [{ id: 'c1', name: 'Montaj calorifer' }]
+  const nine: Line[] = [mk('c1', 9)]
+
+  it('corectia INLOCUIESTE cantitatea, nu o aduna', () => {
+    // Modelul emite `add` cu 2 (asa a facut in realitate). Codul trebuie sa
+    // recunoasca "nu" ca semnal de CORECTIE si sa seteze 2, nu 9+2=11.
+    const r = applyEditActions(nine, [{ op: 'add', label: 'calorifer', quantity: 2 }],
+      calor, mk, '2 calorifere nu 9')
+    expect(r.items).toEqual([mk('c1', 2)])
+  })
+
+  it.each([
+    '2 calorifere nu 9', 'de fapt 2 calorifere', 'am gresit, 2 calorifere',
+    'schimba la 2 calorifere', 'corect e 2 calorifere', 'nu 9, 2 calorifere',
+  ])('corectie: "%s" => cantitate exacta', cmd => {
+    const r = applyEditActions(nine, [{ op: 'add', label: 'calorifer', quantity: 2 }], calor, mk, cmd)
+    expect(r.items[0].quantity).toBe(2)
+  })
+
+  it.each([
+    'mai pune 2 calorifere', 'inca 2 calorifere', 'adauga 2 calorifere',
+    'mai adauga inca doua calorifere', '2 calorifere in plus',
+  ])('cumulare: "%s" => 9 + 2 = 11', cmd => {
+    const r = applyEditActions(nine, [{ op: 'add', label: 'calorifer', quantity: 2 }], calor, mk, cmd)
+    expect(r.items[0].quantity).toBe(11)
+  })
+
+  it('fara niciun semnal, numarul rostit e valoarea EXACTA (implicit sigur)', () => {
+    // "pune 3 calorifere" => 3, nu 12. Daca gresim asa, omul spune "mai";
+    // daca gresim invers, cantitatea creste in tacere si ajunge pe fisa.
+    const r = applyEditActions(nine, [{ op: 'add', label: 'calorifer', quantity: 3 }],
+      calor, mk, 'pune 3 calorifere')
+    expect(r.items[0].quantity).toBe(3)
+  })
+
+  it('modelul care zice `set` dar omul a spus "mai" => tot cumuleaza', () => {
+    const r = applyEditActions(nine, [{ op: 'set', label: 'calorifer', quantity: 2 }],
+      calor, mk, 'mai pune doua calorifere')
+    expect(r.items[0].quantity).toBe(11)
+  })
+
+  it('corectia bate cumularea cand apar ambele ("nu mai vreau 9, pun 2")', () => {
+    const r = applyEditActions(nine, [{ op: 'add', label: 'calorifer', quantity: 2 }],
+      calor, mk, 'nu mai vreau 9, pun 2 calorifere')
+    expect(r.items[0].quantity).toBe(2)
+  })
+
+  it('cu diacritice', () => {
+    const r = applyEditActions(nine, [{ op: 'add', label: 'calorifer', quantity: 2 }],
+      calor, mk, '2 calorifere, nu 9')
+    expect(r.items[0].quantity).toBe(2)
   })
 })

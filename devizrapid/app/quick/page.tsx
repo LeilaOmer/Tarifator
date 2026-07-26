@@ -25,6 +25,11 @@ export default function QuickPage() {
   const [preview, setPreview] = useState<{ client_name: string; items: PreviewItem[] } | null>(null)
   const [unmatched, setUnmatched] = useState<string[]>([]) // dictate care nu s-au potrivit cu un serviciu
   const [voiceDebug, setVoiceDebug] = useState('') // ce a propus modelul, cand rezultatul nu e cel asteptat
+  // Ce a INTELES Whisper, pastrat pe ecran dupa procesare. Intr-o aplicatie pe
+  // voce asta e esential: "doua" si "noua" rimeaza in romana si se confunda des,
+  // iar daca transcriptul dispare, omul vede doar cantitatea gresita din fisa si
+  // nu stie daca a gresit el, microfonul sau modelul.
+  const [heard, setHeard] = useState('')
   const router = useRouter()
   const committedRef = useRef('')
   const previewRef = useRef<{ client_name: string; items: PreviewItem[] } | null>(null)
@@ -133,6 +138,7 @@ export default function QuickPage() {
       body: JSON.stringify({ text, services })
     })
     const data = await res.json().catch(() => ({}))
+    setHeard(text)
     setPreview({ client_name: data.client_name || '', items: buildPreviewItems(data.items) })
     // ce a dictat dar nu s-a potrivit cu niciun serviciu salvat — il ARATAM, nu-l
     // aruncam tacut (asa userul stie ca "teava" n-a fost prinsa si o poate adauga).
@@ -154,6 +160,7 @@ export default function QuickPage() {
       body: JSON.stringify({ command, items: current.items, services })
     })
     const data = await res.json().catch(() => ({ error: 'network' }))
+    setHeard(command)
 
     // Daca modificarea NU s-a putut interpreta, pastram fisa asa cum era. Inainte
     // se scria `items: []` peste lista curenta => o comanda neinteleasa GOLEA
@@ -291,7 +298,7 @@ export default function QuickPage() {
           {loading && (
             <p className="text-center text-sm text-gray-500">Procesez...</p>
           )}
-          <button onClick={() => { setPreview(null); setTranscript(''); committedRef.current = '' }}
+          <button onClick={() => { setPreview(null); setTranscript(''); setHeard(''); setUnmatched([]); setVoiceDebug(''); committedRef.current = '' }}
             className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold text-sm">
             Fisa noua
           </button>
@@ -300,6 +307,13 @@ export default function QuickPage() {
         {preview && (
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-4">
             <h2 className="font-bold text-base text-gray-800">Preview</h2>
+            {heard && (
+              <div className="rounded-xl px-3 py-2 text-xs" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <span className="text-gray-500">Am auzit: </span>
+                <span className="text-gray-800">„{heard}"</span>
+                <p className="text-gray-500 mt-0.5">Daca nu e ce ai spus, dicteaza corectia (ex. „2 calorifere, nu 9").</p>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <span className="text-gray-500 text-sm">Client:</span>
               <input className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 flex-1"
