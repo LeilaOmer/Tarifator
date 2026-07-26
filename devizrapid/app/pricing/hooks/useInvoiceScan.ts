@@ -7,7 +7,12 @@ import { dedupeScannedItems } from '@/lib/pricing/scanGuards'
 
 type ScanResult = { supplier: string; items: Item[] }
 type ApiItem = { name: string; unit: string; supplier_price: number; discount: number; vat: number; sgr: number; verified?: boolean }
-type ApiResult = { supplier?: string; items?: ApiItem[]; error?: string; detail?: string; debug?: string }
+// `excluded` = randuri pe care gardurile deterministe le-au scos din lista
+// (garantie/ambalaj SGR sau rand-fantoma duplicat). Sunt EURISTICI si pot gresi
+// — pe un comerciant de ambalaje sau pe un aviz fara coloana de cantitate pot
+// scoate marfa reala. Pana acum greseau in tacere; acum se ARATA.
+export type ExcludedRow = { name: string; reason: 'garantie' | 'duplicat' }
+type ApiResult = { supplier?: string; items?: ApiItem[]; excluded?: ExcludedRow[]; error?: string; detail?: string; debug?: string }
 
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms))
 
@@ -97,6 +102,21 @@ function mapItems(apiItems: ApiItem[]): Item[] {
 export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState('')
+  const [excluded, setExcluded] = useState<ExcludedRow[]>([])
+
+  // Excluderile din toate feliile unei poze, fara duplicate (aceeasi linie poate
+  // aparea in doua felii suprapuse).
+  function collectExcluded(results: ApiResult[]) {
+    const seen = new Set<string>()
+    const out: ExcludedRow[] = []
+    for (const r of results) {
+      for (const e of r.excluded ?? []) {
+        const key = e.name.trim().toLowerCase()
+        if (key && !seen.has(key)) { seen.add(key); out.push(e) }
+      }
+    }
+    setExcluded(out)
+  }
 
   async function callApi(body: Record<string, string>, token?: string): Promise<{ ok: boolean; status: number; data: ApiResult }> {
     const res = await fetch('/api/parse-invoice', {
@@ -133,6 +153,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
     }
     setScanning(true)
     setError('')
+    setExcluded([])
     try {
       // e-Factura XML = date structurate: le citim determinist in cod (100% corect,
       // gratuit, instant), fara AI si fara sa consumam din cota de scanari. Trebuie
@@ -160,7 +181,11 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
         if (!ok) { setError(errorMessage(status, data)); return }
         // dedupe si aici: modelul poate scoate acelasi rand de doua ori
         // dintr-un PDF dens (vazut pe facturi reale), nu doar din felii de poza.
-        if (data.items?.length) { onSuccess({ supplier: data.supplier || '', items: mapItems(dedupeScannedItems(data.items)) }); return }
+        if (data.items?.length) {
+          collectExcluded([data])
+          onSuccess({ supplier: data.supplier || '', items: mapItems(dedupeScannedItems(data.items)) })
+          return
+        }
         setError('Nu s-au gasit produse. Incearca o poza mai clara sau incarca PDF-ul.')
         return
       }
@@ -199,6 +224,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
       const supplier = sliceRes.find(r => r.supplier)?.supplier || ''
 
       if (combinedItems.length > 0) {
+        collectExcluded(sliceRes)
         onSuccess({ supplier, items: mapItems(dedupeScannedItems(combinedItems)) })
         // Rezultat PARTIAL: o felie tot n-a incaput in limita chiar si dupa
         // reincercari. Anuntam clar, ca sa nu para complet cand nu e.
@@ -225,5 +251,5 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
     }
   }
 
-  return { scanning, error, handleScan }
+  return { scanning, error, excluded, handleScan }
 }

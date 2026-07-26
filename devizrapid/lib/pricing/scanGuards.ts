@@ -8,10 +8,28 @@
 // produsul vecin). Filtrul din cod e plasa de siguranta care nu da gres.
 export function isNonProductLine(name: string): boolean {
   const n = name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
-  // palet = ambalaj de transport la schimb (Ursus: "PALET STANDARD"), nu marfa;
+
+  // 1. Semnale NEECHIVOCE — nimeni nu vinde "garantie" ca produs.
+  if (/garanti[ae]/.test(n)) return true          // "GARANTIE PET", "Garantie-Returnare"
+  if (/^sgr\b/.test(n)) return true
   // un rand care INCEPE cu "keg" e butoiul GOL dat la schimb ("KEG 30L 1x1" =
   // garantia ambalajului), nu berea (aia are numele marcii inainte de "keg")
-  return /\bambalaj\b|garantie|garanti[ae]-?returnare|\breturnare\b|^sgr\b|\bpaleti?\b|^keg\b/.test(n)
+  if (/^keg\b/.test(n)) return true
+
+  // 2. Semnale AMBIGUE. "ambalaj" si "palet" apar si pe linia de depozit
+  //    (Ursus: "PALET STANDARD"), si in denumirea unei MARFI reale — exista
+  //    comercianti care vand exact ambalaje, cutii si paleti, iar pentru ei
+  //    regula veche stergea tot catalogul, tacut. Le tratam ca linie de depozit
+  //    doar cand ARATA a asa ceva: scurte, generice, fara cifre. Cifrele
+  //    (dimensiuni, gramaje) inseamna marfa: "PALETI LEMN 1200x800" e produs.
+  if (/\bambalaj\w*\b|\bpalet\w*\b/.test(n)) {
+    return !/\d/.test(n) && n.split(/\s+/).length <= 3
+  }
+
+  // 3. "returnare" SINGUR nu mai exclude nimic: prindea si liniile de retur de
+  //    marfa ("RETURNARE MARFA"), care sunt tranzactii reale, nu garantii.
+  //    Forma relevanta ("Garantie-Returnare") e deja prinsa la punctul 1.
+  return false
 }
 
 // Randuri-FANTOMA la scanarea pozelor: modelul citeste zona de sub un produs

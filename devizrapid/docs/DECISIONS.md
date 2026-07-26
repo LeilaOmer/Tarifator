@@ -290,3 +290,14 @@ dictare mai are o sansa sa fie inteleasa gresit. Vocea pentru viteza, mana pentr
 Plafoanele de cantitate sunt aceleasi ca pe server (1..100.000), ca cele doua cai sa nu diveargheze.
 **Corolar:** transcriptul ramane afisat ("Am auzit: ...") dupa procesare. Daca dispare, omul vede
 doar cantitatea gresita si nu poate sti daca a gresit el, microfonul sau modelul.
+
+## ADR-033 — Gardurile de scanare RAPORTEAZA ce exclud, nu sterg tacut
+**Decizie:** `isNonProductLine` si `phantomRowIndexes` raman, dar fiecare rand scos e intors
+clientului in `excluded: [{name, reason}]` si afisat in `/pricing`. In plus, `isNonProductLine`
+nu mai exclude pe baza cuvintelor AMBIGUE decat cand linia arata a depozit (scurta, generica,
+fara cifre); `returnare` singur nu mai exclude nimic.
+**De ce:** Sunt euristici pe denumire, deci GRESESC. Un comerciant de ambalaje/paleti isi vedea
+tot catalogul disparand, iar `RETURNARE MARFA` (storno real) era tratat ca garantie. Randurile
+lipsa nu se pot observa — omul nu vede ce nu i s-a aratat. Un gard care greseste e acceptabil
+daca spune ce a facut; unul care greseste in tacere, nu. Acelasi principiu ca la `unmatched`
+din fisele vocale (ADR-020).

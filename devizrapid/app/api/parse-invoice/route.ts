@@ -222,6 +222,12 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
   delete d.discounts
   delete d.doc_type
 
+  // Ce am scos din lista si DE CE. Gardurile de mai jos sunt euristici: pot
+  // gresi (un comerciant de ambalaje, un rand real fara cantitate proprie), iar
+  // pana acum greseau in TACERE — produsul lipsea din rezultat fara ca omul sa
+  // aiba cum sa afle. Raportam fiecare excludere, ca decizia finala sa fie a lui.
+  const excluded: { name: string; reason: 'garantie' | 'duplicat' }[] = []
+
   const filtered = (d.items as unknown[]).filter((i: unknown) => {
     if (!i || typeof i !== 'object') return false
     const item = i as Record<string, unknown>
@@ -229,7 +235,7 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
     // Plasa de siguranta DETERMINISTA: modelul e instruit sa excluda liniile de
     // garantie/ambalaj SGR, dar uneori le scapa ca produse (cu pret copiat de la
     // vecin). Filtrul din cod nu da gres.
-    if (isNonProductLine(item.name)) return false
+    if (isNonProductLine(item.name)) { excluded.push({ name: item.name, reason: 'garantie' }); return false }
     // Number(...) accepta si numere, si numere ca text ("2.64"): modelul le
     // intoarce inconsistent, iar daca ceream strict typeof==='number' un raspuns
     // cu preturi ca string ar fi fost filtrat COMPLET (0 produse => vision_failed).
@@ -262,6 +268,7 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
       // deduplicarea intre feliile suprapuse ale aceleiasi poze.
       return { name: item.name, unit, supplier_price: supplierPrice, vat, discount: 0, sgr, verified: lineTotal > 0 }
     })
+    d.excluded = excluded
     return d
   }
 
@@ -318,6 +325,7 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
   // si fara cantitate/valoare) se elimina inainte de orice alta potrivire — vezi
   // phantomRowIndexes (lib/pricing/scanGuards.ts) pentru semnatura ceruta.
   const phantoms = phantomRowIndexes(prep.map(p => ({ name: String(p.name), verified: p.verified })))
+  for (const i of phantoms) excluded.push({ name: String(prep[i].name), reason: 'duplicat' })
   const kept = prep.filter((_, i) => !phantoms.has(i))
 
   const siblingRatios = new Map<string, number>()
@@ -340,6 +348,7 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
       ? 'buc' : rawUnit
     return { name: p.name, unit, supplier_price: supplierPrice, vat: p.vat, discount: p.discount, sgr: p.sgr, verified: p.verified }
   })
+  d.excluded = excluded
   return d
 }
 

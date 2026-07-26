@@ -31,7 +31,7 @@ export default function PricingPage() {
 
   const draft = usePricingDraft()
 
-  const { scanning, error: scanError, handleScan } = useInvoiceScan(({ supplier, items }) => {
+  const { scanning, error: scanError, excluded, handleScan } = useInvoiceScan(({ supplier, items }) => {
     if (supplier) draft.setSupplier(supplier)
     draft.setItems(items)
   })
@@ -122,6 +122,28 @@ export default function PricingPage() {
 
       <div className="max-w-2xl mx-auto px-3 pt-3 space-y-3">
         <InvoiceScanner scanning={scanning} error={scanError} onScan={handleScan} />
+
+        {/* Randuri scoase de gardurile deterministe. Le ARATAM: sunt euristici
+            si pot gresi (un comerciant care VINDE ambalaje, un aviz fara coloana
+            de cantitate), iar pana acum produsul lipsea din lista fara ca nimeni
+            sa poata observa. Culori prin hex direct: paleta remapeaza amber. */}
+        {excluded.length > 0 && (
+          <div className="rounded-2xl p-3 text-xs" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+            <p className="font-semibold" style={{ color: '#b45309' }}>
+              Am exclus {excluded.length} {excluded.length === 1 ? 'rand' : 'randuri'} din factura
+            </p>
+            <ul className="mt-1 space-y-0.5" style={{ color: '#92700e' }}>
+              {excluded.map((e, i) => (
+                <li key={i}>
+                  • {e.name} <span className="opacity-70">({e.reason === 'garantie' ? 'pare garantie/ambalaj' : 'pare rand duplicat'})</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1" style={{ color: '#92700e' }}>
+              Daca vreunul e produs real, adauga-l manual mai jos.
+            </p>
+          </div>
+        )}
 
         <SettingsPanel
           supplier={draft.supplier} onSupplier={draft.setSupplier}
