@@ -26,6 +26,32 @@ export type ApplyResult<T extends EditableLine> = {
   unmatched: string[]
   /** true daca vreo actiune a schimbat efectiv ceva (pentru mesajul din UI). */
   changed: boolean
+  /** Actiuni distructive propuse de model, dar pe care omul nu le-a cerut. */
+  blockedDestructive: number
+}
+
+// Verbe de stergere, in comanda OMULUI (fara diacritice, cum vine de la Whisper
+// si dupa normalizare). Lista e voit generoasa: un fals-pozitiv inseamna doar ca
+// permitem o stergere pe care modelul oricum a cerut-o corect.
+const DESTRUCTIVE_RE =
+  /\b(sterg\w*|sters\w*|scoat\w*|scot|scoti|elimin\w*|anul\w*|renunt\w*|curat\w*|gol\w*|arunc\w*|inlocui\w*|refac\w*|capat)\b|\bnu mai\b|\bfara\b/
+
+const noDiacritics = (s: string) =>
+  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
+/**
+ * A cerut omul, efectiv, o stergere?
+ *
+ * Gard DETERMINIST peste iesirea modelului, in acelasi spirit ca `scanGuards.ts`:
+ * `remove` si `clear` sunt singurele operatii care pot face munca utilizatorului
+ * sa dispara, deci nu au voie sa depinda DOAR de judecata modelului. Pe
+ * "mai adauga doua prize" un model poate emite "clear" + "add" ("golesc si
+ * reconstruiesc lista") — corect din punctul lui de vedere, catastrofal pentru
+ * om. Daca in ce a spus omul nu exista niciun verb de stergere, actiunile
+ * distructive se ignora.
+ */
+export function hasDestructiveIntent(command: string): boolean {
+  return DESTRUCTIVE_RE.test(noDiacritics(command))
 }
 
 const MAX_QTY = 100_000
@@ -52,15 +78,22 @@ export function applyEditActions<T extends EditableLine>(
   actions: EditAction[],
   services: MatchableService[],
   makeLine: (serviceId: string, quantity: number) => T | null,
+  /** Comanda ORIGINALA a omului — decide daca stergerile sunt permise. */
+  command = '',
 ): ApplyResult<T> {
   let items = [...current]
   const unmatched: string[] = []
   let changed = false
+  let blockedDestructive = 0
+  // Fara comanda (apel din teste/alte fluxuri) pastram comportamentul deschis;
+  // ruta trimite mereu comanda, deci in productie gardul e mereu activ.
+  const allowDestructive = command === '' || hasDestructiveIntent(command)
 
   for (const a of actions) {
     const op = normalizeOp(a.op)
 
     if (op === 'clear') {
+      if (!allowDestructive) { blockedDestructive++; continue }
       if (items.length > 0) changed = true
       items = []
       continue
@@ -74,6 +107,7 @@ export function applyEditActions<T extends EditableLine>(
     const idx = items.findIndex(i => i.service_id === svc.id)
 
     if (op === 'remove') {
+      if (!allowDestructive) { blockedDestructive++; continue }
       if (idx !== -1) { items.splice(idx, 1); changed = true }
       continue
     }
@@ -94,5 +128,5 @@ export function applyEditActions<T extends EditableLine>(
     }
   }
 
-  return { items, unmatched, changed }
+  return { items, unmatched, changed, blockedDestructive }
 }

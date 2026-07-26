@@ -128,3 +128,50 @@ describe('normalizeOp — sinonime si necunoscute', () => {
     ['add', 'add'], ['adauga', 'add'], ['', 'add'], [undefined, 'add'], [null, 'add'],
   ])('%s => %s', (input, expected) => expect(normalizeOp(input)).toBe(expected))
 })
+
+describe('GARD: stergerile cer intentia OMULUI, nu doar a modelului', () => {
+  it('"mai adauga doua prize" + model care emite clear => clear IGNORAT', () => {
+    // Scenariul suspectat pe cazul raportat: modelul "goleste si reconstruieste".
+    const r = applyEditActions(
+      current,
+      [{ op: 'clear' }, { op: 'add', label: 'priza', quantity: 2 }],
+      services, mk, 'mai adauga doua prize',
+    )
+    expect(r.items).toEqual([mk('s1', 3), mk('s3', 2), mk('s2', 2)])
+    expect(r.blockedDestructive).toBe(1)
+  })
+
+  it('"mai pune o priza" + model care emite remove => remove IGNORAT', () => {
+    const r = applyEditActions(
+      current,
+      [{ op: 'remove', label: 'teava' }, { op: 'add', label: 'priza', quantity: 1 }],
+      services, mk, 'mai pune o priza',
+    )
+    expect(r.items.map(i => i.service_id)).toContain('s1')
+    expect(r.blockedDestructive).toBe(1)
+  })
+
+  it.each([
+    'sterge teava', 'scoate teava', 'nu mai vreau teava', 'anuleaza teava',
+    'elimina teava', 'renunt la teava', 'fara teava',
+  ])('stergerea CERUTA de om se aplica: "%s"', cmd => {
+    const r = applyEditActions(current, [{ op: 'remove', label: 'teava' }], services, mk, cmd)
+    expect(r.items).toEqual([mk('s3', 2)])
+    expect(r.blockedDestructive).toBe(0)
+  })
+
+  it.each(['sterge tot', 'o iau de la capat', 'goleste lista', 'curata tot'])(
+    'golirea CERUTA de om se aplica: "%s"', cmd => {
+      expect(applyEditActions(current, [{ op: 'clear' }], services, mk, cmd).items).toEqual([])
+    },
+  )
+
+  it('functioneaza si cu diacritice (Whisper le poate produce)', () => {
+    const r = applyEditActions(current, [{ op: 'remove', label: 'teava' }], services, mk, 'șterge țeava')
+    expect(r.items).toEqual([mk('s3', 2)])
+  })
+
+  it('fara comanda (apel din alte fluxuri) comportamentul ramane deschis', () => {
+    expect(applyEditActions(current, [{ op: 'clear' }], services, mk).items).toEqual([])
+  })
+})

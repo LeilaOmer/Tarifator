@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyBearer } from '@/lib/apiAuth'
 import { allowDaily } from '@/lib/rateLimit'
 import { type MatchableService } from '@/lib/services/matchService'
-import { applyEditActions, normalizeOp, type EditAction } from '@/lib/services/editActions'
+import { applyEditActions, normalizeOp, hasDestructiveIntent, type EditAction } from '@/lib/services/editActions'
 
 // Modificarea prin voce a unei fise in curs ("mai adauga doua prize", "scoate
 // teava"). Modelul intoarce lista REZULTATA, dar doar ca ETICHETE auzite —
@@ -122,12 +122,31 @@ export async function POST(req: NextRequest) {
   // Aplicarea e DETERMINISTA, in cod, peste lista trimisa de client. Lista
   // curenta nu trece prin model, deci o linie nu poate disparea decat daca
   // utilizatorul a cerut explicit stergerea ei.
-  const { items, unmatched, changed } = applyEditActions(
+  const { items, unmatched, changed, blockedDestructive } = applyEditActions(
     currentLines,
     actions,
     svcList,
     (service_id, quantity) => ({ service_id, quantity }),
+    command,
   )
 
-  return NextResponse.json({ items, unmatched, changed })
+  // Plasa finala, independenta de orice: o modificare NU are voie sa goleasca o
+  // fisa care avea lucrari, cand omul n-a cerut nicio stergere. Daca ajungem
+  // aici, ceva a scapat de gardurile de mai sus — pastram starea si raportam.
+  if (items.length === 0 && currentLines.length > 0 && !hasDestructiveIntent(command)) {
+    return NextResponse.json(
+      { items: currentLines, unmatched, changed: false, error: 'refused_wipe', debug: actionsDebug(actions) },
+      { status: 200 },
+    )
+  }
+
+  return NextResponse.json({
+    items, unmatched, changed, blockedDestructive,
+    // Ce a propus efectiv modelul — vizibil pentru diagnostic, ca la
+    // parse-invoice (`debug`), fara acces la logurile serverului.
+    debug: actionsDebug(actions),
+  })
 }
+
+const actionsDebug = (actions: EditAction[]) =>
+  actions.map(a => `${a.op}:${a.label ?? ''}${a.quantity ? '=' + a.quantity : ''}`).join(', ')

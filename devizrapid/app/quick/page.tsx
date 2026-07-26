@@ -24,6 +24,7 @@ export default function QuickPage() {
   const [loading, setLoading] = useState(false)
   const [preview, setPreview] = useState<{ client_name: string; items: PreviewItem[] } | null>(null)
   const [unmatched, setUnmatched] = useState<string[]>([]) // dictate care nu s-au potrivit cu un serviciu
+  const [voiceDebug, setVoiceDebug] = useState('') // ce a propus modelul, cand rezultatul nu e cel asteptat
   const router = useRouter()
   const committedRef = useRef('')
   const previewRef = useRef<{ client_name: string; items: PreviewItem[] } | null>(null)
@@ -157,7 +158,7 @@ export default function QuickPage() {
     // Daca modificarea NU s-a putut interpreta, pastram fisa asa cum era. Inainte
     // se scria `items: []` peste lista curenta => o comanda neinteleasa GOLEA
     // tacut tot ce dictase utilizatorul.
-    if (!res.ok || data.error) {
+    if (!res.ok || (data.error && data.error !== 'refused_wipe')) {
       setLoading(false)
       setTranscript('')
       committedRef.current = ''
@@ -165,6 +166,18 @@ export default function QuickPage() {
         ? 'Limita zilnica de comenzi vocale atinsa. Revino maine.'
         : 'Nu am inteles modificarea. Fisa a ramas neschimbata — mai incearca o data.')
       return
+    }
+
+    // Serverul a refuzat sa goleasca fisa pentru o comanda care nu cerea stergere.
+    if (data.error === 'refused_wipe') {
+      toast('Nu am aplicat modificarea (ar fi golit fisa, desi nu ai cerut stergere).')
+    }
+    // `debug` = ce a propus modelul. Il aratam cand rezultatul nu e cel asteptat,
+    // ca sa poata fi raportat fara acces la logurile serverului.
+    if (data.debug && (data.error || data.blockedDestructive > 0)) {
+      setVoiceDebug(String(data.debug))
+    } else {
+      setVoiceDebug('')
     }
 
     const items = buildPreviewItems(data.items)
@@ -312,6 +325,9 @@ export default function QuickPage() {
                   <button onClick={() => router.push('/services')} className="underline font-medium">Adauga-le in Servicii</button>{' '}si redicteaza.
                 </p>
               </div>
+            )}
+            {voiceDebug && (
+              <p className="text-[11px] text-gray-500 break-words">Model: {voiceDebug}</p>
             )}
             <div className="flex justify-between font-bold text-lg border-t border-gray-100 pt-3">
               <span className="text-gray-800">Total</span>
