@@ -103,6 +103,24 @@ export default function QuickPage() {
     setListening(true)
   }
 
+  // Serviciul e sursa pretului, nu modelul: din raspunsul serverului luam doar
+  // `service_id` (deja potrivit determinist prin matchService) si cantitatea.
+  function buildPreviewItems(raw: unknown): PreviewItem[] {
+    return (Array.isArray(raw) ? raw : []).flatMap((i): PreviewItem[] => {
+      const o = (i ?? {}) as Record<string, unknown>
+      const service = services.find(s => s.id === o.service_id)
+      if (!service) return []
+      const quantity = Math.max(1, Math.round(Number(o.quantity)) || 1)
+      return [{
+        service_id: service.id,
+        name: service.name,
+        quantity,
+        unit_price: service.price_per_unit,
+        total: Math.round(quantity * service.price_per_unit * 100) / 100,
+      }]
+    })
+  }
+
   async function handleParse(input?: string) {
     const text = input || transcript
     if (!text) return
@@ -113,19 +131,8 @@ export default function QuickPage() {
       headers: { 'Content-Type': 'application/json', ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}) },
       body: JSON.stringify({ text, services })
     })
-    const data = await res.json()
-    const items: PreviewItem[] = (data.items || []).map((item: any) => {
-      const service = services.find(s => s.id === item.service_id)
-      if (!service) return null
-      return {
-        service_id: service.id,
-        name: service.name,
-        quantity: item.quantity,
-        unit_price: service.price_per_unit,
-        total: item.quantity * service.price_per_unit
-      }
-    }).filter(Boolean)
-    setPreview({ client_name: data.client_name || '', items })
+    const data = await res.json().catch(() => ({}))
+    setPreview({ client_name: data.client_name || '', items: buildPreviewItems(data.items) })
     // ce a dictat dar nu s-a potrivit cu niciun serviciu salvat — il ARATAM, nu-l
     // aruncam tacut (asa userul stie ca "teava" n-a fost prinsa si o poate adauga).
     setUnmatched(Array.isArray(data.unmatched) ? data.unmatched : [])
@@ -145,19 +152,24 @@ export default function QuickPage() {
       headers: { 'Content-Type': 'application/json', ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}) },
       body: JSON.stringify({ command, items: current.items, services })
     })
-    const data = await res.json()
-    const items: PreviewItem[] = (data.items || []).map((item: any) => {
-      const service = services.find(s => s.id === item.service_id)
-      if (!service) return null
-      return {
-        service_id: service.id,
-        name: service.name,
-        quantity: item.quantity,
-        unit_price: service.price_per_unit,
-        total: item.quantity * service.price_per_unit
-      }
-    }).filter(Boolean)
-    setPreview({ ...current, items })
+    const data = await res.json().catch(() => ({ error: 'network' }))
+
+    // Daca modificarea NU s-a putut interpreta, pastram fisa asa cum era. Inainte
+    // se scria `items: []` peste lista curenta => o comanda neinteleasa GOLEA
+    // tacut tot ce dictase utilizatorul.
+    if (!res.ok || data.error) {
+      setLoading(false)
+      setTranscript('')
+      committedRef.current = ''
+      toast(data.error === 'rate_limit'
+        ? 'Limita zilnica de comenzi vocale atinsa. Revino maine.'
+        : 'Nu am inteles modificarea. Fisa a ramas neschimbata — mai incearca o data.')
+      return
+    }
+
+    setPreview({ ...current, items: buildPreviewItems(data.items) })
+    // Ce s-a dictat dar nu s-a potrivit cu un serviciu salvat se ARATA, nu dispare.
+    setUnmatched(Array.isArray(data.unmatched) ? data.unmatched : [])
     setTranscript('')
     committedRef.current = ''
     setLoading(false)
@@ -181,40 +193,57 @@ export default function QuickPage() {
     }
     let client_id = null
     if (preview.client_name) {
-      const { data: existing } = await supabase.from('clients').select('id').ilike('name', preview.client_name).limit(1)
+      // `%` si `_` sunt metacaractere in ilike: un nume dictat care le contine
+      // ar lega fisa de un client GRESIT. Filtrul pe user_id e aparare in
+      // adancime peste RLS (nu ne bazam pe un singur strat pentru izolare).
+      const pattern = preview.client_name.trim().replace(/[\\%_]/g, m => '\\' + m)
+      const { data: existing } = await supabase.from('clients')
+        .select('id').eq('user_id', user.id).ilike('name', pattern).limit(1)
       if (existing && existing.length > 0) {
         client_id = existing[0].id
       } else {
-        const { data: newClient, error: clientErr } = await supabase.from('clients').insert({ name: preview.client_name, user_id: user?.id }).select().single()
+        const { data: newClient, error: clientErr } = await supabase.from('clients').insert({ name: preview.client_name, user_id: user.id }).select().single()
         if (clientErr) { setLoading(false); toast('Nu s-a putut salva clientul: ' + clientErr.message); return }
         client_id = newClient?.id
       }
     }
     const companyId = localStorage.getItem('dashboardMode') === 'pro' ? (localStorage.getItem('activeCompanyId') || null) : null
     const quote_number = await nextQuoteNumber(user.id, companyId)
+
+    // Totalul se calculeaza INAINTE si se scrie din prima: nu mai e nevoie de un
+    // update separat care putea esua dupa ce fisa era deja creata.
+    const total = Math.round(preview.items.reduce((sum, i) => sum + i.total, 0) * 100) / 100
     const { data: quote, error: quoteErr } = await supabase.from('quotes').insert({
       title: 'Fisa Servicii ' + (preview.client_name || ''),
-      user_id: user?.id,
+      user_id: user.id,
       client_id,
       status: 'draft',
-      total: 0,
+      total,
       quote_number,
       company_id: companyId
     }).select().single()
     if (quoteErr || !quote) { setLoading(false); toast('Nu s-a creat fisa: ' + (quoteErr?.message || 'eroare necunoscuta')); return }
-    for (const item of preview.items) {
-      const { error: itemErr } = await supabase.from('quote_items').insert({
+
+    // Liniile se insereaza intr-o SINGURA cerere. Inainte era o bucla care iesea
+    // la prima eroare, lasand in urma o fisa cu jumatate din linii si total 0 —
+    // deja numarata in limita lunara si cu un numar de fisa consumat. Daca
+    // inserarea esueaza, stergem fisa ca sa nu ramana un ciot inutilizabil.
+    const { error: itemsErr } = await supabase.from('quote_items').insert(
+      preview.items.map(item => ({
         quote_id: quote.id,
         service_id: item.service_id,
         description: item.name,
         quantity: item.quantity,
-        unit_price: item.unit_price
-      })
-      if (itemErr) { setLoading(false); toast('Nu s-a salvat o linie din fisa: ' + itemErr.message); return }
+        unit_price: item.unit_price,
+      }))
+    )
+    if (itemsErr) {
+      await supabase.from('quotes').delete().eq('id', quote.id)
+      setLoading(false)
+      toast('Nu s-au salvat lucrarile, fisa nu a fost creata: ' + itemsErr.message)
+      return
     }
-    const total = preview.items.reduce((sum, i) => sum + i.total, 0)
-    const { error: totalErr } = await supabase.from('quotes').update({ total }).eq('id', quote.id)
-    if (totalErr) { setLoading(false); toast('Nu s-a actualizat totalul: ' + totalErr.message); return }
+
     playSuccessSound()
     router.push('/quotes/' + quote.id)
   }
