@@ -142,7 +142,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
     return status === 401 ? 'Trebuie sa fii autentificat pentru a scana facturi.' :
       status === 429 ? `Ai atins limita de ${SCANS_PER_DAY} scanari pe zi. Revino maine.` :
       data.error === 'groq_rate_limit' ? `Serverul AI este aglomerat. Asteapta 15 secunde si incearca din nou.${suffix}` :
-      data.error === 'groq_model_gone' ? `Modelul AI de citire nu mai e disponibil la furnizor. Nu e din cauza pozei — trebuie schimbat in setarile serverului.${suffix}` :
+      data.error === 'groq_model_gone' ? `Niciun model AI de citire nu mai e disponibil la furnizor. NU e din cauza pozei — trebuie pus un model valid in GROQ_VISION_MODEL.${suffix}` :
       data.error === 'groq_too_large' ? `Factura e prea lunga/complexa pentru a fi citita dintr-o singura cerere. Incearca sa o imparti (scaneaza doar o parte din pagina sau doar o pagina din PDF).${suffix}` :
       data.error === 'vision_failed' ? `Poza neclara sau unghi dificil, chiar si dupa citirea pe felii. Incearca o poza mai apropiata, cu lumina mai buna, sau incarca PDF-ul daca il ai.${data.debug ? ' [model: ' + data.debug + ']' : ''}` :
       `Eroare: ${data.error || 'necunoscuta'}`

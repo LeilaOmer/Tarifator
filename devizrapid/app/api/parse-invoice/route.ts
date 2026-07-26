@@ -119,8 +119,34 @@ async function getKnownRatios(supplierName: string, userId: string): Promise<Map
 //   2. eroarea "model inexistent" e recunoscuta explicit si spusa ca atare.
 // Implicit: qwen/qwen3.6-27b — multimodal (text+imagine), cu mod JSON,
 // recomandat de Groq ca inlocuitor pentru llama-4-scout.
-const VISION_MODEL = process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b'
-const TEXT_MODEL = process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile'
+// LISTA de modele, incercate in ordine — nu un singur model. Cand furnizorul
+// opreste unul (s-a intamplat: llama-4-scout, 17.06.2026), codul trece automat
+// la urmatorul in loc sa moara pana observa cineva. Se poate suprascrie complet
+// din mediu, separate prin virgula, deci un model nou se pune FARA deploy.
+const VISION_MODELS = (process.env.GROQ_VISION_MODEL ||
+  'qwen/qwen3.6-27b,meta-llama/llama-4-maverick-17b-128e-instruct')
+  .split(',').map(m => m.trim()).filter(Boolean)
+
+const TEXT_MODELS = (process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile')
+  .split(',').map(m => m.trim()).filter(Boolean)
+
+// Incearca modelele pe rand. Trece la urmatorul DOAR pentru "model inexistent";
+// orice alta eroare (limita de rata, cerere prea mare) e reala si se propaga —
+// n-are rost sa ardem cota pe alte modele pentru aceeasi problema.
+async function callGroqWithFallback(models: string[], messages: unknown[], maxTokens: number) {
+  let lastGone = ''
+  for (const model of models) {
+    try {
+      return { raw: await callGroq(model, messages, maxTokens), model }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (!msg.startsWith('groq_model_gone::')) throw err
+      lastGone = msg
+      console.error(`[parse-invoice] model indisponibil, incerc urmatorul: ${model}`)
+    }
+  }
+  throw new Error(lastGone || 'groq_model_gone::niciun model configurat')
+}
 
 const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extragi din document (factura, aviz sau bon fiscal) furnizorul si produsele. Raspunzi DOAR cu JSON valid, fara text, fara markdown.
 Format: {"supplier":"Nume SRL","doc_type":"invoice","discounts":{"11":0,"21":0},"items":[{"name":"produs","unit":"buc","price_raw":0,"price_includes_vat":false,"pieces_per_box":1,"discount":0,"vat":21,"sgr":0,"line_total":0,"quantity":1,"card_discount":0}]}
@@ -425,7 +451,7 @@ async function runVisionScan(
   // factura densa (poza cu multe randuri), prompt+imagine+8192 rezervat
   // poate depasi bugetul de tokeni/minut al modelului de vedere, la fel cum
   // se intampla si la modelul de text daca nu era redus.
-  const raw = await callGroq(VISION_MODEL, messages, 4000)
+  const { raw, model: usedModel } = await callGroqWithFallback(VISION_MODELS, messages, 4000)
   const parsed = parseJson(raw)
   const result = validateAndSanitize(parsed, await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '', userId))
   const items = result && Array.isArray((result as { items?: unknown[] }).items) ? (result as { items: unknown[] }).items : []
@@ -439,7 +465,7 @@ async function runVisionScan(
   return NextResponse.json({
     items: [],
     error: 'vision_failed',
-    debug: (raw || '').replace(/\s+/g, ' ').trim().slice(0, 300) || '(raspuns gol de la model)',
+    debug: `[${usedModel}] ` + ((raw || '').replace(/\s+/g, ' ').trim().slice(0, 300) || '(raspuns gol de la model)'),
   })
 }
 
@@ -561,7 +587,7 @@ export async function POST(req: NextRequest) {
     // Marja e voit generoasa (nu doar strict cat incape acum) ca sa reziste la urmatoarele reguli adaugate.
     // Preferat sa scadem max_tokens (recuperarea din parseJson salveaza oricum ce apuca sa genereze)
     // decat slice-ul de text de mai sus, ca sa nu taiem input-ul (ex: legenda TVA de la finalul unui bon).
-    const raw = await callGroq(TEXT_MODEL, messages, 3000)
+    const { raw } = await callGroqWithFallback(TEXT_MODELS, messages, 3000)
     const parsed = parseJson(raw)
     const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '', user.id)
     const result = validateAndSanitize(parsed, knownRatios)
