@@ -1,4 +1,13 @@
-const CACHE = 'tarifator-v2'
+// Versiunea cache-ului. BUMP-UIE-O LA FIECARE SCHIMBARE care trebuie sa ajunga
+// sigur pe telefoanele cu aplicatia instalata (PWA): la `activate`, orice cache
+// cu ALT nume e sters, deci un nume nou = curatenie completa.
+//
+// De ce conteaza: handler-ul de `fetch` e network-first, dar cade pe cache la
+// orice hopa de retea — obisnuit pe mobil. Cum numele nu s-a schimbat de la
+// scrierea lui, in cache stateau bucati din TOATE deploy-urile anterioare, iar
+// un singur fallback servea un shell vechi care apoi cerea chunk-uri vechi.
+// Rezultat: utilizatorul rula cod vechi si vedea bug-uri deja reparate.
+const CACHE = 'tarifator-v3'
 
 self.addEventListener('install', () => self.skipWaiting())
 
