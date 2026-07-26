@@ -265,3 +265,16 @@ dar orice `.from(...)` care depinde de `auth.uid()` foloseste un client separat 
 clientului. Verificat empiric: interogarile ulterioare plecau ca rol `anon`. In `parse-invoice`
 asta insemna ca limita de 50 scanari/zi nu se declansa NICIODATA si `invoice_scan_logs` ramanea gol.
 ADR-013 spunea corect ce sa NU faci; nu spunea ce sa faci in loc.
+
+## ADR-031 — La modificarea vocala, modelul intoarce OPERATIA, nu starea
+**Decizie:** `/api/edit-quote` primeste de la model actiuni (`add` / `set` / `remove` / `clear`)
+cu eticheta si cantitatea, iar aplicarea peste lista curenta se face determinist in cod
+(`lib/services/editActions.ts`). Lista existenta NU mai trece prin model.
+**De ce:** Cerandu-i modelului lista completa rezultata, el trebuia sa re-transcrie corect fiecare
+linie la fiecare comanda. Pe "mai adauga doua prize" intorcea doar priza, iar lista se inlocuia cu
+ea — restul lucrarilor dispareau (bug reprodus pe un caz real). Nu e o problema de formulare a
+promptului: instructiunea explicita "intoarce lista COMPLETA" nu a fost respectata. Un model care
+re-scrie 8 linii ca sa adauge una are 8 ocazii sa greseasca; unul care spune "adauga priza x2" are
+una. E acelasi principiu ca la scanare (AI-ul citeste, codul calculeaza) si ca la ADR-020
+(matchService): modelul face partea de LIMBAJ, codul face partea de STARE.
+**Consecinta:** o lucrare poate disparea din fisa DOAR daca s-a cerut explicit stergerea ei.

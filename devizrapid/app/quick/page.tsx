@@ -167,9 +167,16 @@ export default function QuickPage() {
       return
     }
 
-    setPreview({ ...current, items: buildPreviewItems(data.items) })
+    const items = buildPreviewItems(data.items)
+    setPreview({ ...current, items })
     // Ce s-a dictat dar nu s-a potrivit cu un serviciu salvat se ARATA, nu dispare.
-    setUnmatched(Array.isArray(data.unmatched) ? data.unmatched : [])
+    const nomatch: string[] = Array.isArray(data.unmatched) ? data.unmatched : []
+    setUnmatched(nomatch)
+    // Comanda inteleasa, dar fara efect (ex. "scoate teava" cand nu e nicio teava):
+    // spunem asta, ca sa nu para ca aplicatia a ignorat-o.
+    if (data.changed === false && nomatch.length === 0) {
+      toast('Comanda nu a schimbat nimic in fisa.')
+    }
     setTranscript('')
     committedRef.current = ''
     setLoading(false)

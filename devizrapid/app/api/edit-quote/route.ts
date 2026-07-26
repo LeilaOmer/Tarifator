@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyBearer } from '@/lib/apiAuth'
 import { allowDaily } from '@/lib/rateLimit'
-import { matchService, type MatchableService } from '@/lib/services/matchService'
+import { type MatchableService } from '@/lib/services/matchService'
+import { applyEditActions, normalizeOp, type EditAction } from '@/lib/services/editActions'
 
 // Modificarea prin voce a unei fise in curs ("mai adauga doua prize", "scoate
 // teava"). Modelul intoarce lista REZULTATA, dar doar ca ETICHETE auzite —
@@ -43,14 +44,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ items: [], unmatched: [], error: 'invalid_body' }, { status: 400 })
   }
 
-  // Lista curenta, redusa la ce ajuta modelul sa inteleaga comanda (nume +
-  // cantitate). Id-urile nu-i mai trebuie, pentru ca nu le mai intoarce.
-  const current = Array.isArray(body.items)
-    ? (body.items as unknown[]).map(i => {
-        const o = (i ?? {}) as Record<string, unknown>
-        return { nume: String(o.name ?? ''), cantitate: Number(o.quantity) || 1 }
-      })
-    : []
+  // Lista curenta, in doua forme:
+  //  - `currentLines`: starea REALA peste care aplicam actiunile (in cod);
+  //  - `current`: doar nume+cantitate, ca CONTEXT pentru model ("scoate teava"
+  //    are nevoie sa stie ca exista o teava). Modelul o citeste, nu o rescrie.
+  const rawItems = Array.isArray(body.items) ? (body.items as unknown[]) : []
+  const currentLines: EditItem[] = rawItems.flatMap(i => {
+    const o = (i ?? {}) as Record<string, unknown>
+    return typeof o.service_id === 'string'
+      ? [{ service_id: o.service_id, quantity: Math.max(1, Math.round(Number(o.quantity)) || 1) }]
+      : []
+  })
+  const current = rawItems.map(i => {
+    const o = (i ?? {}) as Record<string, unknown>
+    return { nume: String(o.name ?? ''), cantitate: Number(o.quantity) || 1 }
+  })
 
   let raw = '{}'
   try {
@@ -65,11 +73,17 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: 'Esti asistent pentru mesteri romani. Primesti o lista curenta de lucrari si o comanda de modificare prin voce. Raspunzi DOAR cu JSON, fara text, fara markdown. Format: {"items":[{"label":"priza","quantity":2}]}\n' +
-              '- Intoarce lista COMPLETA rezultata dupa aplicarea comenzii, nu doar ce s-a schimbat.\n' +
-              '- label = DOAR substantivul serviciului, FARA cantitate si FARA unitate ("inca 3 m de teava" => "teava"). Daca se potriveste cu unul din serviciile disponibile, foloseste formularea de acolo.\n' +
-              '- quantity = numar intreg. Implicit 1.\n' +
-              '- Daca comanda cere stergerea a tot, intoarce {"items":[]}. Nu inventa lucrari care nu au fost cerute.',
+            content: 'Esti asistent pentru mesteri romani. Primesti o lista curenta de lucrari si o comanda de modificare prin voce. Raspunzi DOAR cu JSON, fara text, fara markdown.\n' +
+              'Format: {"actions":[{"op":"add","label":"priza","quantity":2}]}\n' +
+              'Intorci DOAR ce trebuie SCHIMBAT. NU repeta lista curenta — de ea se ocupa aplicatia.\n' +
+              'op poate fi:\n' +
+              '- "add"    = se adauga la cat exista deja ("mai pune doua prize", "inca 3 m de teava")\n' +
+              '- "set"    = cantitate exacta, inlocuieste ("fa 5 prize", "schimba la 2 ore")\n' +
+              '- "remove" = scoate lucrarea de tot ("scoate teava", "sterge priza"); fara quantity\n' +
+              '- "clear"  = goleste toata lista ("sterge tot", "o iau de la capat"); fara label\n' +
+              'label = DOAR substantivul serviciului, FARA cantitate si FARA unitate ("inca 3 m de teava" => "teava"). Daca se potriveste cu unul din serviciile disponibile, foloseste formularea de acolo.\n' +
+              'quantity = numar intreg. Implicit 1.\n' +
+              'Mai multe schimbari intr-o comanda => mai multe actiuni. Daca nu se cere nicio schimbare, intoarce {"actions":[]}.',
           },
           {
             role: 'user',
@@ -87,31 +101,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ items: [], unmatched: [], error: 'ai_unavailable' }, { status: 503 })
   }
 
-  // Parsarea esuata NU inseamna "lista goala". Clientul trebuie sa poata distinge
-  // "modelul a raspuns si rezultatul e o lista goala" (comanda de stergere, corect)
-  // de "n-am inteles raspunsul" — altfel golea fisa utilizatorului in tacere.
-  let parsed: { items?: unknown }
+  // Parsarea esuata NU inseamna "nicio actiune". Clientul trebuie sa poata
+  // distinge "am inteles si nu e nimic de schimbat" de "n-am inteles" — altfel
+  // ar putea aplica peste fisa un rezultat pe care nimeni nu l-a cerut.
+  let parsed: { actions?: unknown }
   try {
     const m = raw.match(/\{[\s\S]*\}/)
     if (!m) throw new Error('no json')
     parsed = JSON.parse(m[0])
-    if (!Array.isArray(parsed.items)) throw new Error('no items')
+    if (!Array.isArray(parsed.actions)) throw new Error('no actions')
   } catch {
     return NextResponse.json({ items: [], unmatched: [], error: 'parse_failed' }, { status: 502 })
   }
 
-  const items: EditItem[] = []
-  const unmatched: string[] = []
-  for (const it of parsed.items as unknown[]) {
-    const o = (it ?? {}) as Record<string, unknown>
-    const label = String(o.label ?? o.name ?? '').trim()
-    if (!label) continue
-    const qty = Math.min(Math.max(1, Math.round(Number(o.quantity)) || 1), 100_000)
-    const svc = matchService(label, svcList)
-    // Ce nu se potriveste se ARATA, nu dispare (aceeasi regula ca la parse-quote).
-    if (svc) items.push({ service_id: svc.id, quantity: qty })
-    else unmatched.push(label)
-  }
+  const actions: EditAction[] = (parsed.actions as unknown[]).map(a => {
+    const o = (a ?? {}) as Record<string, unknown>
+    return { op: normalizeOp(o.op), label: String(o.label ?? o.name ?? ''), quantity: Number(o.quantity) }
+  })
 
-  return NextResponse.json({ items, unmatched })
+  // Aplicarea e DETERMINISTA, in cod, peste lista trimisa de client. Lista
+  // curenta nu trece prin model, deci o linie nu poate disparea decat daca
+  // utilizatorul a cerut explicit stergerea ei.
+  const { items, unmatched, changed } = applyEditActions(
+    currentLines,
+    actions,
+    svcList,
+    (service_id, quantity) => ({ service_id, quantity }),
+  )
+
+  return NextResponse.json({ items, unmatched, changed })
 }
