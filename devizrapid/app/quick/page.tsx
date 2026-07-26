@@ -127,6 +127,57 @@ export default function QuickPage() {
     })
   }
 
+  // ————— Editare MANUALA a fisei, langa cea prin dictare —————
+  // Dictarea e rapida, mana e sigura: cand Whisper aude "noua" in loc de "doua"
+  // ("doua"/"noua" rimeaza in romana), o atingere pe cifra corecteaza instant,
+  // fara alt drum la model. Cele doua cai lucreaza pe aceeasi stare, deci o
+  // corectie manuala e vizibila si pentru urmatoarea comanda vocala
+  // (previewRef se sincronizeaza din useEffect).
+  const lineTotal = (q: number, p: number) => Math.round(q * p * 100) / 100
+
+  function setQty(idx: number, raw: number) {
+    // Acelasi plafon ca pe server (lib/services/editActions.ts), ca sa nu
+    // diveargheze cele doua cai de editare.
+    const quantity = Math.min(Math.max(1, Math.round(raw) || 1), 100_000)
+    setPreview(prev => prev && {
+      ...prev,
+      items: prev.items.map((it, i) =>
+        i === idx ? { ...it, quantity, total: lineTotal(quantity, it.unit_price) } : it),
+    })
+  }
+
+  function removeLine(idx: number) {
+    setPreview(prev => prev && { ...prev, items: prev.items.filter((_, i) => i !== idx) })
+  }
+
+  function addLine(serviceId: string) {
+    const service = services.find(s => s.id === serviceId)
+    if (!service) return
+    setPreview(prev => {
+      if (!prev) return prev
+      // Serviciul exista deja => crestem cantitatea, nu duplicam randul.
+      const idx = prev.items.findIndex(it => it.service_id === serviceId)
+      if (idx !== -1) {
+        const quantity = Math.min(prev.items[idx].quantity + 1, 100_000)
+        return {
+          ...prev,
+          items: prev.items.map((it, i) =>
+            i === idx ? { ...it, quantity, total: lineTotal(quantity, it.unit_price) } : it),
+        }
+      }
+      return {
+        ...prev,
+        items: [...prev.items, {
+          service_id: service.id,
+          name: service.name,
+          quantity: 1,
+          unit_price: service.price_per_unit,
+          total: lineTotal(1, service.price_per_unit),
+        }],
+      }
+    })
+  }
+
   async function handleParse(input?: string) {
     const text = input || transcript
     if (!text) return
@@ -310,8 +361,8 @@ export default function QuickPage() {
             {heard && (
               <div className="rounded-xl px-3 py-2 text-xs" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
                 <span className="text-gray-500">Am auzit: </span>
-                <span className="text-gray-800">„{heard}"</span>
-                <p className="text-gray-500 mt-0.5">Daca nu e ce ai spus, dicteaza corectia (ex. „2 calorifere, nu 9").</p>
+                <span className="text-gray-800">&bdquo;{heard}&rdquo;</span>
+                <p className="text-gray-500 mt-0.5">Daca nu e ce ai spus, corecteaza direct cantitatea mai jos, sau dicteaza (ex. &bdquo;2 calorifere, nu 9&rdquo;).</p>
               </div>
             )}
             <div className="flex items-center gap-2">
@@ -320,14 +371,65 @@ export default function QuickPage() {
                 value={preview.client_name} onChange={e => setPreview({ ...preview, client_name: e.target.value })} />
             </div>
             {preview.items.length > 0 && (
-              <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
+              <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
                 {preview.items.map((item, i) => (
-                  <div key={i} className="flex justify-between items-center p-3 text-sm">
-                    <span className="font-medium text-gray-900">{item.name}</span>
-                    <span className="text-gray-500">x{item.quantity} × {item.unit_price} lei = <strong className="text-gray-800">{item.total} lei</strong></span>
+                  <div key={item.service_id} className="p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-medium text-gray-900 text-sm flex-1 min-w-0">{item.name}</span>
+                      <button
+                        onClick={() => removeLine(i)}
+                        aria-label={`Sterge ${item.name}`}
+                        className="text-red-400 text-xl leading-none shrink-0 w-9 h-9 -mt-1 -mr-1 flex items-center justify-center">
+                        ×
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      {/* Tinte mari de atins: aplicatia se foloseste pe telefon, in teren. */}
+                      <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden shrink-0">
+                        <button
+                          onClick={() => setQty(i, item.quantity - 1)}
+                          disabled={item.quantity <= 1}
+                          aria-label={`Scade cantitatea la ${item.name}`}
+                          className="w-11 h-11 text-lg font-bold text-gray-600 disabled:text-gray-300 active:bg-gray-100">
+                          −
+                        </button>
+                        <input
+                          type="number" min="1" step="1" inputMode="numeric"
+                          aria-label={`Cantitate ${item.name}`}
+                          className="w-14 h-11 text-center text-sm font-bold text-gray-900 border-x border-gray-200 focus:outline-none"
+                          value={item.quantity}
+                          onChange={e => setQty(i, parseInt(e.target.value, 10))}
+                        />
+                        <button
+                          onClick={() => setQty(i, item.quantity + 1)}
+                          aria-label={`Creste cantitatea la ${item.name}`}
+                          className="w-11 h-11 text-lg font-bold text-gray-600 active:bg-gray-100">
+                          +
+                        </button>
+                      </div>
+                      <span className="text-xs text-gray-500 text-right">
+                        × {item.unit_price} lei =<br />
+                        <strong className="text-gray-800 text-sm">{item.total} lei</strong>
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* Adaugare manuala — alternativa la dictare cand modelul nu prinde
+                un serviciu, sau cand e mai rapid sa alegi din lista. */}
+            {services.length > 0 && (
+              <select
+                aria-label="Adauga o lucrare din lista"
+                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm bg-white text-gray-900"
+                value=""
+                onChange={e => { if (e.target.value) addLine(e.target.value) }}>
+                <option value="">+ Adauga lucrare din lista...</option>
+                {services
+                  .filter(s => !preview.items.some(it => it.service_id === s.id))
+                  .map(s => <option key={s.id} value={s.id}>{s.name} ({s.price_per_unit} lei/{s.unit})</option>)}
+              </select>
             )}
             {unmatched.length > 0 && (
               // culori amber prin hex direct: paleta remapeaza amber->verde, iar un

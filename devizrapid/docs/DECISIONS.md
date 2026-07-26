@@ -278,3 +278,15 @@ re-scrie 8 linii ca sa adauge una are 8 ocazii sa greseasca; unul care spune "ad
 una. E acelasi principiu ca la scanare (AI-ul citeste, codul calculeaza) si ca la ADR-020
 (matchService): modelul face partea de LIMBAJ, codul face partea de STARE.
 **Consecinta:** o lucrare poate disparea din fisa DOAR daca s-a cerut explicit stergerea ei.
+
+## ADR-032 — Fisa se editeaza si MANUAL, nu doar prin dictare
+**Decizie:** In previzualizarea din `/quick`, fiecare lucrare are −/+ si camp de cantitate,
+buton de stergere, plus un select de adaugare din serviciile salvate. Dictarea ramane calea
+principala; mana e calea de corectie. Ambele lucreaza pe aceeasi stare (`preview`), deci o
+corectie manuala e vizibila si pentru urmatoarea comanda vocala.
+**De ce:** Whisper confunda in romana "doua" cu "noua" (rimeaza). Cand transcrierea greseste,
+o atingere pe cifra e instantanee si 100% sigura, fara alt drum la model — iar corectia prin
+dictare mai are o sansa sa fie inteleasa gresit. Vocea pentru viteza, mana pentru certitudine.
+Plafoanele de cantitate sunt aceleasi ca pe server (1..100.000), ca cele doua cai sa nu diveargheze.
+**Corolar:** transcriptul ramane afisat ("Am auzit: ...") dupa procesare. Daca dispare, omul vede
+doar cantitatea gresita si nu poate sti daca a gresit el, microfonul sau modelul.
