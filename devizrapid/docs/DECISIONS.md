@@ -219,3 +219,49 @@ desenat de utilizator, dreptul de autor e clar al ei (protejabil ca marcă la OS
 (cel din rădăcină e singurul încărcat automat de Claude Code).
 **De ce:** Deciziile luate în chat se pierd; un loc fix le păstrează. Acest fișier e
 exact soluția.
+
+## ADR-025 — Aritmetica de bani se face in bani intregi, nu in lei zecimali
+**Decizie:** Rotunjirea (`applyRounding`) si totalurile fiselor (`computeQuoteTotals`) lucreaza
+pe intregi (bani), nu pe `number` in lei.
+**De ce:** Pasii 0.10 si 1.00 nu sunt reprezentabili exact in binar. `Math.round(12.35 / 0.1) * 0.1`
+da 12.30, nu 12.40 — eroare pe **698 din 20.000** de preturi testate (3,5%), mereu in JOS, deci
+comerciantul pierde de fiecare data. `fmt2()` masca problema la afisare, deci nu arata niciodata
+ca un bug numeric, ci ca o rotunjire nedreapta si inexplicabila.
+
+## ADR-026 — Plafoane pe intrari, in `lib/`, nu in atribute HTML
+**Decizie:** Discount `0..100%` (sau cel mult subtotalul, in lei), adaos `0..1000%`, pret si SGR
+`>= 0` — plafonate in `lib/pricing/calc.ts` si `lib/quotes/totals.ts`.
+**De ce:** `min`/`max` pe `<input type=number>` NU se aplica: inputurile nu sunt intr-un `<form>`,
+deci validarea nativa nu ruleaza. Un discount de 150% producea pret, TVA si TOTAL negative pe
+PDF-ul trimis beneficiarului.
+
+## ADR-027 — Un singur loc care calculeaza totalurile unei fise
+**Decizie:** `lib/quotes/totals.ts` (`computeQuoteTotals`) e unica sursa; `app/quotes/[id]` doar
+o apeleaza, inclusiv la scriere (`persistTotals`).
+**De ce:** Formula era copiata identic de CINCI ori in acelasi fisier si incepuse sa divergheze —
+caile de scriere foloseau `emitent.vat_rate`, randarea si PDF-ul `quote.vat_rate`. Orice regula
+fiscala noua trebuia aplicata in cinci locuri.
+
+## ADR-028 — PDF-ul se genereaza din date PERSISTATE, nu din state-ul de formular
+**Decizie:** Butoanele PDF/WhatsApp folosesc `savedDiscount`; cat exista modificari nesalvate,
+cer intai salvarea.
+**De ce:** Utilizatorul tasta un discount si apasa direct "Trimite" — documentul ajuns la client
+continea o valoare pe care `quotes.total` n-o avea. Evidenta interna si documentul nu se potriveau,
+fara nicio urma a divergentei.
+
+## ADR-029 — Restrictiile pe COLOANE se fac cu granturi, nu cu RLS
+**Decizie:** `supabase/lock-billing-columns.sql` retrage `update` global pe `profiles` si il
+reacorda explicit doar pe coloanele editabile din aplicatie.
+**De ce:** RLS raspunde la "ce RANDURI vezi", nu la "ce COLOANE poti scrie". Politica `profiles_own`
+(la nivel de rand) permitea oricui sa-si seteze `plan_tier`/`lifetime` — iar ambele straturi de
+limitare, si `lib/plan.ts` si triggerul din DB, citesc exact acele coloane. Consecinta secundara
+dorita: orice coloana noua pe `profiles` e implicit NEscriibila (fail-closed).
+
+## ADR-030 — Interogarile sub RLS din rutele API cer un client cu tokenul userului
+**Decizie:** In rutele API, `auth.getUser(token)` se face cu clientul anon (ADR-013 ramane valabil),
+dar orice `.from(...)` care depinde de `auth.uid()` foloseste un client separat construit cu
+`global.headers.Authorization`.
+**De ce:** `getUser(jwt)` doar VALIDEAZA tokenul printr-un apel la `/auth/v1/user` — nu il ataseaza
+clientului. Verificat empiric: interogarile ulterioare plecau ca rol `anon`. In `parse-invoice`
+asta insemna ca limita de 50 scanari/zi nu se declansa NICIODATA si `invoice_scan_logs` ramanea gol.
+ADR-013 spunea corect ce sa NU faci; nu spunea ce sa faci in loc.

@@ -47,7 +47,15 @@ Referinta: `lib/pricing/calc.ts` (`calcItem`).
 
 - **Adaos** = procent aplicat pe costul de intrare (dupa discount).
 - **Rotunjire pret final**: fara / 0.10 / 0.50 / 1.00 lei, mod "la cel mai apropiat" sau "in sus".
+  Se calculeaza in **bani intregi**, nu in lei zecimali: pasii 0.10 si 1.00 nu sunt reprezentabili
+  exact in binar, iar `Math.round(pret / 0.1) * 0.1` dadea rezultatul gresit pe ~3,5% din preturi
+  (12,35 => 12,30 in loc de 12,40) — mereu in JOS, deci in dezavantajul comerciantului.
 - **Discount** furnizor = procent, se scade din pretul furnizorului INAINTE de adaos (nu se aplica pe pretul brut de doua ori).
+- **Plafoane obligatorii** (`lib/pricing/calc.ts`, `lib/quotes/totals.ts`): discount `0..100%`
+  (sau cel mult subtotalul, cand e in lei), adaos `0..1000%`, pret si SGR `>= 0`. Fara ele, un
+  discount de 150% producea pret, TVA si TOTAL **negative** pe documentul dat clientului.
+  Plafonarea se face in `lib/`, NU prin atribute HTML `min`/`max`: inputurile nu sunt intr-un
+  `<form>`, deci validarea nativa a browserului nu ruleaza niciodata.
 
 ## 4. SGR (Sistemul Garantie-Returnare) — cerinta legala
 
@@ -72,6 +80,13 @@ Fiecare tip de cont are limite LUNARE diferite pe cele doua module:
 - **Freemium**: primele 30 de zile de la inregistrare, un cont Free primeste 30 fise + 30 calcule (in loc de 3+3), apoi cade pe Free. Free e podeaua permanenta — nimeni nu ramane blocat complet.
 - **PRELAUNCH** traieste in DB: `app_config`, cheia `prelaunch`. Cat e `true`, oricine e tratat ca Pro (totul nelimitat). Se stinge la lansare cu UN SINGUR update: `update app_config set value='false' where key='prelaunch';` — UI-ul (`lib/plan.ts`) si triggerele DB citesc amandoua de acolo.
 - **Limitele sunt IMPUSE si in DB** (triggere pe `quotes` si `pricing_usage` — `supabase/enforce-limits.sql`), nu doar in UI: altfel un user tehnic le-ar ocoli scriind direct in Supabase cu propriul token. Daca schimbi limitele in `lib/plan.ts`, oglindeste-le si in SQL.
+- **Coloanele de abonament sunt NESCRIIBILE de utilizator** (`supabase/lock-billing-columns.sql`).
+  RLS decide ce RANDURI vezi; granturile decid ce COLOANE poti scrie — sunt mecanisme diferite.
+  Politica `profiles_own` fiind la nivel de rand, orice user isi putea seta singur
+  `plan_tier` / `plan_active_until` / `lifetime` dintr-un `update` din consola browserului, iar
+  ambele straturi de limitare (`lib/plan.ts` SI triggerul din DB) citesc exact acele coloane.
+  Orice coloana noua pe `profiles` e implicit nescriibila; daca userul trebuie s-o editeze,
+  adaug-o EXPLICIT in `grant update (...)` din acel fisier.
 - Activarea unui abonament platit e MANUALA (se seteaza `plan_tier` + `plan_active_until` in DB) pana la integrarea unui procesator de plati.
 - Numararea consumului e pe luna calendaristica: fise = tabelul `quotes`, calcule = `pricing_usage`.
 
@@ -85,7 +100,7 @@ Principiu central: **AI-ul doar CITESTE si TRANSCRIE numere brute; TOATA aritmet
 - **Pret**: `price_raw` = pretul unitar tiparit + `price_includes_vat` (din header: "TTI"/"cu TVA" => true; "net"/"fara TVA" => false). Verificare: `cantitate × pret ≈ valoarea randului` — daca nu se potriveste, citirea e gresita.
 - **Cutie/bucata** (cap. 7).
 - **Formate**: factura/aviz (tabel cu coloane), bon fiscal de casa de marcat (Lidl/Kaufland — layout inversat, pret cu TVA inclus, legenda de litere TVA A/B/C/D citita de pe bonul curent), e-Factura.
-- **e-Factura (XML UBL / RO_CIUS + PDF-ul oficial ANAF)**: EXCEPTIE de la regula AI — fiind date STRUCTURATE (XML) sau layout national FIX (PDF-ul "RO eFactura" generat de ANAF), se citesc 100% determinist in cod (`lib/pricing/efactura.ts`), FARA AI, fara sa consume din cota de scanari. Per linie: nume + pret unitar fara TVA + cota TVA declarata + cantitate; verificare `cantitate x pret ≈ valoarea randului`. Pretul de bax se imparte pe bucata dupa "x N" / "1XN" din denumire; SGR din denumire; liniile de AMBALAJ SGR / garantie / PALET / keg gol se exclud. XML-ul se intercepteaza in client INAINTE de calea AI; PDF-ul ANAF pe server, dupa extragerea textului. PDF-urile cu layout propriu al furnizorului raman pe calea AI.
+- **e-Factura (XML UBL / RO_CIUS + PDF-ul oficial ANAF)**: EXCEPTIE de la regula AI — fiind date STRUCTURATE (XML) sau layout national FIX (PDF-ul "RO eFactura" generat de ANAF), se citesc 100% determinist in cod (`lib/pricing/efactura.ts`), FARA AI, fara sa consume din cota de scanari. Per linie: nume + pret unitar fara TVA + cota TVA declarata + cantitate; verificare `cantitate x pret ≈ valoarea randului`. Pretul de bax se imparte pe bucata dupa "x N" / "1XN" din denumire — DAR numai daca denumirea nu descrie DIMENSIUNI: pe non-bauturi tiparul e identic ("TABLA 1000 x 2000", "FOLIE 100 x 150 CM", "PLACA OSB 1250 x 2500 x 12"), iar impartirea facea ca o tabla de 250 lei sa iasa 0,125 lei/bucata. Se resping: trei numere legate cu `x`, o unitate de lungime/suprafata dupa pereche (mm/cm/m/mp), un numar "gol" de 3+ cifre inainte de `x`. Peste toate, un gard de pret: daca impartirea da sub 0,05 lei, pretul ramane neimpartit (`piecesPerBox` + `buildItem` in `efactura.ts`). SGR din denumire; liniile de AMBALAJ SGR / garantie / PALET / keg gol se exclud. XML-ul se intercepteaza in client INAINTE de calea AI; PDF-ul ANAF pe server, dupa extragerea textului. PDF-urile cu layout propriu al furnizorului raman pe calea AI.
 - **Codificarile UM din e-Factura (UN/ECE Rec 20/21)** — `mapUnit` in `efactura.ts`: masura: `KGM`=kg (pretul e DEJA pe kg, NU se imparte pe bucata!), `GRM`=g, `LTR`=l, `MLT`=ml, `MTR`=m, `H87`/`C62`/`EA`/`NIU`=bucata; ambalaje (prefix X + Rec 21): `XCS`=bax, `XBX`=cutie, `XPK`=pachet, `XKG`=butoi(keg), `XDU`, `XBO` — toate "bucata", iar impartirea pe bucata o decide configuratia din DENUMIRE. Pe PDF-ul ANAF, "Pretul net al articolului" e NET de discounturile de linie (nu se mai aplica discount o data); coloana "Cantitate de baza" e OPTIONALA (unii emitenti o completeaza, altii nu — parserul acopera ambele). Cota TVA poate fi "21.00" sau "21".
 - **Garduri deterministe peste orice citire AI** (`lib/pricing/scanGuards.ts`): (1) o linie de garantie/ambalaj SGR intai MARCHEAZA produsul precedent cu aceeasi cantitate (`sgr=0.50` — facturi Metro/Supeco, unde produsele nu au "SGR" in denumire), apoi se filtreaza din lista SI in cod (modelul uneori le scapa ca produse); linia cumulata de la finalul facturii (cantitate = suma) nu marcheaza nimic. (2) `reconcileUnitPrice` alege pretul care satisface `cantitate x pret ≈ valoare`, tinand cont de discount (valoarea randului poate fi deja neta de discount) si de separatorul romanesc de mii ("4.560" = 4560 bucati — factorul 1000 dintre declarat si derivat inseamna cantitate citita gresit, nu pret gresit). (3) Randurile-FANTOMA (`phantomRowIndexes`): zona de sub un produs (cod de bare + cantitate) citita ca produs nou se elimina DOAR cu semnatura dubla — nume trunchiat (prefix al unui rand verificat) + fara cantitate/valoare proprii; doua produse reale au amandoua date de rand, deci nu se ating intre ele.
 - **Discount global** ("SCONTURI ACORDATE X%") si **SGR** — vezi cap. 4.
