@@ -110,6 +110,18 @@ async function getKnownRatios(supplierName: string, userId: string): Promise<Map
   return map
 }
 
+// Modelele Groq se DEPRECIAZA: meta-llama/llama-4-scout-17b-16e-instruct a fost
+// oprit pe 17.06.2026 pentru planurile free/developer, iar scanarea pozelor a
+// murit fara ca nimeni sa observe (calea de poze raporta orice eroare
+// necunoscuta drept "poza neclara" — vezi useInvoiceScan). De aceea:
+//   1. modelele sunt CONFIGURABILE din variabile de mediu — la urmatoarea
+//      depreciere schimbi valoarea in Vercel, fara deploy de cod;
+//   2. eroarea "model inexistent" e recunoscuta explicit si spusa ca atare.
+// Implicit: qwen/qwen3.6-27b — multimodal (text+imagine), cu mod JSON,
+// recomandat de Groq ca inlocuitor pentru llama-4-scout.
+const VISION_MODEL = process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b'
+const TEXT_MODEL = process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile'
+
 const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extragi din document (factura, aviz sau bon fiscal) furnizorul si produsele. Raspunzi DOAR cu JSON valid, fara text, fara markdown.
 Format: {"supplier":"Nume SRL","doc_type":"invoice","discounts":{"11":0,"21":0},"items":[{"name":"produs","unit":"buc","price_raw":0,"price_includes_vat":false,"pieces_per_box":1,"discount":0,"vat":21,"sgr":0,"line_total":0,"quantity":1,"card_discount":0}]}
 
@@ -170,7 +182,16 @@ async function callGroq(model: string, messages: unknown[], maxTokens = 4096) {
     if (/tokens per minute|request too large|TPM/i.test(msg)) throw new Error('groq_too_large::' + msg)
     throw new Error('groq_rate_limit::' + msg)
   }
-  if (!res.ok) throw new Error(data.error?.message || `Groq error ${res.status}`)
+  if (!res.ok) {
+    const msg = String(data.error?.message || `Groq error ${res.status}`)
+    // Model scos din uz / redenumit. Fara acest caz, mesajul ajungea in ramura
+    // generica a clientului si aparea ca "poza neclara" — utilizatorul dadea
+    // vina pe poza si refotografia la nesfarsit.
+    if (res.status === 404 || /does not exist|decommission|deprecat|model_not_found|no longer/i.test(msg)) {
+      throw new Error('groq_model_gone::' + msg)
+    }
+    throw new Error(msg)
+  }
   return data.choices?.[0]?.message?.content || ''
 }
 
@@ -404,7 +425,7 @@ async function runVisionScan(
   // factura densa (poza cu multe randuri), prompt+imagine+8192 rezervat
   // poate depasi bugetul de tokeni/minut al modelului de vedere, la fel cum
   // se intampla si la modelul de text daca nu era redus.
-  const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages, 4000)
+  const raw = await callGroq(VISION_MODEL, messages, 4000)
   const parsed = parseJson(raw)
   const result = validateAndSanitize(parsed, await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '', userId))
   const items = result && Array.isArray((result as { items?: unknown[] }).items) ? (result as { items: unknown[] }).items : []
@@ -540,7 +561,7 @@ export async function POST(req: NextRequest) {
     // Marja e voit generoasa (nu doar strict cat incape acum) ca sa reziste la urmatoarele reguli adaugate.
     // Preferat sa scadem max_tokens (recuperarea din parseJson salveaza oricum ce apuca sa genereze)
     // decat slice-ul de text de mai sus, ca sa nu taiem input-ul (ex: legenda TVA de la finalul unui bon).
-    const raw = await callGroq('llama-3.3-70b-versatile', messages, 3000)
+    const raw = await callGroq(TEXT_MODEL, messages, 3000)
     const parsed = parseJson(raw)
     const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '', user.id)
     const result = validateAndSanitize(parsed, knownRatios)
@@ -552,6 +573,7 @@ export async function POST(req: NextRequest) {
     const [code, detail] = msg.split('::')
     if (code === 'groq_rate_limit') return NextResponse.json({ items: [], error: 'groq_rate_limit', detail }, { status: 503 })
     if (code === 'groq_too_large') return NextResponse.json({ items: [], error: 'groq_too_large', detail }, { status: 413 })
+    if (code === 'groq_model_gone') return NextResponse.json({ items: [], error: 'groq_model_gone', detail }, { status: 503 })
     return NextResponse.json({ items: [], error: msg }, { status: 500 })
   }
 }

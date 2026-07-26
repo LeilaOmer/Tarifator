@@ -301,3 +301,15 @@ tot catalogul disparand, iar `RETURNARE MARFA` (storno real) era tratat ca garan
 lipsa nu se pot observa — omul nu vede ce nu i s-a aratat. Un gard care greseste e acceptabil
 daca spune ce a facut; unul care greseste in tacere, nu. Acelasi principiu ca la `unmatched`
 din fisele vocale (ADR-020).
+
+## ADR-034 — Modelele Groq sunt configurabile din mediu, iar "model scos din uz" e o eroare de sine statatoare
+**Decizie:** `GROQ_VISION_MODEL` / `GROQ_TEXT_MODEL` cu valori implicite in cod. `callGroq`
+recunoaste raspunsurile de tip "model inexistent/decomisionat" si le propaga ca `groq_model_gone`,
+cu mesaj propriu in UI.
+**De ce:** Groq a oprit `llama-4-scout-17b-16e-instruct` pe 17.06.2026. Scanarea pozelor a murit
+in aceeasi zi, dar simptomul raportat a fost "poza neclara" — pentru ca in calea pozelor ORICE
+eroare neprevazuta cadea in ramura implicita, care da vina pe poza. Utilizatorul a refotografiat
+la nesfarsit o factura perfect lizibila. Doua concluzii, ambele aplicate: (1) o dependenta externa
+care se poate schimba peste noapte trebuie sa fie o variabila, nu o constanta ingropata;
+(2) un mesaj de eroare implicit NU are voie sa fie o CONCLUZIE despre cauza ("poza e neclara") —
+concluziile se spun doar cand sunt sustinute; restul se raporteaza ca necunoscut, cu detaliu.

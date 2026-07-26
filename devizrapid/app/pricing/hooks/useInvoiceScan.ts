@@ -142,6 +142,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
     return status === 401 ? 'Trebuie sa fii autentificat pentru a scana facturi.' :
       status === 429 ? `Ai atins limita de ${SCANS_PER_DAY} scanari pe zi. Revino maine.` :
       data.error === 'groq_rate_limit' ? `Serverul AI este aglomerat. Asteapta 15 secunde si incearca din nou.${suffix}` :
+      data.error === 'groq_model_gone' ? `Modelul AI de citire nu mai e disponibil la furnizor. Nu e din cauza pozei — trebuie schimbat in setarile serverului.${suffix}` :
       data.error === 'groq_too_large' ? `Factura e prea lunga/complexa pentru a fi citita dintr-o singura cerere. Incearca sa o imparti (scaneaza doar o parte din pagina sau doar o pagina din PDF).${suffix}` :
       data.error === 'vision_failed' ? `Poza neclara sau unghi dificil, chiar si dupa citirea pe felii. Incearca o poza mai apropiata, cu lumina mai buna, sau incarca PDF-ul daca il ai.${data.debug ? ' [model: ' + data.debug + ']' : ''}` :
       `Eroare: ${data.error || 'necunoscuta'}`
@@ -258,7 +259,18 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
         setError(`Limita AI atinsa (plan gratuit Groq).${detail ? ' Groq: ' + detail : ' Asteapta ~1 minut si incearca din nou.'}`)
         return
       }
-      // Nimic gasit — aratam si un fragment din raspunsul brut al modelului.
+      // Daca feliile au esuat cu o EROARE reala (model scos din uz, 500 de la
+      // server, orice altceva), aratam eroarea aia — nu "poza neclara".
+      //
+      // Aici era gaura care a costat cel mai mult: ramura implicita dadea vina
+      // pe poza pentru ORICE esec neprevazut, iar utilizatorul refotografia la
+      // nesfarsit o factura perfect lizibila. "Poza neclara" e o concluzie, si
+      // are voie sa apara doar cand chiar stim ca modelul a citit si n-a gasit
+      // nimic — nu ca sac in care aruncam tot ce nu intelegem.
+      const realErr = sliceRes.find(r => r.error && r.error !== 'vision_failed')
+      if (realErr) { setError(errorMessage(503, realErr)); return }
+
+      // Nimic gasit, fara eroare => modelul chiar n-a extras produse.
       const debug = sliceRes.map(r => r.debug).find(Boolean)
       setError(errorMessage(200, { error: 'vision_failed', debug }))
     } catch {
