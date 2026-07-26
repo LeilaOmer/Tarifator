@@ -124,7 +124,7 @@ Referinta: `lib/quoteNumber.ts`.
 
 - Scanarea foloseste Groq (model de vedere pentru poze, model text pentru PDF/dictare). Pe planul GRATUIT: ~30.000 tokeni/minut si ~500.000 tokeni/zi per model.
 - O factura densa se citeste pe felii (2-4, secvential, cu retry pe limita de rata). Cand cota zilnica e epuizata, scanarea iese incompleta — NU e bug de cod, e plafonul planului. Solutie: plan Groq Dev (limite ~10×) sau asteptarea resetului.
-- Rate-limit propriu per user: 50 scanari/zi (`invoice_scan_logs`), 300/zi pe transcribe/parse-pricing/parse-quote/edit-quote (`api_usage`).
+- Rate-limit propriu per user: 50 scanari/zi (`invoice_scan_logs`), 300/zi pe transcribe/parse-pricing/parse-quote/edit-quote (`api_usage`). **Limita e pe DOCUMENT, nu pe cerere HTTP**: o poza densa se trimite in 2-4 felii, iar numararea fiecarei felii ar transforma "50 scanari" in ~12 poze reale. Clientul trimite `sliceIndex`; serverul contorizeaza doar felia 0.
 
 ---
 

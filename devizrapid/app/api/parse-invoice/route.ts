@@ -38,6 +38,10 @@ function todayRo(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Bucharest' })
 }
 
+// Limita e pe DOCUMENT scanat, nu pe cerere HTTP. O poza densa se trimite in
+// 2-4 felii (useInvoiceScan o taie ca sa fie citibila), iar daca am numara
+// fiecare felie, "50 scanari/zi" ar insemna in realitate ~12 poze — nu asta
+// promite BUSINESS_RULES cap. 9. Contorizam doar prima felie a unui document.
 const SCANS_PER_DAY = 50
 
 // Contorul de scanari, sub identitatea userului. Intoarce `false` cand limita e
@@ -383,6 +387,7 @@ async function runVisionScan(
   userId: string,
   imageBase64: string,
   mimeType: string,
+  countThisScan = true,
 ) {
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
@@ -404,7 +409,7 @@ async function runVisionScan(
   const result = validateAndSanitize(parsed, await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '', userId))
   const items = result && Array.isArray((result as { items?: unknown[] }).items) ? (result as { items: unknown[] }).items : []
   if (items.length > 0) {
-    await logScan(userClient, userId)
+    if (countThisScan) await logScan(userClient, userId)
     return NextResponse.json(result)
   }
   // Zero produse extrase — atasam un fragment din raspunsul BRUT al modelului
@@ -462,6 +467,10 @@ export async function POST(req: NextRequest) {
   if (b64.length > MAX_BODY) return tooLarge
 
   const str = (v: unknown) => (typeof v === 'string' ? v : '')
+  // Feliile 1..N ale aceleiasi poze nu mai consuma din cota — doar felia 0.
+  // Lipsa campului (PDF, XML, apel direct) inseamna document intreg => se conteaza.
+  const sliceIndex = Number(body.sliceIndex)
+  const countThisScan = !Number.isFinite(sliceIndex) || sliceIndex <= 0
   const imageBase64 = str(body.imageBase64)
   const docBase64 = str(body.docBase64)
   const mimeType = str(body.mimeType)
@@ -469,7 +478,7 @@ export async function POST(req: NextRequest) {
 
   try {
     if (imageBase64) {
-      return await runVisionScan(userClient, user.id, imageBase64, mimeType || 'image/jpeg')
+      return await runVisionScan(userClient, user.id, imageBase64, mimeType || 'image/jpeg', countThisScan)
     }
 
     let text = ''

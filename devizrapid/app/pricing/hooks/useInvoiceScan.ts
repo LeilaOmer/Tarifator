@@ -16,6 +16,10 @@ type ApiResult = { supplier?: string; items?: ApiItem[]; excluded?: ExcludedRow[
 
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms))
 
+// Oglindeste SCANS_PER_DAY din app/api/parse-invoice/route.ts (limita reala e
+// impusa pe server; asta e doar pentru textul aratat utilizatorului).
+const SCANS_PER_DAY = 50
+
 // Cat sa asteptam inainte de a reincerca o felie respinsa pe limita de rata.
 // Groq pune in mesaj "try again in 12.5s" / "in 1m30s" — il parsam si il
 // plafonam (5..45s) ca sa nu blocam prea mult, dar suficient sa se elibereze
@@ -136,7 +140,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
     // la care nu avem acces direct) ca sa poata fi trimis mai departe pentru diagnostic.
     const suffix = data.detail ? ` [${data.detail}]` : ''
     return status === 401 ? 'Trebuie sa fii autentificat pentru a scana facturi.' :
-      status === 429 ? 'Ai atins limita de 50 scanari pe zi. Revino maine.' :
+      status === 429 ? `Ai atins limita de ${SCANS_PER_DAY} scanari pe zi. Revino maine.` :
       data.error === 'groq_rate_limit' ? `Serverul AI este aglomerat. Asteapta 15 secunde si incearca din nou.${suffix}` :
       data.error === 'groq_too_large' ? `Factura e prea lunga/complexa pentru a fi citita dintr-o singura cerere. Incearca sa o imparti (scaneaza doar o parte din pagina sau doar o pagina din PDF).${suffix}` :
       data.error === 'vision_failed' ? `Poza neclara sau unghi dificil, chiar si dupa citirea pe felii. Incearca o poza mai apropiata, cu lumina mai buna, sau incarca PDF-ul daca il ai.${data.debug ? ' [model: ' + data.debug + ']' : ''}` :
@@ -203,22 +207,35 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
       // sa abandonam restul facturii.
       const sliceRes: ApiResult[] = []
       let rateLimited = false
+      let quotaExhausted = false
       let fatalTooLarge: { status: number; data: ApiResult } | null = null
-      for (const s of slices) {
-        let r = await callApi({ imageBase64: s, mimeType: 'image/jpeg' }, token)
+      for (let idx = 0; idx < slices.length; idx++) {
+        // sliceIndex: doar felia 0 consuma din cota zilnica — feliile sunt
+        // bucati ale ACELEIASI facturi, nu scanari separate.
+        const payload = { imageBase64: slices[idx], mimeType: 'image/jpeg', sliceIndex: String(idx) }
+        let r = await callApi(payload, token)
         let attempts = 0
         while (!r.ok && r.data.error === 'groq_rate_limit' && attempts < 2) {
           const wait = retrySeconds(r.data.detail)
           setError(`Se citeste factura... (astept ${wait}s, limita AI)`)
           await sleep(wait * 1000)
-          r = await callApi({ imageBase64: s, mimeType: 'image/jpeg' }, token)
+          r = await callApi(payload, token)
           attempts++
         }
         sliceRes.push(r.data)
+        // Cota ZILNICA a contului (429 de la noi, nu de la Groq): nu are rost sa
+        // mai trimitem feliile urmatoare, si mai ales nu are voie sa cada in
+        // ramura de "poza neclara" — asta ascundea motivul real.
+        if (r.status === 429 || r.data.error === 'rate_limit') { quotaExhausted = true; break }
         if (!r.ok && r.data.error === 'groq_rate_limit') rateLimited = true
         if (!r.ok && r.data.error === 'groq_too_large' && !fatalTooLarge) fatalTooLarge = { status: r.status, data: r.data }
       }
       setError('')
+
+      if (quotaExhausted) {
+        setError(`Ai atins limita de ${SCANS_PER_DAY} scanari pe zi. Revino maine.`)
+        return
+      }
 
       const combinedItems = sliceRes.flatMap(r => r.items || [])
       const supplier = sliceRes.find(r => r.supplier)?.supplier || ''
