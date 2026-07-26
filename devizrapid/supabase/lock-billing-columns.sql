@@ -60,16 +60,49 @@ select grantee, column_name, privilege_type
    and grantee in ('authenticated', 'anon')
  order by grantee, column_name;
 
--- 4) Test negativ (optional, dar recomandat — vezi docs/AUDIT-LANSARE.md:
---    "o politica existenta dar NEdovedita de un test real se raporteaza ca ABSENT").
---    Logheaza-te in aplicatie ca un user obisnuit si ruleaza in consola browserului:
+-- 4) TESTUL NEGATIV — partea care conteaza cu adevarat.
+--    Punctul 3 arata CONFIGURATIA; asta arata COMPORTAMENTUL. Sunt lucruri
+--    diferite (vezi docs/AUDIT-LANSARE.md: "un gard activat dar netestat e tratat
+--    ca mai rau decat lipsa lui — da incredere falsa").
 --
---      await supabase.from('profiles')
---        .update({ lifetime: true })
---        .eq('id', (await supabase.auth.getUser()).data.user.id)
+--    Rulam ca un UTILIZATOR OBISNUIT, nu ca proprietarul bazei:
+--      `set local role authenticated`      -> se aplica granturile pe coloane
+--      `set local request.jwt.claims`      -> auth.uid() functioneaza, deci si RLS
+--    Totul in tranzactii cu ROLLBACK: nu se modifica nimic real.
 --
---    Rezultat ASTEPTAT: eroare 42501 "permission denied for column lifetime".
---    Daca intoarce succes, punctul 2 nu s-a aplicat.
+--    Ia-ti intai id-ul si inlocuieste-l mai jos (de 2 ori in fiecare bloc):
+--      select id, email from auth.users where email = 'adresa@ta.ro';
+
+-- 4a) TREBUIE SA ESUEZE: 42501 "permission denied for column lifetime"
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"PUNE-AICI-UUID-UL","role":"authenticated"}';
+  update profiles set lifetime = true where id = 'PUNE-AICI-UUID-UL';
+rollback;
+
+-- 4b) TREBUIE SA ESUEZE: permission denied for column plan_tier
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"PUNE-AICI-UUID-UL","role":"authenticated"}';
+  update profiles set plan_tier = 'pro', plan_active_until = now() + interval '10 years'
+   where id = 'PUNE-AICI-UUID-UL';
+rollback;
+
+-- 4c) TREBUIE SA REUSEASCA ("UPDATE 1") — altfel am rupt Setarile pentru useri.
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"PUNE-AICI-UUID-UL","role":"authenticated"}';
+  update profiles set phone = '0722000000' where id = 'PUNE-AICI-UUID-UL';
+rollback;
+
+-- 4d) Izolarea intre conturi (RLS, nu granturi) — TREBUIE "UPDATE 0":
+--     userul A incearca sa scrie in randul userului B pe o coloana permisa.
+--     Zero randuri afectate = RLS l-a filtrat. Pune doua id-uri DIFERITE.
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"UUID-USER-A","role":"authenticated"}';
+  update profiles set phone = '0799999999' where id = 'UUID-USER-B';
+rollback;
 
 -- ============================================================================
 -- NOTA pentru activarea manuala a abonamentelor (BUSINESS_RULES cap. 5):
