@@ -53,7 +53,13 @@ drop policy if exists "services_own" on services;
 create policy "services_own" on services for all to public
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
--- profiles: cheia e id (= auth.uid()), nu user_id
+-- profiles: cheia e id (= auth.uid()), nu user_id.
+-- ATENTIE: aceasta politica da acces la RANDUL propriu, pe TOATE coloanele lui.
+-- Nu e suficienta: `profiles` contine si coloanele de abonament (plan_tier,
+-- plan_active_until, lifetime), iar fara restrictie pe COLOANE orice user si le
+-- putea seta singur => Pro gratuit pe viata. Restrictia de coloane se face cu
+-- granturi, nu cu RLS: vezi supabase/lock-billing-columns.sql — OBLIGATORIU de
+-- rulat impreuna cu acest fisier.
 alter table profiles enable row level security;
 drop policy if exists "own profile"  on profiles;
 drop policy if exists "profiles_own" on profiles;

@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { anafLookup } from "@/lib/anaf";
 import jsPDF from "jspdf";
 import { drawPageChrome } from "@/lib/pricing/brand";
+import { computeQuoteTotals, type DiscountType } from "@/lib/quotes/totals";
 
 interface Profile {
   id: string;
@@ -111,11 +112,8 @@ function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: numb
     doc.setTextColor(...color); doc.text(text, margin, y); y += size * 0.45;
   };
 
-  const subtotalBrut = quote.quote_items.reduce((s, i) => s + i.total, 0);
-  const discountVal = discountType === "pct" ? subtotalBrut * discount / 100 : discount;
-  const subtotalNet = subtotalBrut - discountVal;
-  const vatAmount = isPro ? Math.round(subtotalNet * (quote.vat_rate / 100) * 100) / 100 : 0;
-  const total = subtotalNet + vatAmount;
+  const { subtotalBrut, discountVal, subtotalNet, vatAmount, total, discount: discPct } =
+    computeQuoteTotals(quote.quote_items, discount, discountType, isPro ? quote.vat_rate : 0);
 
   doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.setTextColor(20, 20, 20);
   doc.text(emitent.name, margin, y);
@@ -175,7 +173,7 @@ function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: numb
   y += 3; doc.setDrawColor(180, 180, 180); doc.line(margin, y, W - margin, y); y += 6;
 
   const rows: [string, number][] = [];
-  if (discount > 0) rows.push([`Discount${discountType === "pct" ? ` ${discount}%` : ""}`, -discountVal]);
+  if (discountVal > 0) rows.push([`Discount${discountType === "pct" ? ` ${discPct}%` : ""}`, -discountVal]);
   if (isPro) { rows.push(["Subtotal (fara TVA)", subtotalNet]); rows.push([`TVA ${quote.vat_rate}%`, vatAmount]); }
 
   rows.forEach(([label, val]) => {
@@ -214,7 +212,7 @@ export default function QuoteDetailPage() {
   const [saving, setSaving] = useState(false);
   const [savingDiscount, setSavingDiscount] = useState(false);
   const [discount, setDiscount] = useState<string>("0");
-  const [discountType, setDiscountType] = useState<"pct" | "val">("pct");
+  const [discountType, setDiscountType] = useState<DiscountType>("pct");
   const [savedDiscount, setSavedDiscount] = useState<string>("0");
   const [savedDiscountType, setSavedDiscountType] = useState<"pct" | "val">("pct");
   const [showClientModal, setShowClientModal] = useState(false);
@@ -342,6 +340,27 @@ export default function QuoteDetailPage() {
   function addRow() { setRows(r => [...r, emptyRow()]); }
   function removeRow(idx: number) { setRows(r => r.filter((_, i) => i !== idx)); }
 
+  // Recalculeaza si salveaza totalurile fisei. UNICUL loc care scrie `total`/
+  // `vat_*`/`discount` — inainte, aceleasi 8 linii erau copiate in handleSave,
+  // handleDeleteItem si handleSaveDiscount, si deja divergeau de randare.
+  // Citeste liniile din DB (nu din state) ca sa nu depinda de ordinea update-urilor.
+  async function persistTotals(quoteId: string): Promise<{ error: string | null }> {
+    const { data: items, error: readErr } = await supabase
+      .from("quote_items").select("quantity, unit_price").eq("quote_id", quoteId);
+    if (readErr) return { error: readErr.message };
+    const vatRate = company ? getEmitent().vat_rate : 0;
+    const t = computeQuoteTotals(items || [], discount, discountType, vatRate);
+    const { error } = await supabase.from("quotes").update({
+      total: t.subtotalNet,
+      vat_rate: vatRate,
+      vat_amount: t.vatAmount,
+      total_with_vat: t.total,
+      discount: t.discount,          // valoarea PLAFONATA, nu cea introdusa
+      discount_type: discountType,
+    }).eq("id", quoteId);
+    return { error: error?.message ?? null };
+  }
+
   async function handleSave() {
     if (!quote || !profile) return;
     const validRows = rows.filter(r => r.description.trim() && parseFloat(r.quantity) > 0 && parseFloat(r.unit_price) > 0);
@@ -361,24 +380,8 @@ export default function QuoteDetailPage() {
       if (itemErr) { setSaving(false); toast("Nu s-a salvat o linie: " + itemErr.message); return; }
     }
 
-    const { data: allItems } = await supabase.from("quote_items").select("quantity, unit_price").eq("quote_id", quote.id);
-    const subtotalBrut = (allItems || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
-    const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
-    const subtotalNet = subtotalBrut - dVal;
-    const isPro = !!company;
-    const emitent = getEmitent();
-    const vatRate = isPro ? emitent.vat_rate : 0;
-    const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
-
-    const { error: totalErr } = await supabase.from("quotes").update({
-      total: subtotalNet,
-      vat_rate: vatRate,
-      vat_amount: vatAmount,
-      total_with_vat: subtotalNet + vatAmount,
-      discount: parseFloat(discount || "0"),
-      discount_type: discountType,
-    }).eq("id", quote.id);
-    if (totalErr) { setSaving(false); toast("Nu s-a actualizat totalul: " + totalErr.message); return; }
+    const { error: totalErr } = await persistTotals(quote.id);
+    if (totalErr) { setSaving(false); toast("Nu s-a actualizat totalul: " + totalErr); return; }
 
     setRows([emptyRow()]);
     setSaving(false);
@@ -389,46 +392,17 @@ export default function QuoteDetailPage() {
   async function handleDeleteItem(itemId: string) {
     const { error: delErr } = await supabase.from("quote_items").delete().eq("id", itemId);
     if (delErr) { toast("Nu s-a sters linia: " + delErr.message); return; }
-    const { data: remaining } = await supabase.from("quote_items").select("quantity, unit_price").eq("quote_id", quote!.id);
-    const subtotalBrut = (remaining || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
-    const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
-    const subtotalNet = subtotalBrut - dVal;
-    const isPro = !!company;
-    const emitent = getEmitent();
-    const vatRate = isPro ? emitent.vat_rate : 0;
-    const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
-    await supabase.from("quotes").update({
-      total: subtotalNet,
-      vat_rate: vatRate,
-      vat_amount: vatAmount,
-      total_with_vat: subtotalNet + vatAmount,
-      discount: parseFloat(discount || "0"),
-      discount_type: discountType,
-    }).eq("id", quote!.id);
+    const { error } = await persistTotals(quote!.id);
+    if (error) { toast("Linia s-a sters, dar totalul nu s-a actualizat: " + error); return; }
     await loadQuote();
   }
 
   async function handleSaveDiscount() {
     if (!quote || !profile) return;
     setSavingDiscount(true);
-    const { data: allItems } = await supabase.from("quote_items").select("quantity, unit_price").eq("quote_id", quote.id);
-    const subtotalBrut = (allItems || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
-    const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
-    const subtotalNet = subtotalBrut - dVal;
-    const isPro = !!company;
-    const emitent = getEmitent();
-    const vatRate = isPro ? emitent.vat_rate : 0;
-    const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
-    const { error: discErr } = await supabase.from("quotes").update({
-      total: subtotalNet,
-      vat_rate: vatRate,
-      vat_amount: vatAmount,
-      total_with_vat: subtotalNet + vatAmount,
-      discount: parseFloat(discount || "0"),
-      discount_type: discountType,
-    }).eq("id", quote.id);
+    const { error: discErr } = await persistTotals(quote.id);
     setSavingDiscount(false);
-    if (discErr) { toast("Nu s-a salvat discountul: " + discErr.message); return; }
+    if (discErr) { toast("Nu s-a salvat discountul: " + discErr); return; }
     setSavedDiscount(discount);
     setSavedDiscountType(discountType);
     playSuccessSound();
@@ -449,10 +423,17 @@ export default function QuoteDetailPage() {
     await loadQuote();
   }
 
+  // PDF-ul se genereaza din datele PERSISTATE (savedDiscount), niciodata din
+  // state-ul de formular: altfel utilizatorul tasta un discount, apasa direct
+  // "PDF"/"WhatsApp" si trimitea clientului un document cu o valoare pe care
+  // baza de date n-o continea — evidenta interna si documentul nu se potriveau.
+  const buildSavedPDF = () =>
+    buildPDF(quote!, emitent, !!company, parseFloat(savedDiscount || "0"), savedDiscountType);
+
   const shareWhatsApp = async () => {
     if (!quote || !profile) return;
-    const isPro = !!company;
-    const doc = buildPDF(quote, emitent, isPro, parseFloat(discount || "0"), discountType);
+    if (hasUnsavedDiscount) { toast("Salveaza intai discountul, apoi trimite documentul."); return; }
+    const doc = buildSavedPDF();
     const fileName = `Fisa_${quote.quote_number}.pdf`;
 
     if (typeof navigator !== "undefined" && navigator.canShare) {
@@ -485,11 +466,11 @@ export default function QuoteDetailPage() {
   const isFinalized = quote.status === "final";
   const st = ({ draft: { label: "Ciorna", color: "bg-gray-100 text-gray-600" }, final: { label: "Document Final", color: "bg-green-100 text-green-700" }, sent: { label: "Trimis", color: "bg-blue-100 text-blue-700" }, accepted: { label: "Acceptat", color: "bg-green-100 text-green-700" }, rejected: { label: "Respins", color: "bg-red-100 text-red-700" } } as Record<string, { label: string; color: string }>)[quote.status] ?? { label: quote.status, color: "bg-gray-100 text-gray-600" };
   const c = quote.clients;
-  const subtotalBrut = quote.quote_items.reduce((s, i) => s + i.total, 0);
-  const discountVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
-  const subtotalNet = subtotalBrut - discountVal;
-  const vatAmount = isPro ? Math.round(subtotalNet * quote.vat_rate / 100 * 100) / 100 : 0;
-  const total = subtotalNet + vatAmount;
+  // Previzualizarea din pagina foloseste discountul in curs de editare (ca sa se
+  // vada efectul inainte de salvare); PDF-ul foloseste EXCLUSIV ce e salvat.
+  const { subtotalBrut, discountVal, subtotalNet, vatAmount, total } =
+    computeQuoteTotals(quote.quote_items, discount, discountType, isPro ? quote.vat_rate : 0);
+  const hasUnsavedDiscount = discount !== savedDiscount || discountType !== savedDiscountType;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
@@ -619,7 +600,7 @@ export default function QuoteDetailPage() {
           {parseFloat(discount || "0") > 0 && (
             <p className="text-sm text-red-500 font-medium mt-2">-{fmt(discountVal)} discount aplicat</p>
           )}
-          {!isFinalized && (discount !== savedDiscount || discountType !== savedDiscountType) && (
+          {!isFinalized && hasUnsavedDiscount && (
             <button onClick={handleSaveDiscount} disabled={savingDiscount}
               className="mt-3 w-full py-2.5 bg-orange-500 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
               {savingDiscount ? "Se salveaza..." : "Salveaza discount"}
@@ -666,7 +647,11 @@ export default function QuoteDetailPage() {
             </svg>
             WhatsApp
           </button>
-          <button onClick={() => window.open(buildPDF(quote, emitent, isPro, parseFloat(discount || "0"), discountType).output("bloburl"), "_blank")}
+          <button
+            onClick={() => {
+              if (hasUnsavedDiscount) { toast("Salveaza intai discountul, apoi genereaza PDF-ul."); return; }
+              window.open(buildSavedPDF().output("bloburl"), "_blank");
+            }}
             className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold rounded-xl py-3 text-sm active:bg-blue-800">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

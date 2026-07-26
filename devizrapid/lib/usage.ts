@@ -26,6 +26,11 @@ export async function getMonthlyCalcule(userId: string): Promise<number> {
   return count ?? 0
 }
 
-export async function logCalcul(userId: string): Promise<void> {
-  await supabase.from('pricing_usage').insert({ user_id: userId })
+// Intoarce eroarea in loc s-o inghita: triggerul `pricing_usage_limit` din DB
+// (supabase/enforce-limits.sql) respinge inserarea cand limita lunara e atinsa.
+// Ignorata, UI-ul incrementa un contor pe care baza de date nu-l acceptase —
+// succes fals, exact ce interzice AGENTS.md.
+export async function logCalcul(userId: string): Promise<{ error: string | null }> {
+  const { error } = await supabase.from('pricing_usage').insert({ user_id: userId })
+  return { error: error?.message ?? null }
 }

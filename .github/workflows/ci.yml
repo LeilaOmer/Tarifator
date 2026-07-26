@@ -1,0 +1,43 @@
+name: CI
+
+# Poarta de calitate. Pana acum nu exista niciuna: `npm run build` trecea cu 28
+# de erori de ESLint, iar bug-urile de calcul (rotunjire, e-Factura) au ajuns in
+# main pentru ca nimic nu rula codul cu date de verificare.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: devizrapid
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: devizrapid/package-lock.json
+
+      - run: npm ci
+
+      # Ordinea e voita: cel mai rapid si mai specific semnal primul.
+      - name: Teste (logica de business)
+        run: npm test
+
+      - name: Verificare de tipuri
+        run: npx tsc --noEmit
+
+      - name: Build complet (prinde ce tsc nu vede)
+        run: npm run build
+
+      # Lint-ul are inca datorii istorice (28 de erori la momentul introducerii
+      # CI-ului), deci NU blocheaza inca. Raporteaza, ca sa nu creasca numarul.
+      # De comutat pe blocant dupa curatare: scoate `continue-on-error`.
+      - name: Lint (raportare, inca neblocant)
+        run: npx eslint .
+        continue-on-error: true

@@ -67,12 +67,30 @@ export function isEfacturaXml(text: string): boolean {
 // BAX/ambalaj; il impartim la N ca sa dam pretul pe bucata (cum lucreaza
 // comerciantul si cum arata restul aplicatiei). Daca nu e scris niciun "x N",
 // ramane 1 (produs vandut la bucata).
-function piecesPerBox(name: string): number {
+//
+// CAPCANA (bug real, corectat): pe NON-bauturi denumirea contine DIMENSIUNI cu
+// exact acelasi tipar — "TABLA ZINCATA 1000 x 2000", "FOLIE 100 x 150 CM",
+// "PLACA OSB 1250 x 2500 x 12". Un "x N" generic imparte pretul la dimensiune:
+// tabla de 250 lei devenea 0,125 lei/bucata. De aceea respingem intai tiparele
+// dimensionale, apoi acceptam doar configuratii de ambalaj plauzibile.
+export function piecesPerBox(name: string): number {
+  const n = name.toLowerCase()
+
+  // DIMENSIUNI, nu ambalaj — trei semnale, oricare e suficient:
+  //   1. trei numere legate cu x ("1250 x 2500 x 12" = lungime x latime x grosime)
+  if (/\d\s*[x×]\s*\d+\s*[x×]\s*\d/.test(n)) return 1
+  //   2. o unitate de LUNGIME/SUPRAFATA dupa pereche ("50 x 30 MM", "100 x 150 CM")
+  if (/\d\s*[x×]\s*\d+\s*(mm|cm|m|metri|mp|cm2)\b/.test(n)) return 1
+  //   3. un numar "gol" de 3+ cifre chiar inainte de x ("1000 x", "120 x").
+  //      Baxurile se scriu cu volumul lipit ("0.33L X 12", "500ML x 4"), nu asa.
+  if (/(^|[^.,\d])\d{3,}\s*[x×]/.test(n)) return 1
+
   // "1X24" / "1x6" — configuratia de bax scrisa compact (un bax de N bucati)
-  const compact = name.match(/\b1\s*[x×]\s*(\d{1,4})\b/i)
-  const m = compact || name.match(/\bx\s*(\d{1,4})\b/i)
-  const n = m ? parseInt(m[1], 10) : 1
-  return n > 1 ? n : 1
+  const compact = n.match(/\b1\s*[x×]\s*(\d{1,3})\b/)
+  const m = compact || n.match(/\bx\s*(\d{1,3})\b/)
+  const pieces = m ? parseInt(m[1], 10) : 1
+  // 240 = plafon generos pentru un bax real; peste, e alt numar din denumire.
+  return pieces > 1 && pieces <= 240 ? pieces : 1
 }
 
 // Construieste produsul final dintr-o linie de e-Factura (comun XML + PDF ANAF):
@@ -89,7 +107,13 @@ function buildItem(name: string, priceExVat: number, percent: number, umCode = '
   // impartirea pe bucata are sens doar la bax-uri de bucati.
   const unit = mapUnit(umCode)
   const pieces = unit === 'buc' ? piecesPerBox(name) : 1
-  const supplier_price = Math.round((priceExVat / pieces) * 10000) / 10000
+  // Gard absolut peste potrivirea din denumire: daca impartirea da un pret
+  // ireal de mic, "N"-ul citit era o dimensiune scapata de filtrele de mai sus,
+  // nu un ambalaj — pastram pretul intreg. Mai bine un pret de bax neimpartit
+  // (vizibil, corectabil din "Corecteaza cutie/bucata") decat unul de 1000x
+  // mai mic, care trece neobservat pana la raft.
+  const divided = priceExVat / pieces
+  const supplier_price = Math.round((divided >= 0.05 ? divided : priceExVat) * 10000) / 10000
   return { name, unit, supplier_price, discount: 0, vat, sgr }
 }
 

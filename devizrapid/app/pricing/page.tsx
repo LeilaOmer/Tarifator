@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getEffectiveLimits } from '@/lib/plan'
 import { getMonthlyCalcule, logCalcul } from '@/lib/usage'
-import { emptyItem } from '@/lib/pricing/calc'
+import { emptyItem, parseAdaos } from '@/lib/pricing/calc'
 import { exportPDFContabil, exportPDFMagazin, sharePdfBlob, PdfResult } from '@/lib/pricing/pdf'
 import { renderPdfToImages } from '@/lib/pricing/pdfPreview'
 import { usePricingDraft } from './hooks/usePricingDraft'
@@ -40,31 +40,43 @@ export default function PricingPage() {
     draft.setItems(prev => [...prev.filter(p => p.name || p.supplierPrice), ...parsed])
   })
 
+  // Poarta de autentificare. Lipsea DOAR pe aceasta pagina (restul o au), iar
+  // `handleExport` sarea peste contorizare cand nu exista sesiune — deci
+  // calculatorul si exportul PDF functionau integral, nelimitat, fara cont.
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return
+      if (!session) { router.replace('/login'); return }
       const { calcule: limit } = await getEffectiveLimits(session.user.id, session.user.created_at)
       if (!Number.isFinite(limit)) return // nelimitat (pre-lansare sau abonament Mercator/Pro) — nu aratam contor
       const calcule = await getMonthlyCalcule(session.user.id)
       setUsageInfo({ calcule, limit, show: true })
     })
-  }, [])
+  }, [router])
 
-  const adaosNum = parseFloat(draft.adaos) || 0
+  const adaosNum = parseAdaos(draft.adaos)
   const validItems = draft.items.filter(i => i.name && parseFloat(i.supplierPrice) > 0)
 
   async function handleExport(exportFn: () => Promise<PdfResult>) {
     const { data: { session } } = await supabase.auth.getSession()
-    if (session) {
-      const { calcule: limit } = await getEffectiveLimits(session.user.id, session.user.created_at)
-      if (Number.isFinite(limit)) {
-        const calcule = await getMonthlyCalcule(session.user.id)
-        if (calcule >= limit) { router.push('/upgrade?type=calcule'); return }
-        await logCalcul(session.user.id)
-        setUsageInfo(prev => prev ? { ...prev, calcule: prev.calcule + 1 } : prev)
-      }
-      await draft.saveDraft()
+    // Fara sesiune NU se exporta. Inainte, ramura `if (session)` sarea peste
+    // limita si peste contorizare, iar PDF-ul se genera oricum — modulul platit
+    // era gratuit pentru oricine il folosea manual.
+    if (!session) { router.push('/login'); return }
+
+    const { calcule: limit } = await getEffectiveLimits(session.user.id, session.user.created_at)
+    if (Number.isFinite(limit)) {
+      const calcule = await getMonthlyCalcule(session.user.id)
+      if (calcule >= limit) { router.push('/upgrade?type=calcule'); return }
+      // Consumul se INREGISTREAZA inainte de export si eroarea conteaza: daca
+      // triggerul din DB respinge inserarea (limita atinsa intre timp, alt tab),
+      // exportul nu are voie sa continue — altfel UI-ul arata un consum pe care
+      // baza de date nu l-a acceptat niciodata.
+      const { error } = await logCalcul(session.user.id)
+      if (error) { router.push('/upgrade?type=calcule'); return }
+      setUsageInfo(prev => prev ? { ...prev, calcule: prev.calcule + 1 } : prev)
     }
+    await draft.saveDraft()
+
     const result = await exportFn()
     setPreviewPdf({ url: URL.createObjectURL(result.blob), result })
   }

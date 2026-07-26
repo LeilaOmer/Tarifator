@@ -4,13 +4,60 @@ import { parseEfacturaXml, isEfacturaXml, parseEfacturaAnafPdf } from '@/lib/pri
 import { isNonProductLine, reconcileUnitPrice, applySgrFromGuaranteeLines, classifySgr, phantomRowIndexes, type ScannedLine } from '@/lib/pricing/scanGuards'
 
 function getSupabaseAdmin() {
-  // Cheia anonima — foloseste pentru auth.getUser(token) si invoice_scan_logs.
+  // Cheia anonima — foloseste DOAR pentru auth.getUser(token).
   // NU schimba la service role aici: auth.getUser(token) valideaza gresit
   // (401 pentru toata lumea) daca clientul e creat cu cheia de service role.
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
+}
+
+// Client cu IDENTITATEA userului, pentru orice interogare care trece prin RLS.
+//
+// DE CE separat de cel de mai sus (bug real, corectat): `auth.getUser(token)`
+// doar VALIDEAZA tokenul printr-un apel la /auth/v1/user — NU il ataseaza
+// clientului. Interogarile `.from(...)` care urmeau plecau ca rol `anon`, deci
+// sub politicile `auth.uid() = user_id` din supabase/rls.sql:
+//   - SELECT-ul contorului intorcea mereu 0 randuri => limita de 50 scanari/zi
+//     NU se declansa niciodata;
+//   - INSERT-ul era respins de `with check` => invoice_scan_logs ramanea GOL.
+// Adica singura aparare a cotei Groq nu exista. Acelasi tipar corect e deja
+// folosit in app/api/box-ratio si app/api/delete-account.
+function getUserClient(token: string) {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false } },
+  )
+}
+
+// Ziua curenta in ora Romaniei, nu UTC: cu `toISOString()` contorul se reseta
+// la 03:00 vara / 02:00 iarna, in mijlocul zilei de lucru a utilizatorului.
+function todayRo(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Bucharest' })
+}
+
+const SCANS_PER_DAY = 50
+
+// Contorul de scanari, sub identitatea userului. Intoarce `false` cand limita e
+// atinsa. Fail-open la eroare de infra (un hopa de retea nu trebuie sa blocheze
+// un user legitim), dar fail-open EXPLICIT, nu din accident.
+async function allowScan(userClient: ReturnType<typeof getUserClient>, userId: string) {
+  const { count, error } = await userClient
+    .from('invoice_scan_logs')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', todayRo())
+  if (error) return true
+  return (count ?? 0) < SCANS_PER_DAY
+}
+
+// Inregistrarea scanarii. Eroarea NU se ignora (AGENTS.md): un esec tacut aici
+// era exact cauza pentru care contorul a stat gol luni de zile.
+async function logScan(userClient: ReturnType<typeof getUserClient>, userId: string) {
+  const { error } = await userClient.from('invoice_scan_logs').insert({ user_id: userId })
+  if (error) console.error('[parse-invoice] nu s-a inregistrat scanarea:', error.message)
 }
 
 function getServiceRoleClient() {
@@ -36,7 +83,11 @@ function normalizeName(s: string): string {
 // apara corectand el insusi (corectia lui il acopera pe el, fara sa strice restul).
 async function getKnownRatios(supplierName: string, userId: string): Promise<Map<string, number>> {
   const map = new Map<string, number>()
-  const name = supplierName?.trim()
+  // Numele vine din raspunsul MODELULUI, deci din continutul unui document
+  // incarcat de utilizator. In `ilike`, `%` si `_` sunt metacaractere: un antet
+  // manipulat ca modelul sa intoarca "%" facea interogarea sa potriveasca TOTI
+  // furnizorii si sa aplice raporturi straine. Le escapam.
+  const name = supplierName?.trim().replace(/[\\%_]/g, m => '\\' + m)
   if (!name) return map
   const { data } = await getServiceRoleClient()
     .from('product_box_ratios')
@@ -319,7 +370,7 @@ async function pdfToImageBase64(buf: Buffer): Promise<string | null> {
 }
 
 async function runVisionScan(
-  supabase: ReturnType<typeof getSupabaseAdmin>,
+  userClient: ReturnType<typeof getUserClient>,
   userId: string,
   imageBase64: string,
   mimeType: string,
@@ -344,7 +395,7 @@ async function runVisionScan(
   const result = validateAndSanitize(parsed, await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '', userId))
   const items = result && Array.isArray((result as { items?: unknown[] }).items) ? (result as { items: unknown[] }).items : []
   if (items.length > 0) {
-    await supabase.from('invoice_scan_logs').insert({ user_id: userId })
+    await logScan(userClient, userId)
     return NextResponse.json(result)
   }
   // Zero produse extrase — atasam un fragment din raspunsul BRUT al modelului
@@ -363,42 +414,60 @@ export async function POST(req: NextRequest) {
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
   if (!token) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const supabase = getSupabaseAdmin()
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
   if (authError || !user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  // Rate limiting: max 50 scans/zi pentru toti userii (contor simplu in DB)
-  const today = new Date().toISOString().slice(0, 10)
-  const { count } = await supabase
-    .from('invoice_scan_logs')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .gte('created_at', today)
-  if ((count ?? 0) >= 50) {
-    return NextResponse.json({ error: 'rate_limit', message: 'Limita de 50 scanari/zi atinsa.' }, { status: 429 })
+  // De aici incolo, orice interogare sub RLS foloseste identitatea userului.
+  const userClient = getUserClient(token)
+
+  // Rate limiting: max 50 scanari/zi pentru toti userii (contor in DB).
+  if (!(await allowScan(userClient, user.id))) {
+    return NextResponse.json(
+      { error: 'rate_limit', message: `Limita de ${SCANS_PER_DAY} scanari/zi atinsa.` },
+      { status: 429 },
+    )
   }
 
-  const body = await req.json()
+  // Limita de marime INAINTE de a citi corpul: `req.json()` pe un body de sute
+  // de MB il aduce integral in memoria functiei, deci verificarea de dupa venea
+  // prea tarziu ca sa mai apere ceva. Un base64 ~1.33x fata de bytes => 15 MB
+  // fisier ≈ 21 MB string; lasam 22 MB marja.
+  const MAX_BODY = 22 * 1024 * 1024
+  const tooLarge = NextResponse.json(
+    { items: [], error: 'file_too_large', message: 'Fisier prea mare (max 15 MB).' },
+    { status: 413 },
+  )
+  const declaredLen = Number(req.headers.get('content-length') || 0)
+  if (declaredLen > MAX_BODY) return tooLarge
 
-  // Limita de marime pe server (clientul poate fi ocolit): un base64 ~1.33x fata
-  // de bytes, deci 15 MB fisier ≈ 21 MB string. Blocheaza fisiere uriase inainte
-  // de a atinge pdf-parse / randare / Groq.
+  let body: Record<string, unknown>
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ items: [], error: 'invalid_body' }, { status: 400 })
+  }
+
+  // Plasa a doua: `content-length` poate lipsi (transfer chunked).
   const b64 = typeof body.imageBase64 === 'string' ? body.imageBase64
     : typeof body.docBase64 === 'string' ? body.docBase64 : ''
-  if (b64.length > 22 * 1024 * 1024) {
-    return NextResponse.json({ items: [], error: 'file_too_large', message: 'Fisier prea mare (max 15 MB).' }, { status: 413 })
-  }
+  if (b64.length > MAX_BODY) return tooLarge
+
+  const str = (v: unknown) => (typeof v === 'string' ? v : '')
+  const imageBase64 = str(body.imageBase64)
+  const docBase64 = str(body.docBase64)
+  const mimeType = str(body.mimeType)
+  const fileName = str(body.fileName)
 
   try {
-    if (body.imageBase64) {
-      return await runVisionScan(supabase, user.id, body.imageBase64, body.mimeType || 'image/jpeg')
+    if (imageBase64) {
+      return await runVisionScan(userClient, user.id, imageBase64, mimeType || 'image/jpeg')
     }
 
     let text = ''
-    if (body.docBase64) {
-      const buf = Buffer.from(body.docBase64, 'base64')
-      const mime: string = body.mimeType || ''
-      if (mime.includes('pdf') || (body.fileName as string | undefined)?.toLowerCase().endsWith('.pdf')) {
+    if (docBase64) {
+      const buf = Buffer.from(docBase64, 'base64')
+      const mime = mimeType
+      if (mime.includes('pdf') || fileName.toLowerCase().endsWith('.pdf')) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const pdfParse: (buf: Buffer) => Promise<{ text: string }> = require('pdf-parse/lib/pdf-parse.js')
         const parsed = await pdfParse(buf)
@@ -408,8 +477,8 @@ export async function POST(req: NextRequest) {
         // intoarce aproape nimic. Router automat catre vedere, transparent
         // pentru utilizator — nu mai afiseaza eroare, doar trece pe alta cale.
         if (text.trim().length < 40) {
-          const imageBase64 = await pdfToImageBase64(buf)
-          if (imageBase64) return await runVisionScan(supabase, user.id, imageBase64, 'image/jpeg')
+          const rendered = await pdfToImageBase64(buf)
+          if (rendered) return await runVisionScan(userClient, user.id, rendered, 'image/jpeg')
         }
 
         // PDF-ul oficial ANAF al unei e-Facturi ("RO eFactura"): layout national
@@ -433,8 +502,8 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ items: [], error: 'xml_no_products' })
         }
       }
-    } else if (body.text) {
-      text = body.text
+    } else if (str(body.text)) {
+      text = str(body.text)
     } else {
       return NextResponse.json({ items: [] }, { status: 400 })
     }
@@ -457,7 +526,7 @@ export async function POST(req: NextRequest) {
     const parsed = parseJson(raw)
     const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '', user.id)
     const result = validateAndSanitize(parsed, knownRatios)
-    if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
+    if (result) await logScan(userClient, user.id)
     return NextResponse.json(result ?? { items: [] })
 
   } catch (err) {
