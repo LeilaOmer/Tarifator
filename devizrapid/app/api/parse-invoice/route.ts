@@ -124,10 +124,27 @@ async function getKnownRatios(supplierName: string, userId: string): Promise<Map
 // la urmatorul in loc sa moara pana observa cineva. Se poate suprascrie complet
 // din mediu, separate prin virgula, deci un model nou se pune FARA deploy.
 const VISION_MODELS = (process.env.GROQ_VISION_MODEL ||
-  'qwen/qwen3.6-27b,meta-llama/llama-4-maverick-17b-128e-instruct')
+  'meta-llama/llama-4-scout-17b-16e-instruct')
   .split(',').map(m => m.trim()).filter(Boolean)
 
-const TEXT_MODELS = (process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile')
+// BUGETUL DE TOKENI, nu marimea raspunsului. Groq REZERVA `max_tokens` din
+// plafonul de tokeni-pe-minut INAINTE sa vada raspunsul real, deci o valoare
+// mare respinge cererea chiar daca modelul ar fi raspuns scurt.
+// Pe planul gratuit, llama-4-scout are ~3-6K TPM. Socoteala pe o cerere:
+//   prompt de sistem ~1.4K + imagine ~0.8-1.5K + max_tokens REZERVAT
+// Cu 4000 rezervati ieseau ~7K => PESTE plafon => 429 la fiecare scanare.
+// 1200 lasa loc pentru prompt + imagine si incape si in cazul cel mai strans.
+// Recuperarea din parseJson salveaza oricum produsele generate pana la taietura,
+// deci un raspuns scurtat pierde mult mai putin decat o cerere respinsa.
+const VISION_MAX_TOKENS = Number(process.env.GROQ_VISION_MAX_TOKENS) || 1200
+const TEXT_MAX_TOKENS = Number(process.env.GROQ_TEXT_MAX_TOKENS) || 1500
+
+// llama-3.3-70b functioneaza in continuare pe acest cont, deci ramane primul —
+// nu inlocuim ce merge. Dar NU apare in lista de modele gratuite disponibile,
+// deci poate disparea oricand; gpt-oss-120b e rezerva (cel mai bun TPM din
+// lista: ~8K, fata de ~6K la restul).
+const TEXT_MODELS = (process.env.GROQ_TEXT_MODEL ||
+  'llama-3.3-70b-versatile,openai/gpt-oss-120b')
   .split(',').map(m => m.trim()).filter(Boolean)
 
 // Incearca modelele pe rand. Trece la urmatorul DOAR pentru "model inexistent";
@@ -451,7 +468,7 @@ async function runVisionScan(
   // factura densa (poza cu multe randuri), prompt+imagine+8192 rezervat
   // poate depasi bugetul de tokeni/minut al modelului de vedere, la fel cum
   // se intampla si la modelul de text daca nu era redus.
-  const { raw, model: usedModel } = await callGroqWithFallback(VISION_MODELS, messages, 4000)
+  const { raw, model: usedModel } = await callGroqWithFallback(VISION_MODELS, messages, VISION_MAX_TOKENS)
   const parsed = parseJson(raw)
   const result = validateAndSanitize(parsed, await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '', userId))
   const items = result && Array.isArray((result as { items?: unknown[] }).items) ? (result as { items: unknown[] }).items : []
@@ -587,7 +604,7 @@ export async function POST(req: NextRequest) {
     // Marja e voit generoasa (nu doar strict cat incape acum) ca sa reziste la urmatoarele reguli adaugate.
     // Preferat sa scadem max_tokens (recuperarea din parseJson salveaza oricum ce apuca sa genereze)
     // decat slice-ul de text de mai sus, ca sa nu taiem input-ul (ex: legenda TVA de la finalul unui bon).
-    const { raw } = await callGroqWithFallback(TEXT_MODELS, messages, 3000)
+    const { raw } = await callGroqWithFallback(TEXT_MODELS, messages, TEXT_MAX_TOKENS)
     const parsed = parseJson(raw)
     const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '', user.id)
     const result = validateAndSanitize(parsed, knownRatios)
