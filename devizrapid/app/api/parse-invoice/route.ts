@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { parseEfacturaXml, isEfacturaXml, parseEfacturaAnafPdf } from '@/lib/pricing/efactura'
 import { isNonProductLine, reconcileUnitPrice, applySgrFromGuaranteeLines, classifySgr, phantomRowIndexes, type ScannedLine } from '@/lib/pricing/scanGuards'
+import { parseInvoiceTableText } from '@/lib/pricing/invoiceTable'
+import { piecesPerBox } from '@/lib/pricing/efactura'
 
 function getSupabaseAdmin() {
   // Cheia anonima — foloseste DOAR pentru auth.getUser(token).
@@ -655,6 +657,41 @@ export async function POST(req: NextRequest) {
     // decalate. Promptul de baza presupune text curat, deci pe OCR modelul
     // "crede" cifre imposibile in loc sa le repare din context.
     const isOcr = str(body.source) === 'ocr'
+
+    // CITIRE DETERMINISTA, inaintea modelului. Tabelele de factura au o ancora
+    // stabila (cota TVA + UM) si coloane care se verifica intre ele
+    // (valoare x cota ≈ TVA_lei). Cand se poate citi asa, NU mai chemam modelul:
+    // rezultatul e identic la fiecare rulare, instant si gratuit.
+    //
+    // Asta rezolva problema de fond de pe text OCR: modelul, pus sa transcrie
+    // zeci de randuri de tabel, sarea randuri DIFERITE la fiecare incercare
+    // (25 / 31 / 35 de produse pe aceeasi poza). Un model nu e un parser.
+    // Layout-urile pe care parserul nu le recunoaste cad in continuare pe model.
+    const table = parseInvoiceTableText(text)
+    if (table) {
+      const asScanned = table.map(r => ({
+        name: r.name,
+        unit: r.unit,
+        price_raw: r.price,
+        price_includes_vat: false,   // coloana Valoare de pe factura e fara TVA
+        pieces_per_box: piecesPerBox(r.name),
+        discount: 0,
+        vat: r.vat,
+        sgr: 0,
+        line_total: r.lineTotal,
+        quantity: r.quantity,
+      }))
+      // Trece prin ACELEASI garduri ca rezultatul modelului: SGR, cutie/bucata,
+      // randuri-fantoma, raportarea excluderilor. Nu duplicam nimic.
+      const ratios = await getKnownRatios('', user.id)
+      const result = validateAndSanitize({ items: asScanned }, ratios)
+      const items = result && Array.isArray((result as { items?: unknown[] }).items)
+        ? (result as { items: unknown[] }).items : []
+      if (items.length > 0) {
+        if (countThisScan) await logScan(userClient, user.id)
+        return NextResponse.json({ ...(result as object), parser: 'tabel' })
+      }
+    }
     const OCR_HINT = `
 
 ATENTIE — textul de mai jos vine din OCR pe o POZA, nu dintr-un PDF. Cifrele pot fi citite gresit (0/O, 1/l/I, 5/S, 6/8, 7/1) si coloanele pot fi decalate sau lipite.

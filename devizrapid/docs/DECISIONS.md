@@ -369,3 +369,19 @@ bucati/cutie de la "fratele" cu acelasi pret, nu-l mai gasea (pretul fratelui fi
 si el gresit. Un singur rand stricat strica doua produse.
 **Principiu:** un invariant care nu poate fi incalcat de date reale (pret unitar <= valoare rand)
 bate orice euristica de salvare. Euristicile se aplica DUPA ce invariantii au trecut, nu inaintea lor.
+
+## ADR-039 — Tabelul de factura se parseaza in cod, nu de model
+**Decizie:** `parseInvoiceTableText` ruleaza INAINTEA modelului pe orice text de factura (OCR sau
+PDF). Ancora: cota TVA + UM. Verificare incrucisata: `valoare x cota ≈ TVA_lei`, apoi
+`pret = valoare / cantitate`. Daca gaseste >= 3 randuri verificabile, modelul nu mai e chemat.
+**De ce:** Pe text OCR, extragerea prin model dadea rezultate ALEATOARE — aceeasi poza, aceeasi
+factura, o data 25 de produse, alta data 31, alta data 35. OCR-ul e determinist, deci variatia
+venea din model: pus sa transcrie 41 de randuri de tabel, sarea randuri diferite la fiecare
+rulare. Nicio ajustare de prompt nu repara asta, pentru ca problema nu e formularea — **un model
+nu e un parser**. Pe factura reala testata: 38/38 randuri, toate preturile corecte, identic la
+fiecare rulare.
+**Beneficiu secundar:** verificarea cu coloana de TVA repara erori pe care modelul nu le putea
+repara — pe randul unde OCR-ul pierduse virgula din valoare ("80.84" => "8084"), TVA-ul (16.98)
+o reconstituie.
+**Extinde principiul ADR-035 / e-Factura:** cand sursa are structura, se citeste in cod. Modelul
+ramane pentru ce chiar nu are structura — layout-uri necunoscute, bonuri, formate noi.
