@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { Item } from '@/lib/pricing/calc'
 import { parseEfacturaXml } from '@/lib/pricing/efactura'
 import { dedupeScannedItems } from '@/lib/pricing/scanGuards'
-import { slicesToText } from '@/lib/pricing/ocr'
+import { slicesToText, prepareImageForOcr } from '@/lib/pricing/ocr'
 
 type ScanResult = { supplier: string; items: Item[] }
 type ApiItem = { name: string; unit: string; supplier_price: number; discount: number; vat: number; sgr: number; verified?: boolean }
@@ -16,6 +16,21 @@ export type ExcludedRow = { name: string; reason: 'garantie' | 'duplicat' }
 type ApiResult = { supplier?: string; items?: ApiItem[]; excluded?: ExcludedRow[]; error?: string; detail?: string; debug?: string }
 
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms))
+
+// Taie textul in bucati de cel mult `max` caractere, MEREU pe granita de rand:
+// un produs sta pe un rand, deci taierea la mijloc de rand ar pierde un produs
+// din fiecare bucata.
+function chunkText(text: string, max: number): string[] {
+  const lines = text.split('\n')
+  const out: string[] = []
+  let cur = ''
+  for (const line of lines) {
+    if (cur && cur.length + line.length + 1 > max) { out.push(cur); cur = '' }
+    cur += (cur ? '\n' : '') + line
+  }
+  if (cur.trim()) out.push(cur)
+  return out.length ? out : [text]
+}
 
 // Oglindeste SCANS_PER_DAY din app/api/parse-invoice/route.ts (limita reala e
 // impusa pe server; asta e doar pentru textul aratat utilizatorului).
@@ -261,7 +276,10 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
         setError('Citesc poza pe telefon (prima data dureaza mai mult)...')
         let text = ''
         try {
-          text = await slicesToText(slices, p => setError(`Citesc poza pe telefon... ${p}%`))
+          // Felii pregatite ANUME pentru OCR (mari, alb-negru, fara compresie) —
+          // NU cele facute pentru modelul de vedere, care sunt mici si JPEG.
+          const ocrSlices = await prepareImageForOcr(file)
+          text = await slicesToText(ocrSlices, p => setError(`Citesc poza pe telefon... ${p}%`))
         } catch {
           setError('Nu am putut citi poza pe telefon. Incarca PDF-ul facturii sau XML-ul de e-Factura.')
           return
@@ -271,13 +289,36 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
           setError('Nu am gasit text in poza. Incearca o poza mai apropiata si mai bine luminata, sau incarca PDF-ul.')
           return
         }
-        const { ok, status, data } = await callApi({ text }, token)
-        if (!ok) { setError(errorMessage(status, data)); return }
-        if (data.items?.length) {
-          collectExcluded([data])
-          onSuccess({ supplier: data.supplier || '', items: mapItems(dedupeScannedItems(data.items)) })
+
+        // Textul se trimite pe BUCATI, nu dintr-o data: `max_tokens` limiteaza
+        // cate produse poate scrie modelul intr-un raspuns, iar o factura lunga
+        // iesea taiata dupa ~15-20 de randuri ("a calculat putin"). Bucatile se
+        // taie pe granita de RAND, ca sa nu rupem un produs in doua.
+        const chunks = chunkText(text, 3500)
+        const results: ApiResult[] = []
+        for (let i = 0; i < chunks.length; i++) {
+          if (chunks.length > 1) setError(`Extrag produsele... (${i + 1}/${chunks.length})`)
+          // sliceIndex > 0 => bucatile urmatoare nu mai consuma din cota zilnica
+          const r = await callApi({ text: chunks[i], sliceIndex: String(i) }, token)
+          if (r.status === 429 || r.data.error === 'rate_limit') {
+            setError(`Ai atins limita de ${SCANS_PER_DAY} scanari pe zi. Revino maine.`)
+            return
+          }
+          results.push(r.data)
+        }
+        setError('')
+
+        const ocrItems = results.flatMap(r => r.items || [])
+        if (ocrItems.length > 0) {
+          collectExcluded(results)
+          onSuccess({
+            supplier: results.find(r => r.supplier)?.supplier || '',
+            items: mapItems(dedupeScannedItems(ocrItems)),
+          })
           return
         }
+        const realErr = results.find(r => r.error)
+        if (realErr) { setError(errorMessage(503, realErr)); return }
         setError('Am citit textul din poza, dar nu am recunoscut produse. Incearca o poza mai clara sau incarca PDF-ul.')
         return
       }

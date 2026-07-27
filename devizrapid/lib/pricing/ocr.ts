@@ -41,6 +41,20 @@ async function getWorker(onProgress?: OcrProgress) {
       logger: m => {
         if (onProgress && m.status === 'recognizing text') onProgress(Math.round(m.progress * 100))
       },
+    }).then(async w => {
+      // Parametri pentru TABELE de factura, nu pentru proza:
+      //  - pageseg 6 = "un bloc uniform de text": citeste rand cu rand, stanga->
+      //    dreapta, deci pastreaza "un rand = un produs". Modul automat (3)
+      //    incearca sa detecteze coloane si amesteca randurile intre ele.
+      //  - dpi 300 = Tesseract isi calibreaza altfel pragurile; fara el trateaza
+      //    pozele de telefon ca text la 70 dpi si pierde cifrele mici.
+      //  - spatiile intre cuvinte pastrate = coloanele raman separabile in text.
+      await w.setParameters({
+        tessedit_pageseg_mode: '6' as never,
+        user_defined_dpi: '300',
+        preserve_interword_spaces: '1',
+      })
+      return w
     }).catch(err => {
       workerPromise = null // o initializare esuata nu trebuie sa blocheze reincercarile
       throw err
@@ -77,12 +91,13 @@ export async function imageToText(
  * mai bine decat poza intreaga redusa la aceeasi latime.
  */
 export async function slicesToText(
-  slices: string[],
+  slices: (string | HTMLCanvasElement)[],
   onProgress?: OcrProgress,
 ): Promise<string> {
   const out: string[] = []
   for (let i = 0; i < slices.length; i++) {
-    const text = await imageToText(`data:image/jpeg;base64,${slices[i]}`, p => {
+    const src = slices[i]
+    const text = await imageToText(typeof src === 'string' ? `data:image/jpeg;base64,${src}` : src, p => {
       // progres pe felie -> progres pe tot documentul
       onProgress?.(Math.round(((i + p / 100) / slices.length) * 100))
     })
@@ -92,4 +107,61 @@ export async function slicesToText(
   // randurile repetate sunt normale aici — deduplicarea produselor se face mai
   // departe, pe produse, nu pe text (`dedupeScannedItems`).
   return out.join('\n')
+}
+
+
+// ————— Pregatirea imaginii PENTRU OCR (nu pentru modelul de vedere) —————
+//
+// Cele doua au nevoi OPUSE, si e usor de gresit (am gresit):
+//   - modelul de VEDERE plateste TOKENI per pixel => imagine MICA, JPEG comprimat;
+//   - OCR-ul ruleaza local, nu plateste nimic => imagine MARE, contrast puternic,
+//     FARA pierderi de compresie.
+// Trimitand OCR-ului feliile facute pentru vedere (1400 px, JPEG 0.82) ii dadeam
+// exact intrarea cea mai proasta posibila. Aici o pregatim cum trebuie.
+
+const OCR_TARGET_WIDTH = 2400   // ~300 dpi pe o factura A4 fotografiata
+const OCR_MAX_SLICE_H = 2400    // felii, ca sa nu explodeze memoria pe telefon
+
+function loadImageEl(f: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(f)
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img) }
+    img.onerror = reject
+    img.src = url
+  })
+}
+
+/**
+ * Imaginea, pregatita pentru OCR: marita la ~2400 px latime, alb-negru, cu
+ * contrast crescut, taiata in felii inalte de cel mult 2400 px.
+ * Intoarce CANVAS-uri, nu base64 — Tesseract le citeste direct, deci nu mai
+ * exista nicio trecere prin JPEG si nicio pierdere.
+ */
+export async function prepareImageForOcr(file: File): Promise<HTMLCanvasElement[]> {
+  const img = await loadImageEl(file)
+  const scale = OCR_TARGET_WIDTH / img.width
+  const w = Math.round(img.width * scale)
+  const h = Math.round(img.height * scale)
+
+  const n = Math.max(1, Math.ceil(h / OCR_MAX_SLICE_H))
+  const sliceH = Math.ceil(h / n)
+  const overlap = Math.round(sliceH * 0.06) // ca sa nu taiem un rand la granita
+
+  const out: HTMLCanvasElement[] = []
+  for (let i = 0; i < n; i++) {
+    const dy = Math.max(0, i * sliceH - (i > 0 ? overlap : 0))
+    const dh = Math.min(h - dy, sliceH + overlap)
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = dh
+    const ctx = canvas.getContext('2d')
+    if (!ctx) continue
+    // Alb-negru + contrast: filtrul de canvas e accelerat hardware, deci mult
+    // mai rapid decat o bucla peste pixeli pe un telefon.
+    ctx.filter = 'grayscale(1) contrast(1.6) brightness(1.05)'
+    ctx.drawImage(img, 0, dy / scale, img.width, dh / scale, 0, 0, w, dh)
+    out.push(canvas)
+  }
+  return out
 }
