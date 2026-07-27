@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { SITE_URL } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Tarifator – Raspunsul la „Cat costa?" | Fisa Servicii & Calculator Pret',
   description: 'Raspunsul instant la „cat costa?" — pentru prestatori de servicii (fisa prin dictare vocala cu preturile tale) si comercianti (calculator pret cu adaos si TVA). Clientul primeste un document clar. Plan gratuit permanent, fara card.',
-  alternates: { canonical: 'https://devizele-mele.vercel.app' },
+  alternates: { canonical: SITE_URL },
 }
 
 export default function LandingPage() {
@@ -21,7 +22,7 @@ export default function LandingPage() {
       description: 'Plan gratuit permanent',
     },
     description: 'Raspunsul instant la „cat costa?" — fisa de servicii prin dictare vocala pentru prestatori si calculator pret cu adaos si TVA pentru comercianti.',
-    url: 'https://devizele-mele.vercel.app',
+    url: SITE_URL,
     inLanguage: 'ro',
   }
 

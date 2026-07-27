@@ -512,3 +512,20 @@ utilizator, ca sa rezolve un caz pe care bump-ul de versiune il acopera deja.
 **Nu exista jurnal de audit pe documentele finalizate.** Ramane in ROADMAP ca idee, nu ca defect
 de reparat acum: e o functionalitate de produs (cine, ce, cand a modificat), nu un patch — cere
 tabel, UI si o decizie despre cat se pastreaza.
+
+## ADR-050 — Curatenie: context.md sters, README real, domeniul intr-un singur loc
+**`context.md` s-a STERS.** Continea informatii false care se contraziceau cu `BUSINESS_RULES.md`:
+"TVA: doar 0% si 21%" (real: 11 si 21), "Numar document: TS-YYYYMM-NNN" (real: DR-), tipul de cont
+"meseriasi" (real: artizan), Next.js 15 (real: 16), un singur model Groq fix (real: liste
+configurabile). Un fisier de context gresit e mai rau decat lipsa lui: urmatoarea sesiune il citeste
+si construieste pe el. Sursa de adevar ramane `BUSINESS_RULES.md` + `docs/`.
+**README-ul** era sablonul `create-next-app`. Acum spune ce e aplicatia, ce variabile de mediu ii
+trebuie si — cel mai important — CARE fisiere SQL din `supabase/` trebuie rulate manual. Erau
+imprastiate prin ADR-uri si prin ROADMAP; cine clona repo-ul nu avea de unde sa stie.
+**Domeniul public** era scris de mana in sase fisiere (sitemap, robots, canonical, Open Graph,
+Termeni). Acum e in `lib/site.ts`, cu suprascriere din `NEXT_PUBLIC_SITE_URL`. La o mutare de
+domeniu se schimbau unele si se uitau altele, iar rezultatul nu e o eroare vizibila: sitemap-ul
+trimite motoarele la adrese moarte si `canonical` le cere sa indexeze o pagina inexistenta. Nimic
+nu cade, doar dispari din cautari.
+**Dependinte scoase:** `@supabase/auth-helpers-nextjs` (pachet declarat depasit de Supabase) si
+`@supabase/ssr` — niciuna importata nicaieri. Build verificat dupa scoatere.

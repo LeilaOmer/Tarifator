@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tarifator
 
-## Getting Started
+Aplicatie pentru comercianti si meseriasi din Romania: scaneaza factura de la
+furnizor, calculeaza pretul de vanzare (adaos, TVA, SGR, cutie/bucata) si scoate
+fisa de servicii sau raportul de activitate ca PDF.
 
-First, run the development server:
+Se foloseste de pe telefon, instalata ca PWA.
+
+## Ruleaza local
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Variabile de mediu (`.env.local`):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variabila | Rol |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | proiectul Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | cheia publica, folosita din browser |
+| `SUPABASE_SERVICE_ROLE_KEY` | doar pe server: contoare, stergere cont, admin |
+| `GROQ_API_KEY` | citirea facturilor |
+| `GROQ_VISION_MODEL` | lista de modele de vedere, separate prin virgula. GOL = se sare direct pe OCR local |
+| `GROQ_TEXT_MODEL` | lista de modele de text pentru PDF/OCR |
+| `RESEND_API_KEY` | emailuri de notificare |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Fara `SUPABASE_SERVICE_ROLE_KEY` aplicatia porneste, dar TOATE plafoanele zilnice
+sunt oprite — apare avertisment in logurile serverului (ADR-047).
 
-## Learn More
+## Inainte de commit
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm test              # vitest
+npx tsc --noEmit
+npm run build         # prinde ce tsc nu vede
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## SQL de rulat o data in Supabase
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Fisierele din `supabase/` nu se aplica automat. Ordinea nu conteaza, dar toate
+trebuie rulate inainte de lansare:
 
-## Deploy on Vercel
+| Fisier | Ce face |
+| --- | --- |
+| `rls.sql` | politicile de izolare intre conturi |
+| `lock-billing-columns.sql` | userul nu-si poate schimba singur planul |
+| `enforce-limits.sql` | limitele impuse in DB + indexul unic pe numarul de fisa |
+| `ip-throttle.sql` | plafon pe IP pentru rutele publice |
+| `consents.sql` | dovada consimtamintelor GDPR |
+| `indexes.sql` | indexurile de pe calea critica |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Unde stau regulile
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `AGENTS.md` — disciplina de cod (ce e voie si ce nu, la modificari).
+- `BUSINESS_RULES.md` — regulile de domeniu: TVA, SGR, cutie/bucata, planuri,
+  numerotarea fiselor. **Se citeste inainte de a atinge orice calcul.**
+- `docs/DECISIONS.md` — jurnalul de decizii (ce s-a decis si DE CE).
+- `docs/PRODUCT.md`, `docs/ROADMAP.md`, `docs/VISION.md` — produsul si ce urmeaza.
+- `docs/AUDIT-LANSARE.md` — metoda de audit de securitate.
+
+Logica de business sta in `lib/` si in `app/api/`, niciodata in componentele UI.
+Aritmetica preturilor se face in cod, nu de AI: la scanare modelul doar
+transcrie, calculele sunt deterministe.

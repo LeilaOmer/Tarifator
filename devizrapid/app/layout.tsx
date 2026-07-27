@@ -5,12 +5,13 @@ import "./globals.css";
 import Link from "next/link";
 import ActiveCompanyBanner from './components/ActiveCompanyBanner'
 import CookieBanner from './components/CookieBanner'
+import { SITE_URL } from '@/lib/site'
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://devizele-mele.vercel.app'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'Tarifator – Raspunsul la „Cat costa?" | Fisa Servicii & Calculator Pret',
     template: '%s | Tarifator',
@@ -47,7 +48,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'ro_RO',
-    url: 'https://devizele-mele.vercel.app',
+    url: SITE_URL,
     siteName: 'Tarifator',
     title: 'Tarifator – Raspunsul la „Cat costa?"',
     description: '„Cat costa?" — raspunsul in secunde. Fisa servicii prin dictare vocala pentru prestatori + calculator pret cu adaos si TVA pentru comercianti. Plan gratuit permanent.',

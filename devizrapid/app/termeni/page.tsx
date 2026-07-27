@@ -1,3 +1,5 @@
+import { SITE_HOST } from '@/lib/site'
+
 export default function TermeniPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
@@ -24,7 +26,7 @@ export default function TermeniPage() {
         </div>
 
         <Section title="1. Partile contractante">
-          <p>Prezentii Termeni si Conditii ("Termeni") reglementeaza utilizarea aplicatiei <strong>Tarifator</strong> ("Serviciul"), disponibila la adresa <em>devizele-mele.vercel.app</em>.</p>
+          <p>Prezentii Termeni si Conditii ("Termeni") reglementeaza utilizarea aplicatiei <strong>Tarifator</strong> ("Serviciul"), disponibila la adresa <em>{SITE_HOST}</em>.</p>
           <p className="mt-2">Serviciul este furnizat de <strong>Tarifator</strong> (serviciu in faza beta, operat de o persoana fizica, in curs de inregistrare ca entitate juridica), denumit in continuare "Furnizor".</p>
           <p className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">Aplicatia este in faza de pre-lansare (beta). In aceasta etapa accesul este complet si gratuit; abonamentele platite se activeaza la lansare.</p>
           <p className="mt-2">Serviciul este destinat exclusiv persoanelor cu varsta de minimum <strong>18 ani</strong>. Prin crearea unui cont confirmati ca aveti cel putin 18 ani, ati citit, inteles si acceptat acesti Termeni.</p>
