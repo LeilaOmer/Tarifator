@@ -12,7 +12,7 @@ type ApiItem = { name: string; unit: string; supplier_price: number; discount: n
 // (garantie/ambalaj SGR sau rand-fantoma duplicat). Sunt EURISTICI si pot gresi
 // — pe un comerciant de ambalaje sau pe un aviz fara coloana de cantitate pot
 // scoate marfa reala. Pana acum greseau in tacere; acum se ARATA.
-export type ExcludedRow = { name: string; reason: 'garantie' | 'duplicat' }
+export type ExcludedRow = { name: string; reason: 'garantie' | 'duplicat' | 'neclar' }
 type ApiResult = { supplier?: string; items?: ApiItem[]; excluded?: ExcludedRow[]; error?: string; detail?: string; debug?: string }
 
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms))

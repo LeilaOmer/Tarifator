@@ -342,3 +342,16 @@ erau doua variabile. Consecinta practica: se poate lasa TEXTUL pe un plan gratui
 vederea, care e partea scumpa si greu de inlocuit.
 **Ordinea de preferinta pe poze ramane:** furnizor de vedere (daca e configurat) -> OCR local
 (ADR-035). Nicio cale nu depinde de un singur furnizor.
+
+## ADR-037 — Randurile respinse de filtrul numeric si preturile-zero se RAPORTEAZA
+**Decizie:** Extins `excluded` cu al treilea motiv, `neclar`: (1) un rand cu nume de produs dar
+fara niciun pret/cantitate valid extras (filtrul numeric din `validateAndSanitize` il respingea
+tacut); (2) un produs al carui pret CALCULAT (dupa cutie/bucata, discount, TVA) rotunjeste la 0.
+**De ce:** Raportat direct: scanare OCR cu 35 din 41 de produse gasite, doua cu 0 lei — si nicio
+cale sa se vada ce s-a intamplat cu restul de 6. `excluded` acoperea deja garantiile (ADR-033) si
+duplicatele-fantoma, dar rata cea mai probabila sursa de pierdere pe text OCR (zgomotos, cifre des
+mazgalite): randuri respinse de validarea numerica de baza. Un pret 0 e in plus imposibil legitim
+— liniile PROMO/gratuite sunt deja excluse de model — deci orice 0 e un artefact de calcul (cantitate
+citita gresit, raport bucati/cutie mostenit gresit de la un "produs frate"), nu un produs real.
+**Principiu, acelasi ca la ADR-033/H4/H9:** o decizie automata care poate ascunde munca sau banii
+utilizatorului trebuie SA SE VADA, chiar si atunci cand codul e sigur ca a decis corect.

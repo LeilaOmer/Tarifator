@@ -325,7 +325,7 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
   // gresi (un comerciant de ambalaje, un rand real fara cantitate proprie), iar
   // pana acum greseau in TACERE — produsul lipsea din rezultat fara ca omul sa
   // aiba cum sa afle. Raportam fiecare excludere, ca decizia finala sa fie a lui.
-  const excluded: { name: string; reason: 'garantie' | 'duplicat' }[] = []
+  const excluded: { name: string; reason: 'garantie' | 'duplicat' | 'neclar' }[] = []
 
   const filtered = (d.items as unknown[]).filter((i: unknown) => {
     if (!i || typeof i !== 'object') return false
@@ -341,8 +341,13 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
     const priceRaw = Number(item.price_raw)
     const lineTotal = Number(item.line_total)
     const quantity = Number(item.quantity)
-    if (isReceipt) return lineTotal > 0
-    return priceRaw > 0 || (lineTotal > 0 && quantity > 0)
+    const ok = isReceipt ? lineTotal > 0 : priceRaw > 0 || (lineTotal > 0 && quantity > 0)
+    // Randul avea NUME de produs, dar niciun pret/cantitate valid din care sa se
+    // calculeze ceva — de obicei text OCR mazgalit, nu un produs inexistent. Fara
+    // asta, randul disparea complet, fara nicio urma: nici in lista, nici in
+    // avertismentul de excludere (`excluded` prindea doar garantiile).
+    if (!ok) excluded.push({ name: item.name, reason: 'neclar' })
+    return ok
   }) as Record<string, unknown>[]
 
   if (isReceipt) {
@@ -366,6 +371,13 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
       // verified = randul a putut fi verificat aritmetic; clientul il prefera la
       // deduplicarea intre feliile suprapuse ale aceleiasi poze.
       return { name: item.name, unit, supplier_price: supplierPrice, vat, discount: 0, sgr, verified: lineTotal > 0 }
+    })
+    // Aceeasi garda ca la factura: o reducere de card citita gresit (>= totalul
+    // liniei) poate duce pretul la 0 — il raportam, nu-l lasam ca rand fantoma.
+    d.items = (d.items as { name: string; supplier_price: number }[]).filter(it => {
+      if (it.supplier_price > 0) return true
+      excluded.push({ name: it.name, reason: 'neclar' })
+      return false
     })
     d.excluded = excluded
     return d
@@ -434,7 +446,7 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
     }
   }
 
-  d.items = kept.map(p => {
+  const built = kept.map(p => {
     const ratio = p.isBoxUnit
       ? (p.ownRatio > 1 ? p.ownRatio : (siblingRatios.get(p.siblingKey) ?? 1))
       : 1
@@ -446,6 +458,18 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
     const unit = p.isBoxUnit || !rawUnit || rawUnit.startsWith('buc') || /^(l|lt|litru|litri|ml)$/.test(rawUnit)
       ? 'buc' : rawUnit
     return { name: p.name, unit, supplier_price: supplierPrice, vat: p.vat, discount: p.discount, sgr: p.sgr, verified: p.verified }
+  })
+
+  // Niciun produs de la un furnizor nu costa 0 lei (liniile PROMO/gratuite sunt
+  // deja excluse de model conform SYSTEM_PROMPT). Un pret care rotunjeste la 0
+  // e semnul unui calcul stricat de un citit gresit undeva in lant — cantitate
+  // mazgalita de OCR, sau un raport bucati/cutie mostenit gresit de la un
+  // "produs frate" cu nume asemanator. Il scoatem din lista si il RAPORTAM, in
+  // loc sa lasam un rand fantoma cu "0.00 lei" pe care userul nu stie sa-l explice.
+  d.items = built.filter(it => {
+    if (it.supplier_price > 0) return true
+    excluded.push({ name: String(it.name), reason: 'neclar' })
+    return false
   })
   d.excluded = excluded
   return d

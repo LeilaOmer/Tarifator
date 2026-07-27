@@ -135,7 +135,11 @@ export default function PricingPage() {
             <ul className="mt-1 space-y-0.5" style={{ color: '#92700e' }}>
               {excluded.map((e, i) => (
                 <li key={i}>
-                  • {e.name} <span className="opacity-70">({e.reason === 'garantie' ? 'pare garantie/ambalaj' : 'pare rand duplicat'})</span>
+                  • {e.name} <span className="opacity-70">({
+                    e.reason === 'garantie' ? 'pare garantie/ambalaj' :
+                    e.reason === 'duplicat' ? 'pare rand duplicat' :
+                    'pret/cantitate necitite corect'
+                  })</span>
                 </li>
               ))}
             </ul>
