@@ -50,6 +50,10 @@ trebuie rulate inainte de lansare:
 | `consents.sql` | dovada consimtamintelor GDPR |
 | `indexes.sql` | indexurile de pe calea critica |
 
+`verifica.sql` nu modifica nimic — spune care dintre ele au fost aplicate
+si care lipsesc. Un fisier ne-rulat nu da nicio eroare, doar lipseste
+protectia, deci merita rulat dupa fiecare.
+
 ## Unde stau regulile
 
 - `AGENTS.md` — disciplina de cod (ce e voie si ce nu, la modificari).
