@@ -35,10 +35,25 @@ export async function allowDaily(userId: string, endpoint: string, dailyLimit: n
   }
 }
 
-// IP-ul clientului din headerele proxy-ului (Vercel seteaza x-forwarded-for).
+// IP-ul REAL al clientului, din headerele puse de platforma.
+//
+// ATENTIE (bug corectat): `x-forwarded-for` e un LANT, iar valoarea din STANGA e
+// cea trimisa de client — deci controlata de el. Luand `[0]`, oricine punea
+// `X-Forwarded-For: 1.2.3.4` primea o "identitate" noua la fiecare cerere si
+// ocolea complet plafonul zilnic. Ordinea corecta:
+//   1. headerele proprii ale platformei (Vercel le SUPRASCRIE, nu le accepta
+//      de la client), apoi
+//   2. ULTIMA valoare din lant — cea adaugata de proxy-ul cel mai apropiat de
+//      noi, singura pe care clientul nu o poate falsifica.
 export function clientIp(req: Request): string {
-  const xff = req.headers.get('x-forwarded-for') || ''
-  return xff.split(',')[0].trim() || req.headers.get('x-real-ip') || ''
+  const vercel = req.headers.get('x-vercel-forwarded-for')?.trim()
+  if (vercel) return vercel.split(',').pop()!.trim()
+
+  const real = req.headers.get('x-real-ip')?.trim()
+  if (real) return real
+
+  const chain = (req.headers.get('x-forwarded-for') || '').split(',').map(s => s.trim()).filter(Boolean)
+  return chain.length ? chain[chain.length - 1] : ''
 }
 
 // La fel ca allowDaily, dar cheia e IP-ul, nu userId — pentru rutele PUBLICE

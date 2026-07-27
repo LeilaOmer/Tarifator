@@ -19,7 +19,10 @@ function adminClient(): SupabaseClient | null {
 export async function POST(req: NextRequest) {
   // Ruta e PUBLICA (pre-signup). Throttle pe IP ca sa nu fie folosita la nesfarsit
   // pentru enumerare de conturi / apeluri repetate de listUsers de la un singur IP.
-  if (!(await allowDailyByIp(clientIp(req), 'check-signup', 60))) {
+  // 20/zi de la un IP REAL (clientIp nu mai poate fi falsificat dintr-un header).
+  // Un om care isi face cont verifica una-doua adrese; 20 acopera lejer si cazul
+  // in care greseste de cateva ori, dar taie enumerarea in masa.
+  if (!(await allowDailyByIp(clientIp(req), 'check-signup', 20))) {
     return NextResponse.json({ ok: true }) // fail-open, nu blocam inregistrarea reala
   }
 
@@ -37,7 +40,13 @@ export async function POST(req: NextRequest) {
 
   const target = canonicalEmail(email)
   try {
-    for (let page = 1; page <= 50; page++) {
+    // Plafon de 5 pagini (~5.000 de conturi). Inainte erau 50 (~50.000), deci
+    // FIECARE verificare de email putea plimba 50.000 de randuri prin functie —
+    // lent, scump, si o parghie de amplificare pentru cine apela ruta repetat.
+    // Cand baza depaseste plafonul, cautarea devine partiala: acceptat DELIBERAT,
+    // pentru ca ruta e o masura ANTI-ABUZ, nu o poarta de securitate — signUp
+    // respinge oricum duplicatul exact.
+    for (let page = 1; page <= 5; page++) {
       const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 })
       if (error || !data) break
       if (data.users.some(u => u.email && canonicalEmail(u.email) === target)) {

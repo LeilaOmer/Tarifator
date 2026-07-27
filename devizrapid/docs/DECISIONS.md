@@ -404,3 +404,19 @@ pe care subiectul o poate rescrie nu mai e dovada. Retragerea se inregistreaza c
 **Ramane de facut:** utilizatorii inregistrati INAINTE de aceasta schimbare nu au dovada, si ea nu
 se poate reconstitui retroactiv — ar fi o falsificare. Li se va cere acordul din nou, la prima
 autentificare (vezi ROADMAP). Pana atunci, absenta lor din tabel e informatia corecta.
+
+## ADR-041 — IP-ul de throttling se ia din coada lantului, nu din cap
+**Decizie:** `clientIp` prefera headerele platformei (`x-vercel-forwarded-for`, `x-real-ip`), iar
+din `x-forwarded-for` ia ULTIMA valoare, nu prima.
+**De ce:** `x-forwarded-for` e un lant in care valoarea din STANGA vine de la client. Luand-o pe
+aceea, oricine trimitea `X-Forwarded-For: <aleator>` primea o identitate noua la fiecare cerere si
+ocolea complet plafonul zilnic — adica singura aparare a rutelor publice, pre-autentificare, nu
+exista. Ultima valoare e cea adaugata de proxy-ul cel mai apropiat de noi, singura pe care clientul
+nu o poate falsifica.
+
+## ADR-042 — Plafon si pe scrierea in tabelul partajat de raporturi cutie/bucata
+**Decizie:** `/api/box-ratio` primeste `allowDaily(userId, 'box-ratio', 30)`.
+**De ce:** Era singura ruta care scrie intr-un tabel PARTAJAT intre toti utilizatorii (ADR-024) si
+singura ramasa fara plafon. Un cont putea insera oricate raporturi gresite, iar ele se aplicau
+automat la scanarile tuturor clientilor aceluiasi furnizor. 30/zi acopera lejer corectiile reale
+ale unui comerciant; peste, e abuz.
