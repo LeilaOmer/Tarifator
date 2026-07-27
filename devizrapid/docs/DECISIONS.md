@@ -465,3 +465,50 @@ le poate folosi.
 **Ce NU rezolva:** `/api/check-signup` si `/api/admin/lifetime` parcurg `auth.users` prin
 `listUsers()`, nu tabelul `profiles` — niciun index nu le ajuta, e nevoie de schimbare de cod
 (ROADMAP).
+
+## ADR-046 — Numarul de fisa se reincearca la coliziune
+**Decizie:** Ambele locuri care creeaza fise (`/quotes`, `/quick`) trec prin
+`insertQuoteWithNumber()`. La eroare de unicitate se reciteste maximul si se incearca din nou,
+de trei ori. Orice ALTA eroare se intoarce imediat.
+**De ce:** `nextQuoteNumber` citeste maximul, apoi se scrie — intre cele doua momente o a doua
+creare (alt tab, alt telefon pe acelasi cont) poate lua acelasi numar. Indexul unic din
+`enforce-limits.sql` opreste dublura, dar pana acum ea ajungea la om ca mesaj de baza de date, cu
+fisa nesalvata. Acum coliziunea e invizibila.
+**De ce NU se reincearca la alte erori:** ar ascunde cauza reala (RLS, coloana lipsa, retea) si ar
+face trei cereri degeaba.
+**Depinde de:** indexul unic `quotes_unique_number`. Fara el nu apare nicio eroare si se salveaza
+doua fise cu acelasi numar — pe un document dat clientului, exact ce nu vrem. Deci
+`supabase/enforce-limits.sql` ramane obligatoriu inainte de lansare.
+
+## ADR-047 — Fail-open ramane, dar nu mai e tacut
+**Decizie:** Fiecare loc care lasa o cerere sa treaca fara plafon (cheie de service-role lipsa,
+eroare de citire a contorului, exceptie, IP nedeterminabil) scrie in logurile serverului.
+`warnOnce` per cauza, ca sa se poata gasi fara sa inunde logul.
+**De ce fail-open ramane:** contoarele sunt aparare anti-abuz, nu poarta critica; un hopa de retea
+nu are voie sa blocheze un utilizator care plateste.
+**De ce tacut era o capcana:** o singura variabila de mediu lipsa oprea TOATE plafoanele din
+aplicatie deodata, si nimic nu semnala asta — sistemul parea sanatos in timp ce singura aparare
+impotriva abuzului nu mai exista. La fel, eroarea de CITIRE a contorului era inghitita: `count`
+ramanea `undefined`, `?? 0` il facea sa arate ca "zero folosiri azi", si limita nu se mai atingea
+niciodata.
+
+## ADR-048 — Vitest stie aliasul `@/`
+**Decizie:** `vitest.config.ts` mapeaza `@` la radacina proiectului.
+**De ce:** Vitest nu citeste `paths` din `tsconfig.json`. Fara alias, orice fisier care importa
+`@/lib/...` nu putea fi testat DELOC — testul cadea la incarcare, nu la o asertiune. Efectul
+secundar era mai subtil decat inconvenientul: ajungea sa fie acoperit cu teste doar codul fara
+importuri interne, adica exact codul deja cel mai izolat si cel mai putin riscant.
+
+## ADR-049 — Ce s-a decis sa NU se schimbe (limite acceptate constient)
+**`allowDaily` are o fereastra de cursa (TOCTOU).** Numara, apoi insereaza; doua cereri simultane
+pot vedea amandoua "sub limita". Nu se repara: costul maxim e un apel gratuit in plus, iar conturile
+sunt folosite de un singur operator. Repararea corecta cere o functie atomica in baza de date, deci
+inca un fisier SQL de rulat si o schimbare pe calea critica a fiecarui apel AI — disproportionat
+fata de ce se castiga.
+**Service worker-ul nu expira intrarile din cache.** Strategia e network-first: cache-ul se
+foloseste doar cand reteaua cade, iar `CACHE = 'tarifator-vN'` sterge tot la fiecare versiune noua.
+Un mecanism de expirare peste asta ar adauga cod pe calea prin care ajunge FIECARE fisier la
+utilizator, ca sa rezolve un caz pe care bump-ul de versiune il acopera deja.
+**Nu exista jurnal de audit pe documentele finalizate.** Ramane in ROADMAP ca idee, nu ca defect
+de reparat acum: e o functionalitate de produs (cine, ce, cand a modificat), nu un patch — cere
+tabel, UI si o decizie despre cat se pastreaza.

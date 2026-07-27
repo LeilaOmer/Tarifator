@@ -55,7 +55,12 @@ async function allowScan(userClient: ReturnType<typeof getUserClient>, userId: s
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
     .gte('created_at', todayRo())
-  if (error) return true
+  if (error) {
+    // Fail-open, dar cu urma in log: fara ea, o politica RLS gresita oprea tacut
+    // contorizarea scanarilor si limita de plan nu se mai atingea niciodata.
+    console.error('[parse-invoice] nu s-a putut citi contorul de scanari => trece fara plafon:', error.message)
+    return true
+  }
   return (count ?? 0) < SCANS_PER_DAY
 }
 

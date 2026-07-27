@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { ensureAccountLocal } from '@/lib/session'
 import { getEffectiveLimits } from '@/lib/plan'
 import { getMonthlyFise } from '@/lib/usage'
-import { nextQuoteNumber } from '@/lib/quoteNumber'
+import { insertQuoteWithNumber, quoteInsertMessage } from '@/lib/quoteNumber'
 import { useRouter } from 'next/navigation'
 
 type Service = { id: string; name: string; unit: string; price_per_unit: number }
@@ -286,21 +286,18 @@ export default function QuickPage() {
       }
     }
     const companyId = localStorage.getItem('dashboardMode') === 'pro' ? (localStorage.getItem('activeCompanyId') || null) : null
-    const quote_number = await nextQuoteNumber(user.id, companyId)
-
     // Totalul se calculeaza INAINTE si se scrie din prima: nu mai e nevoie de un
     // update separat care putea esua dupa ce fisa era deja creata.
     const total = Math.round(preview.items.reduce((sum, i) => sum + i.total, 0) * 100) / 100
-    const { data: quote, error: quoteErr } = await supabase.from('quotes').insert({
+    const { data: quote, error: quoteErr } = await insertQuoteWithNumber(user.id, companyId, {
       title: 'Fisa Servicii ' + (preview.client_name || ''),
       user_id: user.id,
       client_id,
       status: 'draft',
       total,
-      quote_number,
       company_id: companyId
-    }).select().single()
-    if (quoteErr || !quote) { setLoading(false); toast('Nu s-a creat fisa: ' + (quoteErr?.message || 'eroare necunoscuta')); return }
+    })
+    if (quoteErr || !quote) { setLoading(false); toast('Nu s-a creat fisa: ' + quoteInsertMessage(quoteErr)); return }
 
     // Liniile se insereaza intr-o SINGURA cerere. Inainte era o bucla care iesea
     // la prima eroare, lasand in urma o fisa cu jumatate din linii si total 0 —

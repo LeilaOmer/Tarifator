@@ -36,7 +36,10 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = adminClient()
-  if (!admin) return NextResponse.json({ ok: true })
+  if (!admin) {
+    console.error('[check-signup] config Supabase lipsa => verificarea de duplicat e OPRITA')
+    return NextResponse.json({ ok: true })
+  }
 
   const target = canonicalEmail(email)
   try {
@@ -48,13 +51,17 @@ export async function POST(req: NextRequest) {
     // respinge oricum duplicatul exact.
     for (let page = 1; page <= 5; page++) {
       const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 })
-      if (error || !data) break
+      if (error || !data) {
+        console.error('[check-signup] listUsers a esuat => verificarea de duplicat e incompleta:', error?.message)
+        break
+      }
       if (data.users.some(u => u.email && canonicalEmail(u.email) === target)) {
         return NextResponse.json({ ok: false, error: 'Acest email are deja cont. Autentifica-te.' }, { status: 409 })
       }
       if (data.users.length < 1000) break
     }
-  } catch {
+  } catch (err) {
+    console.error('[check-signup] verificarea de duplicat a aruncat => trece:', err)
     return NextResponse.json({ ok: true }) // fail-open
   }
   return NextResponse.json({ ok: true })

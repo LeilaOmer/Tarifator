@@ -7,7 +7,7 @@ import { ensureAccountLocal } from '@/lib/session'
 import { anafLookup } from '@/lib/anaf'
 import { getEffectiveLimits } from '@/lib/plan'
 import { getMonthlyFise } from '@/lib/usage'
-import { nextQuoteNumber } from '@/lib/quoteNumber'
+import { insertQuoteWithNumber, quoteInsertMessage } from '@/lib/quoteNumber'
 import { useRouter } from 'next/navigation'
 
 type Quote = { id: string; title: string; status: string; total: number; created_at: string; client_id: string | null; company_id: string | null }
@@ -73,14 +73,13 @@ async function fetchData() {
     }
 
     const user = session.user
-    const quote_number = await nextQuoteNumber(user.id, activeCompanyId || null)
-    const { data, error } = await supabase.from('quotes').insert({
+    const { data, error } = await insertQuoteWithNumber(user.id, activeCompanyId || null, {
       title, user_id: user.id, status: 'draft', total: 0,
-      client_id: clientId || null, quote_number,
+      client_id: clientId || null,
       company_id: activeCompanyId || null
-    }).select().single()
+    })
     setLoading(false)
-    if (error || !data) { toast('Nu s-a creat fisa: ' + (error?.message || 'eroare necunoscuta')); return }
+    if (error || !data) { toast('Nu s-a creat fisa: ' + quoteInsertMessage(error)); return }
     setTitle(''); setClientId('')
     router.push(`/quotes/${data.id}`)
   }
