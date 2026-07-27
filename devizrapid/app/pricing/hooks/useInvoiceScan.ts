@@ -129,6 +129,10 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState('')
   const [excluded, setExcluded] = useState<ExcludedRow[]>([])
+  // Textul BRUT citit de OCR. Fara el, orice problema de scanare se
+  // diagnosticheaza pe ghicite: nu se poate distinge "OCR-ul a citit gresit
+  // cifra" de "modelul a extras gresit dintr-un text corect". Se arata la cerere.
+  const [ocrText, setOcrText] = useState('')
 
   // Excluderile din toate feliile unei poze, fara duplicate (aceeasi linie poate
   // aparea in doua felii suprapuse).
@@ -184,6 +188,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
     setScanning(true)
     setError('')
     setExcluded([])
+    setOcrText('')
     try {
       // e-Factura XML = date structurate: le citim determinist in cod (100% corect,
       // gratuit, instant), fara AI si fara sa consumam din cota de scanari. Trebuie
@@ -284,6 +289,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
           setError('Nu am putut citi poza pe telefon. Incarca PDF-ul facturii sau XML-ul de e-Factura.')
           return
         }
+        setOcrText(text)
         setError('')
         if (text.trim().length < 40) {
           setError('Nu am gasit text in poza. Incearca o poza mai apropiata si mai bine luminata, sau incarca PDF-ul.')
@@ -299,7 +305,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
         for (let i = 0; i < chunks.length; i++) {
           if (chunks.length > 1) setError(`Extrag produsele... (${i + 1}/${chunks.length})`)
           // sliceIndex > 0 => bucatile urmatoare nu mai consuma din cota zilnica
-          const r = await callApi({ text: chunks[i], sliceIndex: String(i) }, token)
+          const r = await callApi({ text: chunks[i], sliceIndex: String(i), source: 'ocr' }, token)
           if (r.status === 429 || r.data.error === 'rate_limit') {
             setError(`Ai atins limita de ${SCANS_PER_DAY} scanari pe zi. Revino maine.`)
             return
@@ -365,5 +371,5 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
     }
   }
 
-  return { scanning, error, excluded, handleScan }
+  return { scanning, error, excluded, ocrText, handleScan }
 }

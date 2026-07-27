@@ -650,8 +650,19 @@ export async function POST(req: NextRequest) {
     // coada facturii (produse lipsa) FARA nicio eroare vizibila. Cu prompt
     // (~1.4k tokeni) + text (~3.5k) + max_tokens rezervat (3000) ramanem
     // confortabil sub bugetul de ~30k tokeni/minut al planului Groq gratuit.
+    // Textul din OCR e ALTFEL decat cel extras dintr-un PDF: cifrele sunt des
+    // citite gresit (0/O, 1/l/I, 5/S, 6/8), iar coloanele pot fi lipite sau
+    // decalate. Promptul de baza presupune text curat, deci pe OCR modelul
+    // "crede" cifre imposibile in loc sa le repare din context.
+    const isOcr = str(body.source) === 'ocr'
+    const OCR_HINT = `
+
+ATENTIE — textul de mai jos vine din OCR pe o POZA, nu dintr-un PDF. Cifrele pot fi citite gresit (0/O, 1/l/I, 5/S, 6/8, 7/1) si coloanele pot fi decalate sau lipite.
+- Verificarea cantitate x pret ≈ valoarea randului e OBLIGATORIE. Daca nu se potriveste, incearca sa CORECTEZI o cifra confundata (ex. "l2.50" = 12.50, "S.90" = 5.90) pana se verifica.
+- Daca dupa incercari randul tot nu se verifica, pune price_raw=0 si line_total=0 — NU ghici un pret. Un rand marcat asa e semnalat utilizatorului; un pret inventat ii strica marja fara sa stie.
+- Preturile de pe o factura reala sunt intre 0,10 si 10.000 lei. Un pret in afara intervalului e aproape sigur o citire gresita.`
     const messages = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: SYSTEM_PROMPT + (isOcr ? OCR_HINT : '') },
       { role: 'user', content: text.slice(0, 12000) },
     ]
     // max_tokens e rezervat integral din bugetul TPM de Groq inainte sa vada raspunsul real,

@@ -31,7 +31,7 @@ export default function PricingPage() {
 
   const draft = usePricingDraft()
 
-  const { scanning, error: scanError, excluded, handleScan } = useInvoiceScan(({ supplier, items }) => {
+  const { scanning, error: scanError, excluded, ocrText, handleScan } = useInvoiceScan(({ supplier, items }) => {
     if (supplier) draft.setSupplier(supplier)
     draft.setItems(items)
   })
@@ -147,6 +147,26 @@ export default function PricingPage() {
               Daca vreunul e produs real, adauga-l manual mai jos.
             </p>
           </div>
+        )}
+
+        {/* Textul BRUT citit din poza. Ascuns implicit, dar disponibil: fara el,
+            orice problema de scanare se diagnosticheaza pe ghicite — nu se poate
+            distinge "OCR-ul a citit gresit cifra" de "modelul a extras gresit
+            dintr-un text corect". Cele doua cer reparatii complet diferite. */}
+        {ocrText && (
+          <details className="bg-white rounded-2xl shadow-sm p-3 text-xs">
+            <summary className="font-semibold text-gray-600 cursor-pointer">
+              Vezi textul citit din poza ({ocrText.length} caractere)
+            </summary>
+            <button
+              onClick={() => navigator.clipboard?.writeText(ocrText)}
+              className="mt-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-semibold">
+              Copiaza textul
+            </button>
+            <pre className="mt-2 whitespace-pre-wrap break-words text-[10px] leading-snug text-gray-600 max-h-64 overflow-y-auto">
+              {ocrText}
+            </pre>
+          </details>
         )}
 
         <SettingsPanel
