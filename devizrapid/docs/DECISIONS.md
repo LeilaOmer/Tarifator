@@ -313,3 +313,21 @@ la nesfarsit o factura perfect lizibila. Doua concluzii, ambele aplicate: (1) o 
 care se poate schimba peste noapte trebuie sa fie o variabila, nu o constanta ingropata;
 (2) un mesaj de eroare implicit NU are voie sa fie o CONCLUZIE despre cauza ("poza e neclara") —
 concluziile se spun doar cand sunt sustinute; restul se raporteaza ca necunoscut, cu detaliu.
+
+## ADR-035 — Poza = sursa de text; OCR local ca rezerva fara furnizor
+**Decizie:** Calea pozelor devine "obtine text din imagine, prin ce mijloc e disponibil":
+model de vedere daca exista, altfel **OCR local in browser** (Tesseract.js, fisiere gazduite in
+`public/tesseract/`). Textul intra apoi in exact acelasi flux ca PDF-urile.
+**De ce:** Scanarea din poza depindea integral de un model de vedere la un furnizor extern. Cand
+acesta a disparut de pe planul gratuit (iulie 2026), functia-vedeta a produsului a murit complet
+si nu mai exista NICIO alternativa — nici macar una mai slaba. OCR-ul local ruleaza pe telefonul
+utilizatorului: fara cheie, fara cota, fara cost, imposibil de depreciat de altcineva. Fisierele
+sunt gazduite local pentru ca CSP-ul are `connect-src 'self'` (un CDN ar fi blocat) si pentru ca
+asa merge si offline.
+**Compromis asumat:** OCR-ul e mai slab decat un model de vedere pe poze strambe sau prost
+luminate. Acceptat constient: "merge mai slab" bate "nu merge deloc", iar cand un model de vedere
+E disponibil, el are prioritate. Cost: ~5 MB de fisiere statice, descarcate o singura data pe
+dispozitiv.
+**Principiu general:** orice functie-cheie care depinde de un singur furnizor extern are nevoie de
+o cale de rezerva care NU depinde de el. Altfel produsul are un intrerupator pe care il tine
+altcineva.

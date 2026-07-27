@@ -151,6 +151,11 @@ const TEXT_MODELS = (process.env.GROQ_TEXT_MODEL ||
 // orice alta eroare (limita de rata, cerere prea mare) e reala si se propaga —
 // n-are rost sa ardem cota pe alte modele pentru aceeasi problema.
 async function callGroqWithFallback(models: string[], messages: unknown[], maxTokens: number) {
+  // Lista GOALA = "nu avem model de vedere". Semnalam imediat, fara nicio cerere
+  // de retea: clientul trece pe OCR local. Se seteaza GROQ_VISION_MODEL="" cand
+  // contul nu are niciun model de vedere, ca sa nu mai pierdem un drum pe fiecare
+  // felie de poza.
+  if (models.length === 0) throw new Error('groq_model_gone::niciun model configurat')
   let lastGone = ''
   for (const model of models) {
     try {

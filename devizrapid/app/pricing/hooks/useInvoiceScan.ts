@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { Item } from '@/lib/pricing/calc'
 import { parseEfacturaXml } from '@/lib/pricing/efactura'
 import { dedupeScannedItems } from '@/lib/pricing/scanGuards'
+import { slicesToText } from '@/lib/pricing/ocr'
 
 type ScanResult = { supplier: string; items: Item[] }
 type ApiItem = { name: string; unit: string; supplier_price: number; discount: number; vat: number; sgr: number; verified?: boolean }
@@ -218,6 +219,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
       const sliceRes: ApiResult[] = []
       let rateLimited = false
       let quotaExhausted = false
+      let noVision = false
       let fatalTooLarge: { status: number; data: ApiResult } | null = null
       for (let idx = 0; idx < slices.length; idx++) {
         // sliceIndex: doar felia 0 consuma din cota zilnica — feliile sunt
@@ -237,6 +239,9 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
         // mai trimitem feliile urmatoare, si mai ales nu are voie sa cada in
         // ramura de "poza neclara" — asta ascundea motivul real.
         if (r.status === 429 || r.data.error === 'rate_limit') { quotaExhausted = true; break }
+        // Niciun model de VEDERE disponibil pe server. Nu mai trimitem si restul
+        // feliilor degeaba — trecem pe OCR local pentru tot documentul.
+        if (r.data.error === 'groq_model_gone' || r.data.error === 'no_vision') { noVision = true; break }
         if (!r.ok && r.data.error === 'groq_rate_limit') rateLimited = true
         if (!r.ok && r.data.error === 'groq_too_large' && !fatalTooLarge) fatalTooLarge = { status: r.status, data: r.data }
       }
@@ -244,6 +249,36 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
 
       if (quotaExhausted) {
         setError(`Ai atins limita de ${SCANS_PER_DAY} scanari pe zi. Revino maine.`)
+        return
+      }
+
+      // ————— REZERVA: citim poza LOCAL, pe telefon —————
+      // Fara model de vedere la furnizor, poza tot poate fi citita: OCR-ul din
+      // browser scoate TEXTUL, iar textul intra exact in calea care merge deja
+      // pentru PDF-uri. Mai slab decat un model de vedere pe poze strambe, dar
+      // nu depinde de nimeni si nu poate fi oprit peste noapte.
+      if (noVision) {
+        setError('Citesc poza pe telefon (prima data dureaza mai mult)...')
+        let text = ''
+        try {
+          text = await slicesToText(slices, p => setError(`Citesc poza pe telefon... ${p}%`))
+        } catch {
+          setError('Nu am putut citi poza pe telefon. Incarca PDF-ul facturii sau XML-ul de e-Factura.')
+          return
+        }
+        setError('')
+        if (text.trim().length < 40) {
+          setError('Nu am gasit text in poza. Incearca o poza mai apropiata si mai bine luminata, sau incarca PDF-ul.')
+          return
+        }
+        const { ok, status, data } = await callApi({ text }, token)
+        if (!ok) { setError(errorMessage(status, data)); return }
+        if (data.items?.length) {
+          collectExcluded([data])
+          onSuccess({ supplier: data.supplier || '', items: mapItems(dedupeScannedItems(data.items)) })
+          return
+        }
+        setError('Am citit textul din poza, dar nu am recunoscut produse. Incearca o poza mai clara sau incarca PDF-ul.')
         return
       }
 
