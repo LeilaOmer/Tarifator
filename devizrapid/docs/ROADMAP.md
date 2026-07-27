@@ -3,14 +3,10 @@
 Ce urmează. Grupat după orizont, nu după dată fixă. Ideile neangajate sunt clar marcate.
 
 ## Înainte de lansare (detaliile rămase)
-- [ ] **Rulează `supabase/enforce-limits.sql`** în Supabase (o dată) — creează `app_config`
-      + triggerele care impun limitele în DB + indexul unic pe numărul de fișă.
-- [ ] **Rulează `supabase/consents.sql`** în Supabase (o dată) — tabelul de consimțăminte
-      (ADR-040). Fără el, dovada GDPR există doar în `user_metadata`: validă, dar
-      neinterogabilă („cine a acceptat marketing?").
-- [ ] **Rulează `supabase/indexes.sql`** în Supabase (o dată) — indexurile de pe calea critică
-      (ADR-045). De făcut cât tabelele sunt mici: atunci crearea e instantanee și nu blochează
-      scrierile.
+- [x] **SQL aplicat (2026-07-27)** — `enforce-limits.sql` (app_config + triggerele de limite +
+      indexul unic pe numărul de fișă), `consents.sql` (ADR-040) și `indexes.sql` (ADR-045)
+      rulate în Supabase. Cu indexul unic pe loc, reîncercarea din ADR-046 are ce prinde.
+      Starea se poate reverifica oricând cu `supabase/verifica.sql` (doar citește).
 - [ ] **La lansare, stinge pre-lansarea** cu un singur update:
       `update app_config set value='false' where key='prelaunch';` (UI + DB se sting împreună).
 - [x] **RLS verificat și închis (2026-07-03)** — RLS pornit pe toate tabelele; politici
