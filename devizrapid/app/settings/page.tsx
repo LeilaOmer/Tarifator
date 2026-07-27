@@ -9,6 +9,7 @@ import { PlanTier, TIER_LABELS, getEffectiveLimits } from '@/lib/plan'
 import { getMonthlyFise, getMonthlyCalcule } from '@/lib/usage'
 import { isAdminEmail } from '@/lib/admin'
 import { clearAccountLocal } from '@/lib/session'
+import { myConsents } from '@/lib/consents'
 import { useRouter } from 'next/navigation'
 
 interface Company {
@@ -124,13 +125,14 @@ export default function SettingsPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-      const [profile, cos, clients, services, quotes, drafts] = await Promise.all([
+      const [profile, cos, clients, services, quotes, drafts, consents] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', session.user.id).single(),
         supabase.from('companies').select('*'),
         supabase.from('clients').select('*'),
         supabase.from('services').select('*'),
         supabase.from('quotes').select('*, quote_items(*)'),
         supabase.from('pricing_drafts').select('*'),
+        myConsents(session.user.id),
       ])
       const payload = {
         exportat_la: new Date().toISOString(),
@@ -141,6 +143,8 @@ export default function SettingsPage() {
         servicii: services.data ?? [],
         fise: quotes.data ?? [],
         calcule_salvate: drafts.data ?? [],
+        // Dreptul de acces acopera si dovada consimtamintelor date.
+        consimtaminte: consents,
       }
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
       const a = document.createElement('a')

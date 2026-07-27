@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
+import { consentMetadata, recordConsents, type ConsentChoices } from '@/lib/consents'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
@@ -55,7 +56,7 @@ export default function LoginPage() {
     setLoading(true)
 
     if (mode === 'login') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data: signIn, error } = await supabase.auth.signInWithPassword({ email, password })
       setLoading(false)
       if (error) {
         if (error.message.toLowerCase().includes('confirm')) {
@@ -63,6 +64,17 @@ export default function LoginPage() {
           setShowResend(true)
         } else setError('Email sau parola incorecte.')
         return
+      }
+      // La inregistrarea cu confirmare pe email nu exista sesiune, deci randul
+      // interogabil din `consents` n-a putut fi scris atunci. Il completam aici,
+      // din dovada pastrata in metadata. `upsert` face apelul idempotent, deci
+      // se poate executa la fiecare autentificare fara sa duplice nimic.
+      const saved = signIn.session?.user?.user_metadata?.consents
+      if (saved && signIn.session) {
+        void recordConsents(signIn.session.user.id, {
+          termeni: !!saved.termeni, gdpr: !!saved.gdpr,
+          retragere: !!saved.retragere, marketing: !!saved.marketing,
+        })
       }
       router.push('/dashboard')
     } else {
@@ -72,7 +84,18 @@ export default function LoginPage() {
       }).then(r => r.json()).catch(() => ({ ok: true }))
       if (!chk.ok) { setLoading(false); setError(chk.error || 'Email invalid.'); return }
 
-      const { data, error } = await supabase.auth.signUp({ email, password })
+      // Consimtamintele se PASTREAZA, nu doar se verifica. GDPR Art. 7(1) cere
+      // sa poti DEMONSTRA acordul; pana acum bifele erau aruncate dupa validare.
+      // Metadata se scrie odata cu userul, deci dovada exista chiar daca omul
+      // nu-si confirma niciodata emailul (atunci nu exista sesiune, deci nu se
+      // poate scrie in niciun tabel cu RLS).
+      const choices: ConsentChoices = {
+        termeni: acceptTerms, gdpr: acceptGdpr,
+        retragere: acceptRetragere, marketing: acceptMarketing,
+      }
+      const { data, error } = await supabase.auth.signUp({
+        email, password, options: { data: consentMetadata(choices) },
+      })
       setLoading(false)
       if (error) {
         if (error.message.includes('already registered') || error.message.includes('already exists')) {
@@ -85,6 +108,9 @@ export default function LoginPage() {
         return
       }
       if (data.session) {
+        // Forma interogabila ("cine a acceptat marketing?"). Best-effort: dovada
+        // legala e deja in metadata, deci un esec aici nu blocheaza inregistrarea.
+        await recordConsents(data.session.user.id, choices)
         router.push('/dashboard')
       } else {
         setSuccess('Cont creat! Verifica emailul pentru confirmare, apoi autentifica-te.')

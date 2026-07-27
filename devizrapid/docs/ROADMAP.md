@@ -76,3 +76,13 @@ iconiță, imagine OG pentru share. Rămas:
 - **Variante de logo**: wordmark „Papirus Tabac", variantă alb-negru pentru ștampilă/print.
 
 > Ideile de aici se pot muta în `DECISIONS.md` când sunt asumate ferm.
+
+## Re-consimtamant pentru utilizatorii vechi (GDPR)
+Cei inregistrati inainte de ADR-040 nu au dovada consimtamantului — bifele lor nu s-au salvat
+nicaieri, iar reconstituirea retroactiva ar fi o falsificare. La prima autentificare, daca userul
+nu are randuri in `consents` pentru `CONSENT_VERSION` curenta, i se arata documentele si i se cere
+acordul din nou. Acelasi mecanism serveste si la MODIFICAREA documentelor: se incrementeaza
+`CONSENT_VERSION` si toata lumea reconfirma.
+Cati sunt acum:
+  select count(*) from auth.users u
+   where not exists (select 1 from consents c where c.user_id = u.id);

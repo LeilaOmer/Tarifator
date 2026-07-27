@@ -385,3 +385,22 @@ repara — pe randul unde OCR-ul pierduse virgula din valoare ("80.84" => "8084"
 o reconstituie.
 **Extinde principiul ADR-035 / e-Factura:** cand sursa are structura, se citeste in cod. Modelul
 ramane pentru ce chiar nu are structura — layout-uri necunoscute, bonuri, formate noi.
+
+## ADR-040 — Consimtamintele se PASTREAZA, in doua locuri
+**Decizie:** La inregistrare, cele patru acorduri (Termeni, GDPR, Retragere, Marketing) se scriu
+(1) in `auth.users.raw_user_meta_data`, odata cu userul, si (2) in tabelul `consents`, forma
+interogabila. Fiecare consimtamant e legat de o VERSIUNE a documentelor (`CONSENT_VERSION`).
+**De ce:** Bifele erau validate in browser si apoi aruncate. GDPR Art. 7(1) cere operatorului sa
+poata DEMONSTRA consimtamantul — nu exista nicaieri cine, ce, cand, pe ce versiune. Iar acordul de
+marketing, singurul opt-in real, se pierdea complet: nu putea fi nici folosit, nici respectat la
+dezabonare.
+**De ce in DOUA locuri:** la inregistrarea cu confirmare pe email NU exista sesiune, deci nu se
+poate scrie in niciun tabel cu RLS. Metadata se scrie odata cu userul, deci dovada exista chiar
+daca omul nu-si confirma niciodata emailul. Tabelul se completeaza la prima autentificare
+(`upsert`, deci idempotent) si serveste interogarilor ("cine a acceptat marketing?").
+**Userul nu poate STERGE sau MODIFICA un consimtamant** (fara politici de update/delete): o dovada
+pe care subiectul o poate rescrie nu mai e dovada. Retragerea se inregistreaza ca rand NOU cu
+`accepted = false`.
+**Ramane de facut:** utilizatorii inregistrati INAINTE de aceasta schimbare nu au dovada, si ea nu
+se poate reconstitui retroactiv — ar fi o falsificare. Li se va cere acordul din nou, la prima
+autentificare (vezi ROADMAP). Pana atunci, absenta lor din tabel e informatia corecta.
