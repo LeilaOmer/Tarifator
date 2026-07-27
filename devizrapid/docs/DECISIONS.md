@@ -331,3 +331,14 @@ dispozitiv.
 **Principiu general:** orice functie-cheie care depinde de un singur furnizor extern are nevoie de
 o cale de rezerva care NU depinde de el. Altfel produsul are un intrerupator pe care il tine
 altcineva.
+
+## ADR-036 — Furnizorul de AI e o variabila, nu o constanta in cod
+**Decizie:** `VISION_API_BASE` / `VISION_API_KEY` si `TEXT_API_BASE` / `TEXT_API_KEY`, implicit
+Groq. Vederea si textul se pot duce la furnizori diferiti.
+**De ce:** Groq expune API-ul in formatul OpenAI (`/chat/completions`, `messages` cu `image_url`),
+deci codul functiona deja cu orice furnizor compatibil — doar URL-ul si cheia erau ingropate in
+cod. Cand Groq a rupt calea pozelor, singura solutie parea "scrie un adaptor nou"; in realitate
+erau doua variabile. Consecinta practica: se poate lasa TEXTUL pe un plan gratuit si plati DOAR
+vederea, care e partea scumpa si greu de inlocuit.
+**Ordinea de preferinta pe poze ramane:** furnizor de vedere (daca e configurat) -> OCR local
+(ADR-035). Nicio cale nu depinde de un singur furnizor.

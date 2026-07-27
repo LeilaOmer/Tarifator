@@ -150,7 +150,10 @@ const TEXT_MODELS = (process.env.GROQ_TEXT_MODEL ||
 // Incearca modelele pe rand. Trece la urmatorul DOAR pentru "model inexistent";
 // orice alta eroare (limita de rata, cerere prea mare) e reala si se propaga —
 // n-are rost sa ardem cota pe alte modele pentru aceeasi problema.
-async function callGroqWithFallback(models: string[], messages: unknown[], maxTokens: number) {
+async function callGroqWithFallback(
+  models: string[], messages: unknown[], maxTokens: number,
+  api: { base: string; key: string } = TEXT_API,
+) {
   // Lista GOALA = "nu avem model de vedere". Semnalam imediat, fara nicio cerere
   // de retea: clientul trece pe OCR local. Se seteaza GROQ_VISION_MODEL="" cand
   // contul nu are niciun model de vedere, ca sa nu mai pierdem un drum pe fiecare
@@ -159,7 +162,7 @@ async function callGroqWithFallback(models: string[], messages: unknown[], maxTo
   let lastGone = ''
   for (const model of models) {
     try {
-      return { raw: await callGroq(model, messages, maxTokens), model }
+      return { raw: await callGroq(model, messages, maxTokens, api), model }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (!msg.startsWith('groq_model_gone::')) throw err
@@ -209,12 +212,35 @@ BON FISCAL (doc_type=receipt) — layout inversat, pretul mereu cu TVA inclus:
 - O linie fara denumire, doar valoare+litera (ex "0,50 D") sub un produs = garantia SGR a produsului de deasupra => sgr=0.50 la el, nu produs nou.
 - Ignora: Subtotal/Total/Plata card/Rest/TVA%/date/numere de bon/sectiuni de raion fara pret/mesaje de multumire.`
 
-async function callGroq(model: string, messages: unknown[], maxTokens = 4096) {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+// FURNIZORUL e configurabil, nu doar modelul. Groq expune API-ul in formatul
+// OpenAI (`/openai/v1/chat/completions`, `messages` cu blocuri `image_url`),
+// deci ORICE furnizor compatibil OpenAI se poate folosi schimband doar doua
+// variabile de mediu — inclusiv OpenAI insusi, care are modele cu vedere.
+//
+// Exemplu, ca sa reactivezi citirea din poza printr-un model de vedere platit:
+//   VISION_API_BASE  = https://api.openai.com/v1
+//   VISION_API_KEY   = sk-...
+//   GROQ_VISION_MODEL = <id-ul modelului cu vedere din contul tau>
+// Textul poate ramane pe Groq (gratuit) — sunt configurari separate.
+const GROQ_BASE = 'https://api.groq.com/openai/v1'
+const VISION_API = {
+  base: process.env.VISION_API_BASE || GROQ_BASE,
+  key: process.env.VISION_API_KEY || process.env.GROQ_API_KEY || '',
+}
+const TEXT_API = {
+  base: process.env.TEXT_API_BASE || GROQ_BASE,
+  key: process.env.TEXT_API_KEY || process.env.GROQ_API_KEY || '',
+}
+
+async function callGroq(
+  model: string, messages: unknown[], maxTokens = 4096,
+  api: { base: string; key: string } = TEXT_API,
+) {
+  const res = await fetch(`${api.base}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + process.env.GROQ_API_KEY,
+      'Authorization': 'Bearer ' + api.key,
     },
     body: JSON.stringify({ model, messages, temperature: 0.1, max_tokens: maxTokens }),
   })
@@ -473,7 +499,7 @@ async function runVisionScan(
   // factura densa (poza cu multe randuri), prompt+imagine+8192 rezervat
   // poate depasi bugetul de tokeni/minut al modelului de vedere, la fel cum
   // se intampla si la modelul de text daca nu era redus.
-  const { raw, model: usedModel } = await callGroqWithFallback(VISION_MODELS, messages, VISION_MAX_TOKENS)
+  const { raw, model: usedModel } = await callGroqWithFallback(VISION_MODELS, messages, VISION_MAX_TOKENS, VISION_API)
   const parsed = parseJson(raw)
   const result = validateAndSanitize(parsed, await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '', userId))
   const items = result && Array.isArray((result as { items?: unknown[] }).items) ? (result as { items: unknown[] }).items : []
