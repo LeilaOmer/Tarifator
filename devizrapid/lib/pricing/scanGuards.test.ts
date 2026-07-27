@@ -159,3 +159,44 @@ describe('applySgrFromGuaranteeLines', () => {
     expect(items[1]).not.toMatchObject({ sgr: 0.5 })
   })
 })
+
+describe('reconcileUnitPrice — factura cu preturile BIFATE DE MANA (caz real)', () => {
+  // Text OCR real: pe factura, comerciantul bifase fiecare pret cu pixul, iar
+  // OCR-ul a citit creionul peste cifre ("40.42" => "40473", "7.78" => "77815").
+  // Coloana Valoare a ramas curata, deci pretul se recupereaza din ea.
+  it.each([
+    ['NAPJOE 160G CIOCO', 77815, 33, 256.74, 7.78],
+    ['NAPJOE CACAO',        604, 24, 144.24, 6.01],
+    ['NAP SPIRALE',         264, 36,  95.04, 2.64],
+    ['MAGURA MACARON',    40473,  2,  80.84, 40.42],  // scapa prin regula x1000
+    ['BISC MILKA BISCUITS', 82449, 28, 230.72, 8.24],
+    ['KAT KAT TAT',        2068,  3,  62.04, 20.68],
+    ['CAKE OLALA',           73, 48,  35.04, 0.73],
+  ])('%s: pret bifat => recuperat din valoare/cantitate', (_n, decl, qty, total, expected) => {
+    expect(reconcileUnitPrice(decl, qty, total, 0)).toBeCloseTo(expected, 2)
+  })
+
+  it('INVARIANT: la cantitate >= 1, pretul unitar nu poate depasi valoarea randului', () => {
+    // 40473 lei/bucata pe un rand de 80,84 lei e imposibil, nu doar suspect.
+    expect(reconcileUnitPrice(40473, 2, 80.84)).toBeCloseTo(40.42, 2)
+    expect(reconcileUnitPrice(9999, 1, 12.50)).toBeCloseTo(12.50, 2)
+  })
+})
+
+describe('reconcileUnitPrice — separatorul de mii ramane acoperit', () => {
+  it('cantitate cu zecimale ("4.560" citit 4,56) => pretul declarat castiga', () => {
+    // Cazul pentru care exista regula x1000: 4560 bucati citite ca 4,56.
+    expect(reconcileUnitPrice(2.5, 4.56, 11400)).toBe(2.5)
+  })
+
+  it('regula x1000 NU se mai aplica pe cantitati intregi curate', () => {
+    // Un intreg curat (2, 33, 108) nu poate rezulta dintr-un separator de mii
+    // citit gresit — acolo regula doar "salva" gunoi de la OCR.
+    expect(reconcileUnitPrice(40473, 2, 80.84)).toBeCloseTo(40.42, 2)
+  })
+
+  it('pretul corect declarat ramane neatins (calea normala)', () => {
+    expect(reconcileUnitPrice(2.7927, 2304, 6434.59)).toBe(2.7927)
+    expect(reconcileUnitPrice(40.42, 2, 80.84)).toBe(40.42)
+  })
+})

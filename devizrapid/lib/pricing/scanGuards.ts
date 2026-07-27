@@ -239,7 +239,24 @@ export function reconcileUnitPrice(
   if (declared > 0) {
     if (ok(declared, derived)) return declared
     if (discountPct > 0 && ok(declared * (1 - discountPct / 100), derived)) return declared
-    if (ok(declared, derived / 1000) || ok(declared, derived * 1000)) return declared
+
+    // INVARIANT: la o cantitate de cel putin 1, pretul UNITAR nu poate depasi
+    // valoarea randului. Cand o depaseste, citirea declarata e imposibila, nu
+    // doar suspecta — nicio regula de salvare de mai jos n-are voie s-o accepte.
+    // Cazul real: pe o factura cu preturile BIFATE DE MANA, OCR-ul citeste
+    // creionul peste cifre ("40.42" => "40473"), iar valoarea randului (80.84)
+    // ramane curata.
+    const impossible = quantity >= 1 && declared > lineTotal
+
+    // Separatorul romanesc de mii: "4.560" bucati citit ca 4,56 face ca valoarea
+    // impartita la cantitate sa iasa de 1000x mai mare. Semnatura e in CANTITATE,
+    // care ramane cu zecimale — un intreg curat (2, 33, 108) nu poate fi rezultatul
+    // unui separator de mii citit gresit, deci pe el regula nu se aplica.
+    // Fara aceasta conditie, un pret-gunoi de ordinul zecilor de mii nimerea din
+    // intamplare in toleranta de 3% fata de derivat x 1000 si era pastrat.
+    const qtyLooksMisparsed = !Number.isInteger(quantity)
+    if (!impossible && qtyLooksMisparsed
+      && (ok(declared, derived / 1000) || ok(declared, derived * 1000))) return declared
   }
   return derived
 }

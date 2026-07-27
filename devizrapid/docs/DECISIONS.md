@@ -355,3 +355,17 @@ mazgalite): randuri respinse de validarea numerica de baza. Un pret 0 e in plus 
 citita gresit, raport bucati/cutie mostenit gresit de la un "produs frate"), nu un produs real.
 **Principiu, acelasi ca la ADR-033/H4/H9:** o decizie automata care poate ascunde munca sau banii
 utilizatorului trebuie SA SE VADA, chiar si atunci cand codul e sigur ca a decis corect.
+
+## ADR-038 — Doua garduri pe reconcilierea pretului unitar
+**Decizie:** In `reconcileUnitPrice`: (1) invariant absolut — la cantitate >= 1, pretul unitar nu
+poate depasi valoarea randului; (2) regula de "separator de mii" (x1000) se aplica DOAR cand
+cantitatea are zecimale.
+**De ce:** Caz real, diagnosticat pe textul OCR trimis de utilizator. Pe o factura cu preturile
+BIFATE CU PIXUL, OCR-ul citea creionul peste cifre: "40.42" => "40473". Coloana Valoare ramanea
+curata, deci pretul se putea recupera din `valoare/cantitate` — si asa se intampla pe 10 din 11
+randuri. Pe al 11-lea, gunoiul 40473 cadea din intamplare la 0,13% de `40.42 x 1000`, deci regula
+de separator de mii il "salva" ca fiind corect. Efect in lant: produsul URMATOR imprumuta raportul
+bucati/cutie de la "fratele" cu acelasi pret, nu-l mai gasea (pretul fratelui fiind gunoi) si iesea
+si el gresit. Un singur rand stricat strica doua produse.
+**Principiu:** un invariant care nu poate fi incalcat de date reale (pret unitar <= valoare rand)
+bate orice euristica de salvare. Euristicile se aplica DUPA ce invariantii au trecut, nu inaintea lor.
