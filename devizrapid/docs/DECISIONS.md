@@ -420,3 +420,48 @@ nu o poate falsifica.
 singura ramasa fara plafon. Un cont putea insera oricate raporturi gresite, iar ele se aplicau
 automat la scanarile tuturor clientilor aceluiasi furnizor. 30/zi acopera lejer corectiile reale
 ale unui comerciant; peste, e abuz.
+
+## ADR-043 — Stergerile ireversibile se confirma, iar butoanele spun ce fac
+**Decizie:** Toate stergerile care ating baza de date trec prin `confirmDelete()` din
+`lib/confirm.ts`, iar butoanele "×" din liste au `aria-label` care numeste actiunea SI randul
+("Sterge fisa Renovare baie"), nu "Inchide".
+**De ce:** Butoanele de stergere din fise, clienti, servicii, calcule si linii de fisa stergeau pe
+loc, la o singura atingere, fara intrebare si fara anulare. Aplicatia se foloseste pe telefon, unde
+"×" e la cativa pixeli de pretul randului si de zona de scroll — o atingere gresita stergea o fisa
+finalizata cu tot cu liniile ei, definitiv.
+**Al doilea defect, in acelasi loc:** toate aceste butoane erau anuntate `aria-label="Inchide"`.
+Cine navigheaza cu cititor de ecran auzea "Inchide", apasa ca sa inchida ceva — si stergea. Cu mai
+multe randuri identice pe ecran, nici nu putea sti pe care.
+**Ce NU s-a schimbat:** butoanele care scot un rand din lista LOCALA, nesalvata (rand nou de fisa,
+produs scanat inainte de import) raman fara confirmare — nu se pierde nimic persistat.
+**Garda:** `lib/confirm.test.ts` citeste paginile cu stergeri si pica daca vreuna scapa de
+`confirmDelete` sau daca un buton care sterge se numeste iar "Inchide".
+
+## ADR-044 — Mesajele brute de eroare nu ajung in browser
+**Decizie:** Rutele API intorc un mesaj scris de noi si logheaza exceptia pe server
+(`console.error`). Exceptie deliberata: cele trei coduri Groq (`groq_rate_limit`, `groq_too_large`,
+`groq_model_gone`) trimit mai departe mesajul FURNIZORULUI, taiat la 300 de caractere.
+**De ce:** `error.message` de la Postgres numeste tabelul, coloanele si constrangerile — harta
+schemei, oferita oricui are un cont. Un `fetch` esuat da hostname-uri interne si proxy-uri; un
+`TypeError` da calea fisierului de pe server. Ramura generica de la `/api/parse-invoice` trimitea
+ORICE exceptie neasteptata direct in UI.
+**De ce Groq face exceptie:** mesajul lui ("mai incearca in 4,6s") e singurul lucru care ii spune
+omului ce sa faca, iar utilizatorul nu are acces la logurile serverului. Nu e o eroare a noastra si
+nu descrie sistemul nostru.
+
+## ADR-045 — Indexuri pe coloanele dupa care se filtreaza (supabase/indexes.sql)
+**Decizie:** Index pe `(user_id, created_at)` la tabelele de consum si liste, pe `quote_items
+(quote_id)`, si un index pg_trgm pe `product_box_ratios (supplier_name)`.
+**De ce:** Tabelele aveau doar cheia primara. Costul unei interogari fara index creste cu numarul
+TOTAL de randuri din tabel, nu cu cate are userul — deci cu cat aplicatia ar avea mai multi clienti,
+cu atat ar fi mai lenta pentru FIECARE, inclusiv pentru cel abia inscris. Tabelele partajate
+(`api_usage`, `invoice_scan_logs`, `product_box_ratios`) sunt cele mai expuse: se scrie in ele la
+fiecare apel.
+**De ce ACUM, cand nu se simte:** pe un tabel mic crearea e instantanee si nu blocheaza nimic; pe
+unul deja mare `create index` tine lacatul si opreste scrierile.
+**De ce pg_trgm la furnizori:** interogarea e `ilike`, iar un B-tree obisnuit nu poate fi folosit de
+`ilike` (ordinea lui e sensibila la majuscule). pg_trgm indexeaza trigrame, pe care planificatorul
+le poate folosi.
+**Ce NU rezolva:** `/api/check-signup` si `/api/admin/lifetime` parcurg `auth.users` prin
+`listUsers()`, nu tabelul `profiles` — niciun index nu le ajuta, e nevoie de schimbare de cod
+(ROADMAP).

@@ -1,6 +1,7 @@
 'use client'
 
 import { toast } from '@/lib/toast'
+import { confirmDelete } from '@/lib/confirm'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { anafLookup } from '@/lib/anaf'
@@ -256,7 +257,7 @@ export default function SettingsPage() {
   }
 
   async function deleteCompany(id: string) {
-    if (!confirm('Stergi firma? Fisele asociate raman dar fara firma.')) return
+    if (!confirmDelete('firma', 'Fisele asociate raman, dar fara firma.')) return
     const { error } = await supabase.from('companies').delete().eq('id', id)
     if (error) { toast('Nu s-a putut sterge firma: ' + error.message); return }
     load()

@@ -58,7 +58,10 @@ export async function GET(req: NextRequest) {
       scpTva: typeof entry?.inregistrare_scop_Tva?.scpTVA === 'boolean' ? entry.inregistrare_scop_Tva.scpTVA : null,
     })
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: 'Eroare conexiune', detail: msg }, { status: 502 })
+    // Mesajul exceptiei NU pleaca spre client: la un `fetch` esuat el contine
+    // adresa interna incercata, proxy-ul, uneori tokenul din URL. Ramane in
+    // logurile serverului, unde e util si unde il vedem doar noi.
+    console.error('[anaf-lookup] apel esuat:', err)
+    return NextResponse.json({ error: 'Nu s-a putut contacta ANAF. Incearca din nou.' }, { status: 502 })
   }
 }

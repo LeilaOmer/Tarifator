@@ -1,5 +1,6 @@
 'use client'
 import { toast } from '@/lib/toast'
+import { confirmDelete, deleteLabel } from '@/lib/confirm'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ensureAccountLocal } from '@/lib/session'
@@ -73,7 +74,8 @@ export default function ServicesPage() {
     await fetchServices(isPro ? activeCompanyId : null)
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(id: string, name: string) {
+    if (!confirmDelete(`serviciul "${name}"`)) return
     const { error } = await supabase.from('services').delete().eq('id', id)
     if (error) { toast('Nu s-a sters serviciul: ' + error.message); return }
     await fetchServices(isPro ? activeCompanyId : null)
@@ -130,7 +132,7 @@ export default function ServicesPage() {
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
                   <span className="text-sm font-bold text-gray-700">{s.price_per_unit} lei/{s.unit}</span>
-                  <button aria-label="Inchide" onClick={() => handleDelete(s.id)} className="text-red-400 text-xl leading-none">×</button>
+                  <button aria-label={deleteLabel(`serviciul ${s.name}`)} onClick={() => handleDelete(s.id, s.name)} className="text-red-400 text-xl leading-none">×</button>
                 </div>
               </div>
             ))}

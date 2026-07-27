@@ -174,6 +174,9 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
       data.error === 'groq_model_gone' ? `Citirea din poza nu e disponibila momentan (problema la furnizorul AI, nu la poza ta). Incarca PDF-ul facturii sau XML-ul de e-Factura — acelea merg, si sunt chiar mai exacte.${suffix}` :
       data.error === 'groq_too_large' ? `Factura e prea lunga/complexa pentru a fi citita dintr-o singura cerere. Incearca sa o imparti (scaneaza doar o parte din pagina sau doar o pagina din PDF).${suffix}` :
       data.error === 'vision_failed' ? `Poza neclara sau unghi dificil, chiar si dupa citirea pe felii. Incearca o poza mai apropiata, cu lumina mai buna, sau incarca PDF-ul daca il ai.${data.debug ? ' [model: ' + data.debug + ']' : ''}` :
+      // Serverul nu mai trimite mesajul brut al exceptiei (continea nume de
+      // tabele si cai interne). Ramane un cod fix, caruia ii dam un text util.
+      data.error === 'server_error' ? 'Ceva a picat pe server la citirea facturii. Incearca din nou; daca se repeta, trimite-ne factura.' :
       `Eroare: ${data.error || 'necunoscuta'}`
   }
 

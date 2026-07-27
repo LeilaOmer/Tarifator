@@ -1,5 +1,6 @@
 "use client";
 import { toast } from '@/lib/toast'
+import { confirmDelete, deleteLabel } from '@/lib/confirm'
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -389,7 +390,8 @@ export default function QuoteDetailPage() {
     await loadQuote();
   }
 
-  async function handleDeleteItem(itemId: string) {
+  async function handleDeleteItem(itemId: string, description: string) {
+    if (!confirmDelete(`linia "${description}"`)) return;
     const { error: delErr } = await supabase.from("quote_items").delete().eq("id", itemId);
     if (delErr) { toast("Nu s-a sters linia: " + delErr.message); return; }
     const { error } = await persistTotals(quote!.id);
@@ -527,7 +529,7 @@ export default function QuoteDetailPage() {
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <p className="text-sm font-semibold text-gray-900">{fmt(item.total)}</p>
-                {!isFinalized && <button aria-label="Inchide" onClick={() => handleDeleteItem(item.id)} className="text-red-400 text-xl leading-none">×</button>}
+                {!isFinalized && <button aria-label={deleteLabel(`linia ${item.description}`)} onClick={() => handleDeleteItem(item.id, item.description)} className="text-red-400 text-xl leading-none">×</button>}
               </div>
             </div>
           ))}

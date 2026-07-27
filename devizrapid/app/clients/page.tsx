@@ -1,5 +1,6 @@
 'use client'
 import { toast } from '@/lib/toast'
+import { confirmDelete, deleteLabel } from '@/lib/confirm'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { anafLookup } from '@/lib/anaf'
@@ -63,7 +64,8 @@ export default function ClientsPage() {
     await fetchClients()
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(id: string, name: string) {
+    if (!confirmDelete(`clientul "${name}"`)) return
     const { error } = await supabase.from('clients').delete().eq('id', id)
     if (error) { toast('Nu s-a sters clientul: ' + error.message); return }
     await fetchClients()
@@ -163,7 +165,7 @@ export default function ClientsPage() {
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
                       <button onClick={() => setEditing(c)} className="text-blue-500 text-sm font-medium">Editeaza</button>
-                      <button aria-label="Inchide" onClick={() => handleDelete(c.id)} className="text-red-400 text-xl leading-none">×</button>
+                      <button aria-label={deleteLabel(`clientul ${c.name}`)} onClick={() => handleDelete(c.id, c.name)} className="text-red-400 text-xl leading-none">×</button>
                     </div>
                   </div>
                 )}

@@ -1,5 +1,6 @@
 'use client'
 import { toast } from '@/lib/toast'
+import { confirmDelete, deleteLabel } from '@/lib/confirm'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
@@ -34,7 +35,8 @@ export default function CompanyQuotesPage() {
     setLoading(false)
   }
 
-  async function handleDelete(qid: string) {
+  async function handleDelete(qid: string, title: string) {
+    if (!confirmDelete(`fisa "${title}"`)) return
     const { error } = await supabase.from('quotes').delete().eq('id', qid)
     if (error) { toast('Nu s-a putut sterge fisa: ' + error.message); return }
     load()
@@ -81,7 +83,7 @@ export default function CompanyQuotesPage() {
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-sm font-semibold text-gray-700">{q.total} lei</span>
-                  <button aria-label="Inchide" onClick={() => handleDelete(q.id)} className="text-red-400 text-lg">×</button>
+                  <button aria-label={deleteLabel(`fisa ${q.title}`)} onClick={() => handleDelete(q.id, q.title)} className="text-red-400 text-lg">×</button>
                 </div>
               </div>
             ))}

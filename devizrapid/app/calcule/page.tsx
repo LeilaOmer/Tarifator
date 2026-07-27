@@ -1,5 +1,6 @@
 'use client'
 import { toast } from '@/lib/toast'
+import { confirmDelete, deleteLabel } from '@/lib/confirm'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -32,7 +33,8 @@ export default function CalculePage() {
     load()
   }, [router])
 
-  async function handleDelete(id: string) {
+  async function handleDelete(id: string, title: string) {
+    if (!confirmDelete(`calculul "${title}"`)) return
     const { error } = await supabase.from('pricing_drafts').delete().eq('id', id)
     if (error) { toast('Nu s-a putut sterge calculul: ' + error.message); return }
     setDrafts(prev => prev.filter(d => d.id !== id))
@@ -74,7 +76,7 @@ export default function CalculePage() {
                 className="text-xs font-bold text-blue-600 px-3 py-1.5 rounded-xl bg-blue-50 whitespace-nowrap">
                 Deschide
               </button>
-              <button aria-label="Inchide" onClick={() => handleDelete(d.id)}
+              <button aria-label={deleteLabel(`calculul ${d.title}`)} onClick={() => handleDelete(d.id, d.title)}
                 className="text-red-400 text-xl leading-none px-1">×</button>
             </div>
           ))

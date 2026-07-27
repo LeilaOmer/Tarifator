@@ -716,10 +716,20 @@ ATENTIE — textul de mai jos vine din OCR pe o POZA, nu dintr-un PDF. Cifrele p
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown'
-    const [code, detail] = msg.split('::')
+    const [code, rest] = msg.split('::')
+    // `detail` se trimite DOAR pentru cele trei coduri pe care le construim noi,
+    // si contine mesajul furnizorului (ex. "Rate limit reached... try again in
+    // 4.6s") — exact ce trebuie sa vada omul, fiindca el nu are logurile
+    // serverului. Taiat la 300 de caractere ca sa nu devina o cale prin care un
+    // raspuns strain intra nelimitat in UI.
+    const detail = (rest || '').slice(0, 300)
     if (code === 'groq_rate_limit') return NextResponse.json({ items: [], error: 'groq_rate_limit', detail }, { status: 503 })
     if (code === 'groq_too_large') return NextResponse.json({ items: [], error: 'groq_too_large', detail }, { status: 413 })
     if (code === 'groq_model_gone') return NextResponse.json({ items: [], error: 'groq_model_gone', detail }, { status: 503 })
-    return NextResponse.json({ items: [], error: msg }, { status: 500 })
+    // Orice ALTA exceptie e necunoscuta: poate fi o eroare Supabase cu numele
+    // tabelelor, un `fetch` esuat cu hostname intern, sau un TypeError cu calea
+    // fisierului de pe server. Nu pleaca spre browser.
+    console.error('[parse-invoice] eroare neasteptata:', err)
+    return NextResponse.json({ items: [], error: 'server_error' }, { status: 500 })
   }
 }

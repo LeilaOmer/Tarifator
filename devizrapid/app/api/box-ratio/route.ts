@@ -57,7 +57,12 @@ export async function POST(req: NextRequest) {
     pieces_per_box: piecesPerBox,
     created_by: user.id,
   })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    // Mesajul brut de Postgres numeste tabelul, coloanele si constrangerile —
+    // harta schemei, oferita oricui are un cont. Ramane in log, nu in raspuns.
+    console.error('[box-ratio] insert esuat:', error.message)
+    return NextResponse.json({ error: 'Nu s-a putut salva corectia. Incearca din nou.' }, { status: 500 })
+  }
 
   return NextResponse.json({ success: true })
 }

@@ -5,6 +5,12 @@ Ce urmează. Grupat după orizont, nu după dată fixă. Ideile neangajate sunt 
 ## Înainte de lansare (detaliile rămase)
 - [ ] **Rulează `supabase/enforce-limits.sql`** în Supabase (o dată) — creează `app_config`
       + triggerele care impun limitele în DB + indexul unic pe numărul de fișă.
+- [ ] **Rulează `supabase/consents.sql`** în Supabase (o dată) — tabelul de consimțăminte
+      (ADR-040). Fără el, dovada GDPR există doar în `user_metadata`: validă, dar
+      neinterogabilă („cine a acceptat marketing?").
+- [ ] **Rulează `supabase/indexes.sql`** în Supabase (o dată) — indexurile de pe calea critică
+      (ADR-045). De făcut cât tabelele sunt mici: atunci crearea e instantanee și nu blochează
+      scrierile.
 - [ ] **La lansare, stinge pre-lansarea** cu un singur update:
       `update app_config set value='false' where key='prelaunch';` (UI + DB se sting împreună).
 - [x] **RLS verificat și închis (2026-07-03)** — RLS pornit pe toate tabelele; politici
@@ -28,8 +34,11 @@ Rămase (neblocante):
       rândurile din `quotes` — ștergerea unei fișe nu ar mai elibera cota lunară.
 - [ ] Monitorizare erori (ex. Sentry free tier) — erorile din producție mor tăcut.
 - [ ] Mesaj în UI la scanarea PDF: „se citește doar prima pagină".
-- [ ] `canonical_email` indexat în `profiles` când userii trec de ~1000 (check-signup
-      și admin/lifetime scanează azi toți userii prin `listUsers`).
+- [ ] `canonical_email` căutat în `profiles`, nu prin `listUsers()`. Azi `/api/check-signup` și
+      `/api/admin/lifetime` parcurg paginat `auth.users` (plafonat la 5 pagini ≈ 5000 conturi,
+      ADR-041) — peste asta verificarea devine incompletă, nu doar lentă. Un index nu ajută:
+      e nevoie ca `canonical_email` să ajungă în `profiles` la înregistrare și căutarea să se
+      mute acolo (vezi ADR-045).
 
 ## Din analiza multi-unghi (2026-07-03)
 Făcut: contrast text mai bun (WCAG), `alert()` → toast discret, `aria-label` pe butoanele

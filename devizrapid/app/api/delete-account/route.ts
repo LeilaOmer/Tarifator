@@ -58,11 +58,21 @@ export async function POST(req: Request) {
   await del(() => admin.from('profiles').delete().eq('id', user.id))
 
   if (errors.length > 0) {
-    return NextResponse.json({ error: 'Nu s-au putut sterge toate datele: ' + errors.join('; ') }, { status: 500 })
+    // Erorile brute de Postgres numesc tabele, coloane si constrangeri. Raman
+    // in log (unde chiar avem nevoie de ele ca sa reparam o stergere blocata),
+    // nu in raspunsul catre browser.
+    console.error('[delete-account] stergeri esuate:', errors.join('; '))
+    return NextResponse.json(
+      { error: 'Nu s-au putut sterge toate datele. Contul NU a fost sters — scrie-ne si rezolvam.' },
+      { status: 500 },
+    )
   }
 
   const { error: delErr } = await admin.auth.admin.deleteUser(user.id)
-  if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 })
+  if (delErr) {
+    console.error('[delete-account] stergerea contului de auth a esuat:', delErr.message)
+    return NextResponse.json({ error: 'Datele s-au sters, dar contul a ramas. Scrie-ne si il stergem.' }, { status: 500 })
+  }
 
   return NextResponse.json({ success: true })
 }

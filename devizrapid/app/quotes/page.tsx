@@ -1,5 +1,6 @@
 'use client'
 import { toast } from '@/lib/toast'
+import { confirmDelete, deleteLabel } from '@/lib/confirm'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ensureAccountLocal } from '@/lib/session'
@@ -115,7 +116,9 @@ async function fetchData() {
     setShowClientModal(false)
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(id: string, title: string) {
+    // Stergerea unei fise ii duce cu ea si liniile (cascade) si nu se poate anula.
+    if (!confirmDelete(`fisa "${title}"`)) return
     const { error } = await supabase.from('quotes').delete().eq('id', id)
     if (error) { toast('Nu s-a sters fisa: ' + error.message); return }
     await fetchData()
@@ -211,7 +214,7 @@ const filteredQuotes = filterCompanyId === 'all' || !filterCompanyId
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-sm font-semibold text-gray-700">{q.total} lei</span>
-                  <button aria-label="Inchide" onClick={() => handleDelete(q.id)} className="text-red-400 text-lg leading-none">×</button>
+                  <button aria-label={deleteLabel(`fisa ${q.title}`)} onClick={() => handleDelete(q.id, q.title)} className="text-red-400 text-lg leading-none">×</button>
                 </div>
               </div>
             ))}
