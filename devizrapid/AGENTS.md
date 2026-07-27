@@ -72,3 +72,11 @@ ai facut (nu astepta sa ti se ceara).
   Mesajul de commit spune DE CE + CE se schimba; la schimbari importante, si riscul.
 - **Verifica orice scriere in Supabase** (`error`), nu o ignora — un esec silentios
   arata succes fals in UI, dar datele nu se salveaza.
+- **Foloseste versiunea de Node din `.nvmrc` (22).** CI o citeste de acolo. Pe o
+  versiune mai veche, `lib/supabase.ts` arunca la IMPORT (are nevoie de WebSocket
+  nativ), deci orice test al unui fisier care il importa pica — si pica DOAR in
+  CI. O divergenta de versiune face "verde local" sa nu mai prezica nimic.
+- **Fisierele din `supabase/` NU se aplica automat.** Cand adaugi unul, spune
+  explicit ca trebuie rulat manual si adauga-l in tabelul din README + in
+  `supabase/verifica.sql`. Un fisier ne-rulat nu da nicio eroare — doar lipseste
+  protectia, tacut.
