@@ -541,3 +541,28 @@ ruleze nicio asertiune, dupa ce local trecuse.
 masina pe care se scrie codul, "verde local" nu mai prezice nimic si esecurile apar abia dupa push.
 **De ce citit din fisier, nu scris in workflow:** trei locuri cu aceeasi versiune scrisa de mana
 diverg; unul singur, citit de restul, nu poate.
+
+## ADR-052 — Raportul cutie/bucata se citeste si din "24BUC/CUT", nu doar din "x 24"
+**Decizie:** `piecesPerBox` recunoaste marcatorul `BUC`/`BC`/`B` dupa numar (`24BUC/CUT`, `30B/CUT`,
+`35 GR 24 BUC`, `/17 B`) si paranteza de la finalul unei denumiri taiate de OCR (`...GLZ (18` => 18),
+pe langa formele de bax de dinainte. Pe calea parserului determinist, `getKnownRatios` fara furnizor
+aplica acum corectiile PROPRII ale utilizatorului in loc sa intoarca o harta goala.
+**De ce:** Pe o factura reala, TOATE cele 12 produse la cutie ieseau cu raportul 1 — pretul CUTIEI
+era vandut ca pret de BUCATA. Un macaron de ~2,65 lei se afisa la 64 lei/buc, o cutie de napolitane
+la 97 lei/buc. `isBoxUnit` era corect (UM=Cut), dar `priceExVat / 1` nu imparte nimic; iar unitatea
+afisata devenea "buc", deci in UI aratau ca preturi de bucata plauzibile ca forma si absurde ca
+valoare.
+**Regula exista deja scrisa in DOUA locuri** — `BUSINESS_RULES.md` cap. 7 ("24BUC/CUT" => 24) si
+promptul din `/api/parse-invoice` — dar codul determinist nu o implementase niciodata. Furnizorii de
+dulciuri/snacks/tigari nu scriu "x 24"; asta stia functia.
+**Ce tine gramajul afara:** marcatorul trebuie urmat de spatiu, `/` sau capat de sir (`(?![a-z])`).
+Fara asta "35GR BANOFFEE" ar da 35 si "COLA 2 BAX" ar da 2. Zece teste de regresie pe denumiri reale
+pazesc exact asta, plus cele sapte dimensionale de dinainte (tabla, OSB, folie raman la 1).
+**De ce corectiile ALTORA nu se aplica fara furnizor:** ADR-024 imparte corectiile tocmai pe
+furnizor. Fara el nu se poate sti daca "cutie de 24" e acelasi ambalaj sau alt producator cu produs
+omonim. Ale tale sunt ale tale oricum — de asta se aplica.
+**Ce NU rezolva:** cutiile la GRAMAJ ("JUMBO 1.3 KG", "TADU 450 GR") nu au raport in denumire si nu
+se poate deduce onest cate bucati contin. Raman la 1 si asteapta regula "frate" sau corectia
+manuala — care de acum chiar se aplica.
+**Rezultat pe factura reala:** 9 din 12 corecte direct din denumire, a 10-a prin regula "frate"
+(MAGURA MACARON CAPPUCCINO imprumuta 24 de la BANOFFEE), 3 cutii la gramaj raman de corectat manual.

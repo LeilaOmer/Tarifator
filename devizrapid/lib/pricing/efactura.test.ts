@@ -30,6 +30,43 @@ describe('piecesPerBox — bax REAL vs DIMENSIUNE', () => {
     ['BURGHIU 5x100', 1],
     ['APA PLATA 2L', 1],
   ])('%s => %i (nemodificat)', (name, expected) => expect(piecesPerBox(name)).toBe(expected))
+
+  // AMBALAJUL SCRIS CU "BUC"/"B", nu cu "x N". Asa scriu furnizorii de dulciuri
+  // si tigari — si asa e scrisa regula in BUSINESS_RULES cap. 7 ("24BUC/CUT" =>
+  // 24) si in promptul din parse-invoice. Codul nu o implementa: toate cele 12
+  // produse la cutie de pe o factura reala ieseau cu raportul 1, deci pretul
+  // CUTIEI era vandut ca pret de BUCATA (macaron la 64 lei in loc de ~2,60).
+  // Denumirile de mai jos sunt verbatim din OCR-ul unei facturi reale.
+  it.each([
+    ['MAGURA MACARON 35GR BANOFFEE 24BUC/CUT', 24],
+    ['MAGURA 42G CIOCOLATA 24 BUC/CUT', 24],
+    ['MAGURA 35G LAPTE 24BUC/CUT', 24],
+    ['NAP MILKA ALUNE 30G 30B/CUT', 30],          // 30G inainte de 30B: se ia B-ul
+    ['BISC MILKA 40 G/24B CHOCO COW CUTIE', 24],
+    ['MILKA CAKE CHOC 35 GR 24 BUC', 24],
+    ['KAT KAT TAT CACAO 24B/CUT X 28G', 24],      // "X 28G" e gramajul, nu numarul
+    ['NAP SPIRALE LICA 104 GR FRPAD. 18BUC/CUT', 18],
+    ['BATON CIOC ROM 30G 36B AUTENTIC', 36],
+    ['CIOC MILKA 100G ALUNE INTREGI /17 B', 17],
+    ['NAPJOE 1606 CIOCO GL CR CACAO 12 B', 12],
+    // Denumire TAIATA de OCR — cazul e scris explicit in promptul rutei.
+    ['ALBENI CAKE 30 GR CACAO SI CARAMEL GLZ (18', 18],
+  ])('%s => %i bucati/cutie', (name, expected) => expect(piecesPerBox(name)).toBe(expected))
+
+  // REGRESIA de temut la fixul de mai sus: GRAMAJUL sa nu fie citit ca numar de
+  // bucati. Toate denumirile astea sunt de pe aceeasi factura reala.
+  it.each([
+    ['CIOC MILKA 87G BISC LU', 1],
+    ['JUMBO 1.3 KG NAP DOINA', 1],
+    ['JUMBO 1 KG NUGA ALUNE STAFIDE', 1],
+    ['TADU 450 GR PALEURI CR CACAO', 1],
+    ['MAGURA MACARON 35GR CAPPUCCINO', 1],        // fara raport => il ia de la "frate"
+    ['CAKE 40 GR OLALA CU SOS DE CIOC NEAGRA', 1],
+    ['NAP CU RAHAT 60GR BOGATI ZMEURA PE', 1],
+    ['BISC MILKA 150G CHOCO BISCUITS', 1],
+    ['SIROP 250 ML BAUTURA', 1],
+    ['FAINA 1 KG', 1],
+  ])('%s => NU are raport in denumire (%i)', (name, expected) => expect(piecesPerBox(name)).toBe(expected))
 })
 
 // Gardul de pret: chiar daca o dimensiune scapa filtrelor de mai sus, pretul

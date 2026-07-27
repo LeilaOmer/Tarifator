@@ -99,7 +99,31 @@ async function getKnownRatios(supplierName: string, userId: string): Promise<Map
   // manipulat ca modelul sa intoarca "%" facea interogarea sa potriveasca TOTI
   // furnizorii si sa aplice raporturi straine. Le escapam.
   const name = supplierName?.trim().replace(/[\\%_]/g, m => '\\' + m)
-  if (!name) return map
+
+  // FARA nume de furnizor (calea parserului determinist nu apeleaza modelul,
+  // deci nu are de unde sa-l afle) se cadea pe o harta GOALA: corectiile manuale
+  // ale utilizatorului erau ignorate complet. Le corecta, se salvau, iar scanarea
+  // urmatoare le pierdea — de asta aceleasi produse reveneau gresite.
+  //
+  // Se iau atunci DOAR corectiile PROPRII, potrivite pe denumirea produsului.
+  // Ale altora NU: fara furnizor n-am putea sti daca "cutie de 24" apartine
+  // aceluiasi ambalaj sau altui producator cu produs omonim, iar ADR-024 imparte
+  // corectiile tocmai pe furnizor. Ale tale sunt ale tale oricum.
+  if (!name) {
+    const { data, error } = await getServiceRoleClient()
+      .from('product_box_ratios')
+      .select('product_name, pieces_per_box')
+      .eq('created_by', userId)
+    if (error) {
+      console.error('[parse-invoice] nu s-au putut citi corectiile proprii:', error.message)
+      return map
+    }
+    for (const row of (data ?? []) as { product_name: string; pieces_per_box: number }[]) {
+      map.set(normalizeName(row.product_name), row.pieces_per_box)
+    }
+    return map
+  }
+
   const { data } = await getServiceRoleClient()
     .from('product_box_ratios')
     .select('product_name, pieces_per_box, created_by')

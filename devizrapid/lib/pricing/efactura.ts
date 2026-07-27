@@ -85,6 +85,33 @@ export function piecesPerBox(name: string): number {
   //      Baxurile se scriu cu volumul lipit ("0.33L X 12", "500ML x 4"), nu asa.
   if (/(^|[^.,\d])\d{3,}\s*[x×]/.test(n)) return 1
 
+  // AMBALAJUL SCRIS CU "BUC"/"B" — forma folosita de furnizorii de dulciuri,
+  // snacks si tigari: "24BUC/CUT", "30B/CUT", "35 GR 24 BUC", "/17 B".
+  //
+  // BUG REAL (gasit pe o factura a utilizatorului): functia stia doar "x N", deci
+  // TOATE cele 12 produse la cutie ieseau cu raportul 1 — pretul CUTIEI ajungea
+  // vandut ca pret de BUCATA. Un macaron de ~2,60 lei se afisa la 64 lei.
+  // Regula era deja scrisa in BUSINESS_RULES cap. 7 ("24BUC/CUT" => 24) si in
+  // promptul din parse-invoice; doar codul nu o implementa.
+  //
+  // `(?![a-z])` e ce tine gramajul afara: fara el, "35GR BANOFFEE" ar da 35 si
+  // "COLA 2 BAX" ar da 2. Marcatorul trebuie urmat de spatiu, "/" sau capat de
+  // sir — nu de alta litera.
+  const bucMatch = n.match(/(\d{1,3})\s*(?:buc|bc|b)(?![a-z])/)
+  if (bucMatch) {
+    const p = parseInt(bucMatch[1], 10)
+    if (p > 1 && p <= 240) return p
+  }
+
+  // Denumire TAIATA de OCR, cu raportul prins in paranteza deschisa la final:
+  // "...CACAO SI CARAMEL GLZ (18" => 18. Ancorat la capatul sirului, ca sa nu
+  // inghita o paranteza din mijlocul denumirii.
+  const truncat = n.match(/\((\d{1,3})$/)
+  if (truncat) {
+    const p = parseInt(truncat[1], 10)
+    if (p > 1 && p <= 240) return p
+  }
+
   // "1X24" / "1x6" — configuratia de bax scrisa compact (un bax de N bucati)
   const compact = n.match(/\b1\s*[x×]\s*(\d{1,3})\b/)
   const m = compact || n.match(/\bx\s*(\d{1,3})\b/)

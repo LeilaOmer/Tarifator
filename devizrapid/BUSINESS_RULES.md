@@ -116,8 +116,10 @@ Principiu central: **AI-ul doar CITESTE si TRANSCRIE numere brute; TOATA aritmet
 ## 7. Cutie / bucata (box vs piece)
 
 - Decizia "se imparte pe bucata?" se ia din **coloana UM** a randului (determinist in cod), NU din text: doar UM de tip `Cut`/`Cutie`/`Bax`/`Bx`/`Set` se imparte; `Buc`/`ST`/`kg` raman ca atare.
-- Raportul bucati/cutie se ia din DENUMIRE daca e scris ("24BUC/CUT" => 24). Un "18 BUC/CUT" cand UM=Buc e doar info de ambalare — NU se imparte.
+- Raportul bucati/cutie se ia din DENUMIRE daca e scris. Formate recunoscute (`piecesPerBox`, `lib/pricing/efactura.ts`): `24BUC/CUT`, `24 BUC/CUT`, `30B/CUT`, `/17 B`, `12 B`, `36B` (marcatorul `BUC`/`BC`/`B` trebuie urmat de spatiu, `/` sau capat de sir - altfel `35GR BANOFFEE` ar da 35); denumire taiata de OCR cu paranteza la final `...GLZ (18` => 18; si formele de bax `x 6`, `1X24`, `0.33L X 12`. Un "18 BUC/CUT" cand UM=Buc e doar info de ambalare - NU se imparte.
+- **Cutiile la GRAMAJ nu au raport in denumire** ("JUMBO 1.3 KG NAP DOINA", "TADU 450 GR PALEURI"): nu se poate deduce onest cate bucati contin, deci raman la 1 si asteapta regula "frate" sau corectia manuala. Nu inventa un raport pentru ele.
 - **Raport imprumutat de la "frate"**: un produs-cutie fara raport in nume imprumuta raportul de la alt produs-cutie cu ACELASI pret de cutie + aceleasi prime 3 cuvinte din denumire (util cand furnizorul nu scrie raportul pe fiecare rand).
+- Pe calea parserului determinist NU exista nume de furnizor (nu se apeleaza modelul), deci se aplica DOAR corectiile PROPRII, potrivite pe denumirea produsului. Ale altora nu: fara furnizor nu se poate sti daca e acelasi ambalaj.
 - Corectiile manuale de raport (butonul "Corecteaza cutie/bucata") sunt PARTAJATE intre utilizatori (ADR-024): ambalarea e a furnizorului, nu a clientului — corectia unui user ii ajuta pe toti la acelasi furnizor. Prioritate: corectia PROPRIE bate corectiile altora (fiecare se poate apara singur de o valoare gresita). Plafonul 2-500 bucati/cutie respinge valorile absurde la scriere.
 
 ## 8. Numerotare fise
