@@ -17,9 +17,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Aceeasi versiune ca in .nvmrc si ca `engines` din package.json.
+      # NU cobori sub 22: `@supabase/realtime-js` are nevoie de WebSocket NATIV,
+      # aparut in Node 22. Sub 20, `lib/supabase.ts` arunca la IMPORT, deci orice
+      # test al unui fisier care il importa pica fara sa ruleze o asertiune — si
+      # pica DOAR in CI, fiindca local se lucreaza pe 22. O divergenta de versiune
+      # intre CI si masina de lucru face "verde local" sa nu mai insemne nimic.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: devizrapid/.nvmrc
           cache: npm
           cache-dependency-path: devizrapid/package-lock.json
 

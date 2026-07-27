@@ -529,3 +529,15 @@ trimite motoarele la adrese moarte si `canonical` le cere sa indexeze o pagina i
 nu cade, doar dispari din cautari.
 **Dependinte scoase:** `@supabase/auth-helpers-nextjs` (pachet declarat depasit de Supabase) si
 `@supabase/ssr` — niciuna importata nicaieri. Build verificat dupa scoatere.
+
+## ADR-051 — CI ruleaza aceeasi versiune de Node ca masina de lucru (22)
+**Decizie:** Versiunea de Node e declarata o singura data, in `devizrapid/.nvmrc`; CI o citeste de
+acolo (`node-version-file`), iar `package.json` o repeta ca `engines`.
+**De ce:** CI era pe Node 20, dezvoltarea pe 22. `@supabase/realtime-js` are nevoie de `WebSocket`
+NATIV, aparut in Node 22 — sub el, `lib/supabase.ts` arunca la IMPORT. Efectul: primul test al unui
+fisier care importa clientul Supabase (`lib/quoteNumber.test.ts`) a picat **doar in CI**, fara sa
+ruleze nicio asertiune, dupa ce local trecuse.
+**Ce era de fapt stricat:** nu testul, ci increderea in semnal. Cand CI ruleaza alt Node decat
+masina pe care se scrie codul, "verde local" nu mai prezice nimic si esecurile apar abia dupa push.
+**De ce citit din fisier, nu scris in workflow:** trei locuri cu aceeasi versiune scrisa de mana
+diverg; unul singur, citit de restul, nu poate.
