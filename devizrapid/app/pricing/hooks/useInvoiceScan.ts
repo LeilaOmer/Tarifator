@@ -13,9 +13,21 @@ type ApiItem = { name: string; unit: string; supplier_price: number; discount: n
 // — pe un comerciant de ambalaje sau pe un aviz fara coloana de cantitate pot
 // scoate marfa reala. Pana acum greseau in tacere; acum se ARATA.
 export type ExcludedRow = { name: string; reason: 'garantie' | 'duplicat' | 'neclar' }
-type ApiResult = { supplier?: string; items?: ApiItem[]; excluded?: ExcludedRow[]; error?: string; detail?: string; debug?: string }
+type ApiResult = { supplier?: string; items?: ApiItem[]; excluded?: ExcludedRow[]; error?: string; detail?: string; debug?: string; parser?: string }
 
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms))
+
+// Ce a raspuns fiecare bucata/felie. Se arata la fel si cand sunt amestecate
+// ("tabel x2, model x1") — asta e chiar cazul interesant: o factura la care
+// parserul a prins o parte, iar restul a cazut pe model.
+function summarizeParsers(results: { parser?: string }[]): string {
+  const count = new Map<string, number>()
+  for (const r of results) {
+    const k = r.parser || 'necunoscut'
+    count.set(k, (count.get(k) ?? 0) + 1)
+  }
+  return [...count].map(([k, n]) => (n > 1 ? `${k} x${n}` : k)).join(', ')
+}
 
 // Taie textul in bucati de cel mult `max` caractere, MEREU pe granita de rand:
 // un produs sta pe un rand, deci taierea la mijloc de rand ar pierde un produs
@@ -133,6 +145,10 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
   // diagnosticheaza pe ghicite: nu se poate distinge "OCR-ul a citit gresit
   // cifra" de "modelul a extras gresit dintr-un text corect". Se arata la cerere.
   const [ocrText, setOcrText] = useState('')
+  // Cine a produs cifrele: 'tabel' = parserul determinist (verifica fiecare
+  // rand cu coloana de TVA), 'model' = AI-ul (ghiceste coloanele). Se arata
+  // langa textul OCR, ca un pret gresit sa poata fi dus direct la sursa.
+  const [parserUsed, setParserUsed] = useState('')
 
   // Excluderile din toate feliile unei poze, fara duplicate (aceeasi linie poate
   // aparea in doua felii suprapuse).
@@ -319,6 +335,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
 
         const ocrItems = results.flatMap(r => r.items || [])
         if (ocrItems.length > 0) {
+          setParserUsed(summarizeParsers(results))
           collectExcluded(results)
           onSuccess({
             supplier: results.find(r => r.supplier)?.supplier || '',
@@ -336,6 +353,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
       const supplier = sliceRes.find(r => r.supplier)?.supplier || ''
 
       if (combinedItems.length > 0) {
+        setParserUsed(summarizeParsers(sliceRes))
         collectExcluded(sliceRes)
         onSuccess({ supplier, items: mapItems(dedupeScannedItems(combinedItems)) })
         // Rezultat PARTIAL: o felie tot n-a incaput in limita chiar si dupa
@@ -374,5 +392,5 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
     }
   }
 
-  return { scanning, error, excluded, ocrText, handleScan }
+  return { scanning, error, excluded, ocrText, parserUsed, handleScan }
 }

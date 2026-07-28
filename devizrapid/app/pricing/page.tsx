@@ -31,7 +31,7 @@ export default function PricingPage() {
 
   const draft = usePricingDraft()
 
-  const { scanning, error: scanError, excluded, ocrText, handleScan } = useInvoiceScan(({ supplier, items }) => {
+  const { scanning, error: scanError, excluded, ocrText, parserUsed, handleScan } = useInvoiceScan(({ supplier, items }) => {
     if (supplier) draft.setSupplier(supplier)
     draft.setItems(items)
   })
@@ -157,6 +157,14 @@ export default function PricingPage() {
           <details className="bg-white rounded-2xl shadow-sm p-3 text-xs">
             <summary className="font-semibold text-gray-600 cursor-pointer">
               Vezi textul citit din poza ({ocrText.length} caractere)
+              {/* CINE a produs cifrele. Un pret gresit poate veni din doua locuri
+                  complet diferite: parserul de tabel (determinist, verifica fiecare
+                  rand cu coloana de TVA) sau modelul (ghiceste coloanele). Fara
+                  eticheta asta, cele doua nu se pot deosebi dintr-o captura de
+                  ecran, iar diagnosticul devine ghicit. */}
+              {parserUsed && (
+                <span className="ml-2 font-normal text-gray-400">· citit de: {parserUsed}</span>
+              )}
             </summary>
             <button
               onClick={() => navigator.clipboard?.writeText(ocrText)}

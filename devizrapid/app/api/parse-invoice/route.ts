@@ -744,7 +744,11 @@ ATENTIE — textul de mai jos vine din OCR pe o POZA, nu dintr-un PDF. Cifrele p
     const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '', user.id)
     const result = validateAndSanitize(parsed, knownRatios)
     if (result) await logScan(userClient, user.id)
-    return NextResponse.json(result ?? { items: [] })
+    // `parser` spune CINE a produs cifrele. Fara el, cand un pret iese gresit
+    // nu se poate sti daca de vina e parserul determinist (care verifica
+    // fiecare rand cu coloana de TVA) sau modelul (care ghiceste coloanele) —
+    // adica nici macar in ce fisier sa te uiti. Costul: un camp in raspuns.
+    return NextResponse.json({ ...(result ?? { items: [] }), parser: 'model' })
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown'

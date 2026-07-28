@@ -583,3 +583,17 @@ nu un raport de aplicat. "x 24" e altceva — configuratia unui bax vandut ca in
 ca inteles, nu.
 **Garda:** teste care cer explicit ca `piecesPerBox` sa intoarca 1 pentru cele sase denumiri cu
 ambalare, si ca ambele functii sa dea acelasi raspuns pe formele de bax.
+
+## ADR-054 — Raspunsul spune CINE a citit cifrele
+**Decizie:** `/api/parse-invoice` intoarce `parser: 'tabel' | 'model'`, iar pagina il arata langa
+textul OCR ("citit de: tabel x2" / "tabel, model").
+**De ce:** Un pret gresit poate veni din doua locuri cu reparatii complet diferite: parserul
+determinist (`parseInvoiceTableText`, care verifica FIECARE rand cu coloana de TVA) sau modelul
+(care ghiceste coloanele). Pana acum raspunsul nu spunea care a raspuns, deci diagnosticul se facea
+prin arheologie pe zecimale — la un caz real s-a ajuns sa se deduca din faptul ca `240,84 / 2239 =
+0,1076` ca modelul luase pretul drept cantitate, fara sa se poata dovedi.
+**Cazul amestecat e cel interesant:** textul OCR se trimite pe bucati de 3500 de caractere, si
+fiecare bucata alege singura calea. "tabel x1, model x1" inseamna ca jumatate de factura a fost
+citita determinist si jumatate ghicita — exact situatia in care unele produse ies corect si altele
+nu, pe aceeasi scanare.
+**Cost:** un camp in raspuns si o eticheta gri. Nimic din calcul nu se schimba.
