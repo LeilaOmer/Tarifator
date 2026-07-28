@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { piecesPerBox, parseEfacturaXml } from './efactura'
+import { piecesPerBox, boxRatioFromName, parseEfacturaXml } from './efactura'
 
 describe('piecesPerBox — bax REAL vs DIMENSIUNE', () => {
   // Configuratii de ambalaj: se imparte pe bucata.
@@ -51,7 +51,7 @@ describe('piecesPerBox — bax REAL vs DIMENSIUNE', () => {
     ['NAPJOE 1606 CIOCO GL CR CACAO 12 B', 12],
     // Denumire TAIATA de OCR — cazul e scris explicit in promptul rutei.
     ['ALBENI CAKE 30 GR CACAO SI CARAMEL GLZ (18', 18],
-  ])('%s => %i bucati/cutie', (name, expected) => expect(piecesPerBox(name)).toBe(expected))
+  ])('%s => %i bucati/cutie', (name, expected) => expect(boxRatioFromName(name)).toBe(expected))
 
   // REGRESIA de temut la fixul de mai sus: GRAMAJUL sa nu fie citit ca numar de
   // bucati. Toate denumirile astea sunt de pe aceeasi factura reala.
@@ -66,7 +66,34 @@ describe('piecesPerBox — bax REAL vs DIMENSIUNE', () => {
     ['BISC MILKA 150G CHOCO BISCUITS', 1],
     ['SIROP 250 ML BAUTURA', 1],
     ['FAINA 1 KG', 1],
-  ])('%s => NU are raport in denumire (%i)', (name, expected) => expect(piecesPerBox(name)).toBe(expected))
+  ])('%s => NU are raport in denumire (%i)', (name, expected) => expect(boxRatioFromName(name)).toBe(expected))
+})
+
+// Cele doua notatii NU inseamna acelasi lucru, si de asta sunt doua functii:
+//   "x 24"    = CONFIGURATIE DE BAX  -> pretul e pe ambalaj chiar daca UM=buc
+//   "36 BUC"  = INFORMATIE DE AMBALARE -> factura vinde la BUCATA (BUSINESS_RULES cap. 7)
+// Calea de e-Factura imparte tocmai cand UM=buc (codurile XBX/XCS ajung tot
+// "buc"), deci daca `piecesPerBox` ar citi si "36 BUC", orice ciocolata cu
+// numarul de bucati in denumire s-ar imparti: 2,23 lei/buc devenea 0,06.
+describe('piecesPerBox NU citeste ambalarea — doar configuratia de bax', () => {
+  it.each([
+    ['CIOCROM CEL DUBLU 50 GR 36 BUC', 1],
+    ['NAP JOE 46G XXL GLAZ LAPTE 20 B/SET PE', 1],
+    ['MAGURA MACARON 35GR BANOFFEE 24BUC/CUT', 1],
+    ['NAP MILKA ALUNE 30G 30B/CUT', 1],
+    ['NAPJOE 1606 CIOCO GL CR CACAO 12 B', 1],
+    ['ALBENI CAKE 30 GR CACAO SI CARAMEL GLZ (18', 1],
+  ])('%s => %i pe calea e-Factura (UM=buc, pret pe bucata)', (name, expected) =>
+    expect(piecesPerBox(name)).toBe(expected))
+
+  // ...dar configuratia de bax ramane citita de amandoua.
+  it.each([
+    ['SUC 0.33L X 12', 12],
+    ['BERE URSUS 1X24', 24],
+  ])('%s => %i la ambele functii', (name, expected) => {
+    expect(piecesPerBox(name)).toBe(expected)
+    expect(boxRatioFromName(name)).toBe(expected)
+  })
 })
 
 // Gardul de pret: chiar daca o dimensiune scapa filtrelor de mai sus, pretul

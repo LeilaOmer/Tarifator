@@ -73,51 +73,74 @@ export function isEfacturaXml(text: string): boolean {
 // "PLACA OSB 1250 x 2500 x 12". Un "x N" generic imparte pretul la dimensiune:
 // tabla de 250 lei devenea 0,125 lei/bucata. De aceea respingem intai tiparele
 // dimensionale, apoi acceptam doar configuratii de ambalaj plauzibile.
-export function piecesPerBox(name: string): number {
-  const n = name.toLowerCase()
-
-  // DIMENSIUNI, nu ambalaj — trei semnale, oricare e suficient:
+// DIMENSIUNI, nu ambalaj — trei semnale, oricare e suficient. Comune ambelor
+// functii de mai jos: o placa de OSB nu se imparte, indiferent ce scrie in UM.
+function looksDimensional(n: string): boolean {
   //   1. trei numere legate cu x ("1250 x 2500 x 12" = lungime x latime x grosime)
-  if (/\d\s*[x×]\s*\d+\s*[x×]\s*\d/.test(n)) return 1
+  if (/\d\s*[x×]\s*\d+\s*[x×]\s*\d/.test(n)) return true
   //   2. o unitate de LUNGIME/SUPRAFATA dupa pereche ("50 x 30 MM", "100 x 150 CM")
-  if (/\d\s*[x×]\s*\d+\s*(mm|cm|m|metri|mp|cm2)\b/.test(n)) return 1
+  if (/\d\s*[x×]\s*\d+\s*(mm|cm|m|metri|mp|cm2)\b/.test(n)) return true
   //   3. un numar "gol" de 3+ cifre chiar inainte de x ("1000 x", "120 x").
   //      Baxurile se scriu cu volumul lipit ("0.33L X 12", "500ML x 4"), nu asa.
-  if (/(^|[^.,\d])\d{3,}\s*[x×]/.test(n)) return 1
+  if (/(^|[^.,\d])\d{3,}\s*[x×]/.test(n)) return true
+  return false
+}
 
-  // AMBALAJUL SCRIS CU "BUC"/"B" — forma folosita de furnizorii de dulciuri,
-  // snacks si tigari: "24BUC/CUT", "30B/CUT", "35 GR 24 BUC", "/17 B".
-  //
-  // BUG REAL (gasit pe o factura a utilizatorului): functia stia doar "x N", deci
-  // TOATE cele 12 produse la cutie ieseau cu raportul 1 — pretul CUTIEI ajungea
-  // vandut ca pret de BUCATA. Un macaron de ~2,60 lei se afisa la 64 lei.
-  // Regula era deja scrisa in BUSINESS_RULES cap. 7 ("24BUC/CUT" => 24) si in
-  // promptul din parse-invoice; doar codul nu o implementa.
-  //
-  // `(?![a-z])` e ce tine gramajul afara: fara el, "35GR BANOFFEE" ar da 35 si
-  // "COLA 2 BAX" ar da 2. Marcatorul trebuie urmat de spatiu, "/" sau capat de
-  // sir — nu de alta litera.
-  const bucMatch = n.match(/(\d{1,3})\s*(?:buc|bc|b)(?![a-z])/)
-  if (bucMatch) {
-    const p = parseInt(bucMatch[1], 10)
-    if (p > 1 && p <= 240) return p
-  }
+const inRange = (p: number) => p > 1 && p <= 240   // 240 = plafon generos pentru un ambalaj real
 
-  // Denumire TAIATA de OCR, cu raportul prins in paranteza deschisa la final:
-  // "...CACAO SI CARAMEL GLZ (18" => 18. Ancorat la capatul sirului, ca sa nu
-  // inghita o paranteza din mijlocul denumirii.
-  const truncat = n.match(/\((\d{1,3})$/)
-  if (truncat) {
-    const p = parseInt(truncat[1], 10)
-    if (p > 1 && p <= 240) return p
-  }
+/**
+ * CONFIGURATIA DE BAX din denumire: "x 6", "0.33L X 12", "1X24".
+ *
+ * Se foloseste acolo unde UM spune BUCATA, dar pretul e totusi pe ambalaj —
+ * cazul e-Factura, unde codurile de ambalaj (XBX, XCS) sunt colapsate tot la
+ * "buc" si singurul semnal ramas e notatia de bax din denumire.
+ *
+ * NU citeste "36 BUC" / "24BUC/CUT" — vezi `boxRatioFromName` si comentariul de
+ * acolo pentru de ce cele doua notatii NU inseamna acelasi lucru.
+ */
+export function piecesPerBox(name: string): number {
+  const n = name.toLowerCase()
+  if (looksDimensional(n)) return 1
 
   // "1X24" / "1x6" — configuratia de bax scrisa compact (un bax de N bucati)
   const compact = n.match(/\b1\s*[x×]\s*(\d{1,3})\b/)
   const m = compact || n.match(/\bx\s*(\d{1,3})\b/)
   const pieces = m ? parseInt(m[1], 10) : 1
-  // 240 = plafon generos pentru un bax real; peste, e alt numar din denumire.
-  return pieces > 1 && pieces <= 240 ? pieces : 1
+  return inRange(pieces) ? pieces : 1
+}
+
+/**
+ * RAPORTUL BUCATI/CUTIE din denumire: "24BUC/CUT", "30B/CUT", "35 GR 24 BUC",
+ * "/17 B", plus denumirea taiata de OCR "...GLZ (18".
+ *
+ * Se foloseste DOAR cand coloana UM spune deja cutie/bax/set, adica atunci cand
+ * stim din document ca pretul e pe ambalaj (BUSINESS_RULES cap. 7).
+ *
+ * DE CE SEPARAT de `piecesPerBox` (regresie reala, prinsa la timp): "36 BUC"
+ * intr-o denumire cu UM=Buc este INFORMATIE DE AMBALARE, nu un raport de aplicat
+ * — factura chiar vinde la bucata. "x 24" e altceva: e configuratia unui bax.
+ * Punandu-le in aceeasi functie, calea de e-Factura (care imparte tocmai cand
+ * UM=buc) a inceput sa imparta orice ciocolata cu numarul de bucati in nume:
+ * 2,23 lei/buc devenea 0,06.
+ */
+export function boxRatioFromName(name: string): number {
+  const n = name.toLowerCase()
+  if (looksDimensional(n)) return 1
+
+  // `(?![a-z])` e ce tine gramajul afara: fara el, "35GR BANOFFEE" ar da 35 si
+  // "COLA 2 BAX" ar da 2. Marcatorul trebuie urmat de spatiu, "/" sau capat de
+  // sir — nu de alta litera.
+  const buc = n.match(/(\d{1,3})\s*(?:buc|bc|b)(?![a-z])/)
+  if (buc && inRange(parseInt(buc[1], 10))) return parseInt(buc[1], 10)
+
+  // Denumire TAIATA de OCR, cu raportul prins in paranteza deschisa la final:
+  // "...CACAO SI CARAMEL GLZ (18" => 18. Ancorat la capatul sirului, ca sa nu
+  // inghita o paranteza din mijlocul denumirii.
+  const trunc = n.match(/\((\d{1,3})$/)
+  if (trunc && inRange(parseInt(trunc[1], 10))) return parseInt(trunc[1], 10)
+
+  // O cutie isi poate scrie continutul si ca bax ("CUTIE 0.33L X 12").
+  return piecesPerBox(name)
 }
 
 // Construieste produsul final dintr-o linie de e-Factura (comun XML + PDF ANAF):

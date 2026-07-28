@@ -566,3 +566,20 @@ se poate deduce onest cate bucati contin. Raman la 1 si asteapta regula "frate" 
 manuala — care de acum chiar se aplica.
 **Rezultat pe factura reala:** 9 din 12 corecte direct din denumire, a 10-a prin regula "frate"
 (MAGURA MACARON CAPPUCCINO imprumuta 24 de la BANOFFEE), 3 cutii la gramaj raman de corectat manual.
+
+## ADR-053 — "x 24" si "36 BUC" sunt doua notatii diferite, deci doua functii
+**Decizie:** `piecesPerBox` citeste DOAR configuratia de bax (`x 6`, `1X24`, `0.33L X 12`).
+`boxRatioFromName` citeste raportul de ambalare (`24BUC/CUT`, `30B/CUT`, `35 GR 24 BUC`, `(18`) si
+cade pe `piecesPerBox` la final. Calea de scanare foloseste `boxRatioFromName` (gata gatuita de
+`isBoxUnit`), calea de e-Factura foloseste `piecesPerBox`.
+**De ce (regresie proprie, prinsa la timp):** ADR-052 pusese ambele tipare in aceeasi functie. Dar
+`buildItem` din e-Factura imparte TOCMAI cand UM=buc — fiindca acolo codurile de ambalaj (XBX=cutie,
+XCS=bax) sunt colapsate toate la "buc", iar singurul semnal ramas e notatia din denumire. Cu
+tiparele de ambalare inauntru, orice ciocolata cu numarul de bucati in nume se imparte desi factura
+o vinde la bucata: "CIOCROM CEL DUBLU 50 GR 36 BUC" la 2,23 lei/buc ar fi devenit 0,06, iar gardul
+de pret (`>= 0.05`) nu l-ar fi prins.
+**Regula de fond, deja in BUSINESS_RULES cap. 7:** "36 BUC" langa UM=Buc e INFORMATIE DE AMBALARE,
+nu un raport de aplicat. "x 24" e altceva — configuratia unui bax vandut ca intreg. Ca text semanau;
+ca inteles, nu.
+**Garda:** teste care cer explicit ca `piecesPerBox` sa intoarca 1 pentru cele sase denumiri cu
+ambalare, si ca ambele functii sa dea acelasi raspuns pe formele de bax.

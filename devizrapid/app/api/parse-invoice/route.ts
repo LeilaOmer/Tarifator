@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { parseEfacturaXml, isEfacturaXml, parseEfacturaAnafPdf } from '@/lib/pricing/efactura'
 import { isNonProductLine, reconcileUnitPrice, applySgrFromGuaranteeLines, classifySgr, phantomRowIndexes, type ScannedLine } from '@/lib/pricing/scanGuards'
 import { parseInvoiceTableText } from '@/lib/pricing/invoiceTable'
-import { piecesPerBox } from '@/lib/pricing/efactura'
+import { boxRatioFromName } from '@/lib/pricing/efactura'
 
 function getSupabaseAdmin() {
   // Cheia anonima — foloseste DOAR pentru auth.getUser(token).
@@ -703,7 +703,10 @@ export async function POST(req: NextRequest) {
         unit: r.unit,
         price_raw: r.price,
         price_includes_vat: false,   // coloana Valoare de pe factura e fara TVA
-        pieces_per_box: piecesPerBox(r.name),
+        // UM-ul e deja cutie/bax pe randurile care conteaza; `validateAndSanitize`
+        // aplica raportul DOAR daca `isBoxUnit`, deci pe randurile la bucata
+        // valoarea de aici e ignorata.
+        pieces_per_box: boxRatioFromName(r.name),
         discount: 0,
         vat: r.vat,
         sgr: 0,
