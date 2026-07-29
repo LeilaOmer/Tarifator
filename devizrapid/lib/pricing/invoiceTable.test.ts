@@ -97,4 +97,41 @@ describe('parseInvoiceTableText — cade elegant pe ce nu recunoaste', () => {
                'C OUA 10B 11% Buc 3 10.00 30.00 3.30'].join('\n')
     expect(parseInvoiceTableText(t)!.every(r => r.vat === 11)).toBe(true)
   })
+
+  // BUG REAL: OCR-ul pune adesea o ghilimea TIPOGRAFICA la inceputul randului
+  // ("NAP MILKA...). `cleanName` stergea doar ghilimelele DREPTE ("), deci
+  // caracterul ramanea lipit de denumire. Efectul nu era cosmetic: cheia regulii
+  // "frate" din parse-invoice e "pret + primele 3 cuvinte", asa ca randul
+  // mazgalit primea alta cheie decat geamanul lui curat si NU mai imprumuta
+  // raportul bucati/cutie. Pe o factura reala, "NAP MILKA CACAO 30G 308/CUT"
+  // (OCR peste "30B/CUT") a ramas neimpartit la 61,60 lei — 97 lei/bucata —
+  // desi acelasi produs, cu acelasi pret, era pe factura si citit corect.
+  it.each([
+    ['\u201c', 'ghilimea tipografica stanga'],
+    ['\u201d', 'ghilimea tipografica dreapta'],
+    ['\u201e', 'ghilimea de jos'],
+    ['\u00ab', 'ghilimea unghiulara'],
+    ['\u2018', 'apostrof tipografic'],
+    ['\u2019', 'apostrof tipografic dreapta'],
+    ['\u2022', 'bulina'],
+    ['\u00b7', 'punct median'],
+  ])('%s (%s) la inceput NU ramane in denumire', prefix => {
+    const t = [`${prefix}NAP MILKA CACAO 30G 30B/CUT 21% Cut 3 61.60 184.80 38.81`,
+               'B PRODUS DOI 21% Buc 4 5.00 20.00 4.20',
+               'C PRODUS TREI 21% Buc 1 5.00 5.00 1.05'].join('\n')
+    const rows = parseInvoiceTableText(t)!
+    expect(rows[0].name).toBe('NAP MILKA CACAO 30G 30B/CUT')
+  })
+
+  it('doua randuri ale aceluiasi produs dau ACEEASI cheie de frate', () => {
+    // Cheia din parse-invoice: pret (in bani) + primele 3 cuvinte normalizate.
+    // Daca gunoiul de la inceput supravietuieste, cheile difera si raportul nu
+    // se mai imprumuta.
+    const t = ['\u201cNAP MILKA CACAO 30G 308/CUT 21% Cut 3 61.60 184.80 38.81',
+               'NAP MILKA CACAO 30G 30B/CUT 21% Cut 3 61.60 184.80 38.81',
+               'C PRODUS TREI 21% Buc 1 5.00 5.00 1.05'].join('\n')
+    const rows = parseInvoiceTableText(t)!
+    const key = (n: string) => n.toLowerCase().split(/\s+/).slice(0, 3).join(' ')
+    expect(key(rows[0].name)).toBe(key(rows[1].name))
+  })
 })

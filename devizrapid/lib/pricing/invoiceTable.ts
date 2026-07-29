@@ -58,7 +58,15 @@ function toNum(raw: string): number {
  * dar lipit de denumire strica potrivirea cu raporturile cutie/bucata salvate.
  */
 function cleanName(raw: string): string {
-  let s = raw.replace(/^[\s\d().,\/>|\[\]{}"'`*%&~_—–-]+/, '')   // simboluri si cifre la inceput
+  // Simboluri si cifre la inceput. Ghilimelele TIPOGRAFICE (“ ” „ « » ‘ ’),
+  // bulinele si punctul median sunt aici pentru un motiv care nu e cosmetic:
+  // OCR-ul le pune des in fata randului, iar cheia regulii "frate" din
+  // parse-invoice e "pret + primele 3 cuvinte". Un singur caracter ramas lipit
+  // de denumire da alta cheie decat geamanul curat al aceluiasi produs, deci
+  // raportul bucati/cutie nu se mai imprumuta. Pe o factura reala,
+  // "“NAP MILKA CACAO 30G 308/CUT" a ramas neimpartit la 61,60 lei (97 lei/buc)
+  // desi randul curat al aceluiasi produs era pe aceeasi factura, citit corect.
+  let s = raw.replace(/^[\s\d().,\/>|\[\]{}"'`*%&~_—–\-“”„‟«»‘’‚‹›•·…]+/, '')
   // Token scurt ramas la inceput = numar de rand ("a ", "AA ", "IZ/ ", "a2) ").
   // Cerem <=2 litere SAU prezenta unei cifre, ca sa nu mancam inceputul unei
   // denumiri reale de 3 litere ("NAP SPIRALE", "MRS TWIX").

@@ -597,3 +597,18 @@ fiecare bucata alege singura calea. "tabel x1, model x1" inseamna ca jumatate de
 citita determinist si jumatate ghicita — exact situatia in care unele produse ies corect si altele
 nu, pe aceeasi scanare.
 **Cost:** un camp in raspuns si o eticheta gri. Nimic din calcul nu se schimba.
+
+## ADR-055 — Gunoiul de la inceputul denumirii rupe regula "frate"
+**Decizie:** `cleanName` sterge de la inceputul denumirii si ghilimelele TIPOGRAFICE (“ ” „ « » ‘ ’),
+bulinele si punctul median, nu doar pe cele drepte.
+**De ce (nu e cosmetic):** cheia regulii "frate" din `parse-invoice` e "pret in bani + primele 3
+cuvinte normalizate". Un singur caracter ramas lipit de denumire da alta cheie decat geamanul curat
+al ACELUIASI produs, deci raportul bucati/cutie nu se mai imprumuta.
+**Cazul real:** pe o factura, OCR-ul a citit "30B/CUT" ca "308/CUT" — deci raportul nu se putea lua
+din denumire. Dar acelasi produs aparea pe factura si citit corect, la acelasi pret, iar regula
+"frate" avea raspunsul. L-a ratat fiindca randul stalcit incepea cu U+201C: cheile erau
+`6160|“nap milka cacao` si `6160|nap milka cacao`. Rezultat: 61,60 lei neimpartit, adica 97 lei
+bucata in loc de ~3,23.
+**De ce NU s-a "reparat" 308 => 30B:** ar fi fost o ghicitoare pe cifre (308 poate fi un numar
+real). Mecanismul corect exista deja — geamanul curat de pe aceeasi factura — si trebuia doar sa nu
+fie rupt de un caracter de punctuatie.
