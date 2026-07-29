@@ -597,3 +597,39 @@ fiecare bucata alege singura calea. "tabel x1, model x1" inseamna ca jumatate de
 citita determinist si jumatate ghicita — exact situatia in care unele produse ies corect si altele
 nu, pe aceeasi scanare.
 **Cost:** un camp in raspuns si o eticheta gri. Nimic din calcul nu se schimba.
+
+## ADR-055 — Canalele de lansare: SEO + contabili, nu ProductHunt/Reddit/AppSumo
+**Data:** 2026-07-29.
+**Decizie:** Planul de lansare traieste in `docs/GTM.md`. Canalele asumate sunt, in ordine:
+SEO/GEO propriu (calculatoare publice peste `lib/pricing/calc.ts` + pagini pe meserie),
+grupuri de Facebook RO si forumuri (avocatnet, contzilla), afiliere prin CONTABILI. Directoarele
+si ProductHunt se fac ieftin, doar pentru backlink-uri. **AppSumo si Reddit se resping.** Nimic
+din distributie nu incepe inainte de deblocatori: forma juridica, domeniu propriu, procesator de
+plati, analytics.
+**De ce (contextul care schimba raspunsul):** analiza a pornit de la o lista populara de tactici
+"cum vinzi fara audienta". Lista e scrisa pentru microSaaS GLOBAL, in ENGLEZA. Tarifator e
+RO-only (`lang="ro"`, fara i18n), cu preturi in lei si reguli de TVA 11/21 si SGR specific
+romanesti, pentru meseriasi si mici comercianti — un public care nu citeste ProductHunt si nu are
+cont de AppSumo. Aceeasi tactica poate fi buna si complet inaplicabila, in functie de piata.
+**De ce se respinge AppSumo (doua motive independente):** (1) audienta e engleza si globala, deci
+produsul e nevandabil acolo; (2) un lifetime deal vinde pe veci apeluri Groq nelimitate contra unei
+plati unice, iar ADR-015 arata ca promptul e deja slabit intentionat ca sa incapa pe tier-ul gratuit
+Groq — fiecare vanzare ar deveni o pierdere recurenta. Al doilea motiv ramane valabil chiar daca
+produsul ar fi tradus.
+**De ce se respinge Reddit:** canal gresit pentru publicul RO (mic, tanar, urban, IT). Echivalentul
+real sunt grupurile de Facebook. Nu e o problema de executie, ci de unde stau oamenii.
+**De ce contabilii, nu afiliati generici:** un contabil are 40-80 de clienti mici — exact publicul
+nostru — si are increderea lor pe bani. ADR-003 arata ca planul Mercator a fost cerut chiar de un
+contabil real: primul afiliat exista deja, doar ca nu i s-a cerut nimic.
+**De ce nimic inainte de deblocatori:** azi tot funnel-ul de conversie se termina in
+`contact.tarifator@gmail.com` (`app/upgrade/page.tsx`), nu exista analytics, iar `prelaunch` e `true`
+deci toti utilizatorii au Pro nelimitat. Trafic adus peste starea asta = utilizatori pierduti
+definitiv, fara sa se poata masura ce canal i-a adus. Fereastra de lansare se consuma o singura data.
+**Alternativa respinsa — "programmatic SEO" cu sute/mii de pagini:** paginile subtiri generate in
+masa sunt exact ce penalizeaza Google. Varianta asumata e mica: cateva calculatoare publice care
+chiar functioneaza, refolosind `lib/pricing/calc.ts`. Un calculator real e unealta, demo de produs
+si dovada de corectitudine in acelasi URL — nu o pagina subtire.
+**Preconditie tacuta pe care o consemnam:** adresa publica implicita e inca
+`devizele-mele.vercel.app` (`lib/site.ts`), numele VECHI al proiectului. Orice backlink, listare in
+directoare sau pagina indexata facuta inainte de mutarea pe domeniu propriu e munca pierduta. De
+aceea domeniul e in Etapa 1, nu mai tarziu.

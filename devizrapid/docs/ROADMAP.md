@@ -3,12 +3,22 @@
 Ce urmează. Grupat după orizont, nu după dată fixă. Ideile neangajate sunt clar marcate.
 
 ## Înainte de lansare (detaliile rămase)
+
+> **Planul de lansare complet e în `docs/GTM.md`** — canale, secvență și definiția lui
+> „gata de lansare". Lista de mai jos e ce a mai rămas de bifat din construcție; GTM-ul
+> adaugă deblocatorii care nu sunt cod (formă juridică, domeniu propriu, procesator de
+> plăți, analytics) și ordinea în care se sting. Decizia de canale: ADR-055.
+
 - [x] **SQL aplicat (2026-07-27)** — `enforce-limits.sql` (app_config + triggerele de limite +
       indexul unic pe numărul de fișă), `consents.sql` (ADR-040) și `indexes.sql` (ADR-045)
       rulate în Supabase. Cu indexul unic pe loc, reîncercarea din ADR-046 are ce prinde.
       Starea se poate reverifica oricând cu `supabase/verifica.sql` (doar citește).
 - [ ] **La lansare, stinge pre-lansarea** cu un singur update:
       `update app_config set value='false' where key='prelaunch';` (UI + DB se sting împreună).
+      **NU e primul pas, e ultimul:** azi toți utilizatorii au Pro nelimitat, iar update-ul
+      dat singur îi aruncă peste noapte la 3+3 fără buton de plată. Secvența corectă
+      (plăți → email către lista din `consents` → ofertă pentru early adopters → stingere)
+      e în `docs/GTM.md`, Etapa 2.
 - [x] **RLS verificat și închis (2026-07-03)** — RLS pornit pe toate tabelele; politici
       corecte (scope pe `auth.uid()`, `with_check` corect la scrieri; `product_box_ratios`
       și `api_usage` doar prin service-role). Politica publică `"allow all"` de pe `counters`
