@@ -633,3 +633,36 @@ si dovada de corectitudine in acelasi URL — nu o pagina subtire.
 `devizele-mele.vercel.app` (`lib/site.ts`), numele VECHI al proiectului. Orice backlink, listare in
 directoare sau pagina indexata facuta inainte de mutarea pe domeniu propriu e munca pierduta. De
 aceea domeniul e in Etapa 1, nu mai tarziu.
+
+## ADR-056 — Demo public PRECALCULAT, nu upload fara cont
+**Data:** 2026-07-29.
+**Decizie:** `/demo` e o pagina publica, fara cont, care arata scanarea unei facturi-exemplu
+**fabricate** (`lib/demo/invoice.ts`). Nu exista upload, nu se apeleaza niciun model, nu pleaca
+nicio cerere de retea la apasarea butonului. Vizitatorul poate schimba adaosul, rotunjirea si
+regimul de TVA, iar preturile se recalculeaza cu `calcItem` din `lib/pricing/calc.ts` — aceleasi
+functii ca `/pricing`. Incarcarea facturii PROPRII ramane dupa autentificare.
+**De ce nu upload public:** `/api/parse-invoice` e autentificata si plafonata la 50 de scanari pe
+zi (`invoice_scan_logs`) tocmai fiindca fiecare apel consuma din cota Groq GRATUITA — ADR-015
+arata ca promptul e deja slabit intentionat ca sa incapa in ea. Singura aparare disponibila pentru
+o ruta publica e `allowDailyByIp` (`lib/rateLimit.ts`), care e **fail-open in patru locuri** prin
+decizie constienta: fara cheie de service-role, la eroare de citire, fara IP, sau la exceptie. Alegerea
+aia e corecta pentru un user logat (un hopa de retea nu trebuie sa blocheze pe cineva care plateste),
+dar ca SINGURA aparare pe o ruta care arde bani inseamna ca o defectiune de infrastructura devine o
+factura. In plus, un upload anonim ar ocoli complet sistemul de `consents` (ADR-040) si ar largi
+suprafata de "injectie de prompt prin factura" pe care `docs/AUDIT-LANSARE.md` o vaneaza deja.
+**Al doilea motiv, independent de cost — frictiunea:** un om venit din Google nu are o factura de
+furnizor la indemana, mai ales pe telefon. Un demo care cere efort INAINTE de valoare converteste
+prost. Exemplul gata pregatit arata acelasi lucru fara sa ceara nimic.
+**De ce factura fabricata si nu `__fixtures__/ocr-smartcash.txt`:** fixture-ul e o factura REALA, cu
+furnizor real si preturile lui de achizitie. Intr-un test e in regula; pe o pagina indexabila ar
+publica marjele cuiva. Datele din `lib/demo/invoice.ts` sunt inventate, dar respecta regulile din
+BUSINESS_RULES (cote 11/21, SGR 0,50 doar la bauturi 0,1-3 L, impartire doar la UM de tip cutie).
+**Garda impotriva divergentei:** `lib/demo/invoice.test.ts` verifica faptul ca fiecare pret afisat
+iese din `calcItem` si ca datele respecta regulile de business (lactatele fara SGR, sucul cu SGR in
+acelasi ambalaj de 1 L). Fara testul asta, demo-ul putea ajunge in timp sa arate alte cifre decat
+aplicatia — adica sa strice exact increderea pe care o vinde.
+**Verificat in browser real:** zero cereri de retea dupa apasarea butonului, si continutul (H1,
+factura, textul explicativ) e prezent si cu JavaScript dezactivat, deci indexabil.
+**Captura fisei de servicii:** landing-ul are pregatita sectiunea, dar imaginea se afiseaza DOAR daca
+`public/captura-fisa.png` exista (verificare la build, in `app/page.tsx`). Asa nu ramane o imagine
+rupta cat timp screenshot-ul nu e facut, iar cand fisierul apare, sectiunea porneste singura.

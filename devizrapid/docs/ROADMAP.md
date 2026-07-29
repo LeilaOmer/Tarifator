@@ -49,8 +49,12 @@ Rămase (neblocante):
 ## Din analiza multi-unghi (2026-07-03)
 Făcut: contrast text mai bun (WCAG), `alert()` → toast discret, `aria-label` pe butoanele
 iconiță, imagine OG pentru share. Rămas:
-- [ ] **Captură reală a produsului pe landing** (fișă/PDF primit pe WhatsApp) — crește
+- [~] **Captură reală a produsului pe landing** (fișă/PDF primit pe WhatsApp) — crește
       conversia mult pentru publicul „arată-mi". Nevoie de un screenshot real.
+      **Jumătatea de comercianți e acoperită** (2026-07-29): `/demo` arată scanarea pe o
+      factură-exemplu, interactiv și fără cont (ADR-056). Rămâne captura fișei de servicii:
+      secțiunea e deja pregătită în `app/page.tsx` și se aprinde singură când apare
+      `public/captura-fisa.png` — până atunci nu se afișează nimic rupt.
 - [ ] **jsPDF încărcat lazy** (`dynamic import`) în `/quotes/[id]` și `lib/pricing/pdf.ts` —
       scoate ~350 KB din bundle-ul inițial. NEatins încă: e pe calea critică de PDF, de
       făcut cu verificare vizuală a output-ului (regula din AGENTS.md).

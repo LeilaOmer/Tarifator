@@ -116,6 +116,11 @@ i-ar arunca peste noapte la 3 fișe + 3 calcule pe lună, fără buton de plată
 4. Abia apoi: `update app_config set value='false' where key='prelaunch';`
 
 ### Etapa 3 — motorul SEO/GEO (după domeniu)
+0. **`/demo` — făcut (2026-07-29, ADR-056).** Prima pagină publică indexabilă în afara
+   landing-ului și a paginilor legale: scanarea unei facturi-exemplu fabricate, cu adaos,
+   rotunjire și regim de TVA reglabile, calculate cu `lib/pricing/calc.ts`. Fără cont, fără
+   apeluri Groq, fără upload. E și șablonul pentru calculatoarele de mai jos: aceeași regulă —
+   unealta e reală, matematica vine din `lib/`, textul explicativ e indexabil fără JavaScript.
 1. **Calculatoare publice**, fără login, indexabile: `/calculator/adaos-comercial`,
    `/calculator/tva`, `/calculator/pret-vanzare`, `/calculator/sgr`. Refolosesc
    funcțiile din `lib/pricing/calc.ts` — **matematica nu se rescrie** (regula din

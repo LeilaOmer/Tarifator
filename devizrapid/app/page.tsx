@@ -1,6 +1,15 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { existsSync } from 'fs'
+import { join } from 'path'
 import { SITE_URL } from '@/lib/site'
+
+// Captura reala a fisei (roadmap: "creste conversia mult"). Se afiseaza DOAR daca
+// fisierul exista, ca landing-ul sa nu ramana cu o imagine rupta cat timp
+// screenshot-ul nu e facut. Pune `public/captura-fisa.png` si sectiunea apare
+// singura — verificarea se face la build, pagina fiind statica.
+const FISA_CAPTURE = '/captura-fisa.png'
+const hasFisaCapture = existsSync(join(process.cwd(), 'public', FISA_CAPTURE.slice(1)))
 
 export const metadata: Metadata = {
   title: 'Tarifator – Raspunsul la „Cat costa?" | Fisa Servicii & Calculator Pret',
@@ -78,6 +87,14 @@ export default function LandingPage() {
               <li className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0 mt-1.5"></span>Iti tii clientii si serviciile la un loc, gata de refolosit</li>
               <li className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0 mt-1.5"></span>Trimiti clientului un document ingrijit, direct pe WhatsApp</li>
             </ul>
+            {hasFisaCapture && (
+              <figure className="mt-6">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={FISA_CAPTURE} alt="Fisa de servicii trimisa clientului ca PDF pe WhatsApp"
+                  className="w-full max-w-xs rounded-xl border border-gray-200" />
+                <figcaption className="text-xs text-gray-500 mt-2">Asa arata fisa primita de client.</figcaption>
+              </figure>
+            )}
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-900 mb-3">Vinzi produse?</h3>
@@ -106,6 +123,11 @@ export default function LandingPage() {
             <li className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-green-500 shrink-0 mt-1.5"></span>Imparte singura pretul de la cutie la bucata</li>
             <li className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-green-500 shrink-0 mt-1.5"></span>Tine cont de reduceri si de garantia ambalajelor</li>
           </ul>
+          <Link href="/demo"
+            className="inline-block mt-8 px-6 py-3 border border-gray-300 text-gray-900 font-semibold rounded-xl hover:border-gray-400 transition-colors">
+            Vezi cum merge, pe o factura-exemplu
+          </Link>
+          <p className="text-xs text-gray-500 mt-3">Fara cont, direct in pagina.</p>
         </div>
       </section>
 
